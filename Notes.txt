@@ -1,0 +1,21 @@
+Supplementary Fig 2:
+Historical_FWI.py - Create uncorrected historical arrays first in .dat files (and make a standalone historical plot)
+PDF_95% - Create the Uncorrected 2023 .dat files
+Supplement2.py - to make the figure
+Plot saved: Supp2_Iberia.png
+(SoW GitHub script Supplement2.py combines these three scripts)
+
+Main Figure:
+Main.py - Does bias correction and makes plot for all 3 regions (Once we have dat files for all regions)
+Plot saved: MainFig.png
+
+
+Things to do: 
+- Take a copy of the above and try to run and get the same plots out for Iberia
+- Edit and run for Scotland and North Korea
+- Chantelle to get FWI date for Feb 2026 once we have ERA5 data (hopefully w/c 9th March)
+- Aim to have plots and Risk Ratios for 3 regions by Friday 13th
+- Update scripts to use 16 HadGEM members (currently just running 1)
+- Update bias correction to cover 2025 gap in data
+- Generally tidy up scripts, and put on GitHub
+
