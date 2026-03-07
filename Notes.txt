@@ -15,7 +15,7 @@ Things to do:
 - Edit and run for Scotland and North Korea
 - Chantelle to get FWI date for Feb 2026 once we have ERA5 data (hopefully w/c 9th March)
 - Aim to have plots and Risk Ratios for 3 regions by Friday 13th
-- Update scripts to use 16 HadGEM members (currently just running 1)
+- Update scripts to use 16 HadGEM members (currently just running 1) (Cylc flow set up to now handle this for historical FWI)
 - Update bias correction to cover 2025 gap in data
 - Generally tidy up scripts, and put on GitHub
 

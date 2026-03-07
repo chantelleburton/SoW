@@ -22,7 +22,7 @@ import scipy.stats
 from scipy import stats
 import cf_units
 import seaborn as sns
-from constrain_cubes_standard import *
+from contrain_cubes_standard import *
 
 
 
@@ -132,6 +132,7 @@ exit()
 
 # HadGEM3
 #for member in np.arange(1,16):
+'''
 for member in np.arange(10,11): #TEST
     HadGEM3_Arr = []
     for year in np.arange(1960, 2014):
@@ -163,13 +164,13 @@ for member in np.arange(10,11): #TEST
 
 
     #Save HaGEM3 text out to a file
+    print(HadGEM3_Arr)
     f = open(folder+'output/HadGEM3_FWI_1960-2013_'+Country+'_'+str(member)+'_'+str(percentile)+'%.dat','a')
     np.savetxt(f,(HadGEM3_Arr))
     f.close()  
 print('finished')
 exit()
 '''
-
 print('starting')
 
 #2) To speed things up, read from the .dat file rather than calculate the array all over again:
@@ -220,7 +221,7 @@ plt.legend(loc='best')
 plt.show()
 exit()
 
-
+'''
 
 
 

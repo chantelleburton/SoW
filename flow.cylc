@@ -1,0 +1,30 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    
+    member = 10,11
+
+[scheduling]
+
+    [[graph]]
+        R1 = """
+            hadgem_historical_fwi<member>
+        """
+
+[runtime]
+    [[hadgem_historical_fwi<member>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        python hadgem_historical_fwi.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 20G
+            --time = 60
+            --cpus-per-task = 1
+            --ntasks = 1

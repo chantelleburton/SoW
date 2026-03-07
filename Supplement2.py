@@ -144,7 +144,7 @@ plt.legend(loc='best')
 
 ######### Subplot (b) - Historical PDF bias-correctd and transformed ######### 
 BiasCorrDict = {}
-FWI_SIM = {}
+FWI_SIM = {} # this isn't used anywhere currently.
 #for member in np.arange(1,16):
 for member in np.arange(10,11):
     print(member)
