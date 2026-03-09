@@ -10,12 +10,12 @@ import re
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 # CONFIG
-country = 'Scotland'
+country = 'Iberia'
 # Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
 
 START_YEAR = 1960
 END_YEAR = 2013
-CSV_EXPORT = True #True for CSV, False for .dat
+CSV_EXPORT = False #True for CSV, False for .dat
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
@@ -74,7 +74,6 @@ for cube in cubes:
             cube.remove_coord(coord_name)
 
 ERA5_hist_all = cubes.concatenate_cube()
-print(ERA5_hist_all)
 # Cut to shapefile 
 print("Applying shapefile")
 ERA5_hist_all = contrain_to_sow_shapefile(ERA5_hist_all, shp_file, shape_name) #SLOW operation, keep out of loop. Could be replaced with the new iris.util.mask_cube_from_shape but works as is.
@@ -97,7 +96,7 @@ yr_country_p = yr_time_p.collapsed(['latitude', 'longitude'], iris.analysis.PERC
 ERA5_ImpactsToolBox_Arr = np.ravel(yr_country_p.data)
 
 # Save ERA5 out to a text file
-output_file = f'/data/scratch/bob.potts/sowf/test_output/IRIS_ERA5_FWI_{START_YEAR}-{END_YEAR}_'+country+str(percentile)+'%'
+output_file = f'/data/scratch/bob.potts/sowf/test_output/ERA5_FWI_{START_YEAR}-{END_YEAR}_'+country+str(percentile)+'%'
 
 if CSV_EXPORT:
     # Get the years from the cube
