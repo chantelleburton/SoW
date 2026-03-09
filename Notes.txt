@@ -11,7 +11,7 @@ Plot saved: MainFig.png
 
 
 Things to do: 
-- Take a copy of the above and try to run and get the same plots out for Iberia
+- Take a copy of the above and try to run and get the same plots out for Iberia (Done and optimised to run in <2mins rather than 40)
 - Edit and run for Scotland and North Korea
 - Chantelle to get FWI date for Feb 2026 once we have ERA5 data (hopefully w/c 9th March)
 - Aim to have plots and Risk Ratios for 3 regions by Friday 13th

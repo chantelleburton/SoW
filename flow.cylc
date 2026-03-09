@@ -24,7 +24,7 @@
         platform = spice
 
         [[[directives]]]
-            --mem = 20G
+            --mem = 60G
             --time = 60
             --cpus-per-task = 1
             --ntasks = 1
