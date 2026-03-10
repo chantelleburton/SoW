@@ -10,9 +10,10 @@ from utils.cubefuncs import *
 import time
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="iris")
+warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
 ############# User inputs here #############
-Country = "Iberia"
+Country = "South Korea"  # Options: 'South Korea', 'Iberia', 'Scotland'
 YEAR = 2024
 FORCINGS = ["historicalExt", "historicalNatExt"]  # set to one or both
 # Options: 'South Korea', 'Iberia', 'Scotland'
@@ -27,7 +28,7 @@ start_time = time.time()
 if Country == "South Korea":
     print("Running South Korea")
     percentile = 95
-    shape_name = "South Korea"
+    shape_name = "Southeast South Korea"
 
 elif Country == "Iberia":
     print("Running Iberia")
@@ -84,13 +85,13 @@ for forcing in FORCINGS:
     iris.util.equalise_attributes(cubes)
     merged = cubes.merge_cube()
     print(f"Merged shape: {merged.shape}")
-
+    print(shape_name)
     merged = contrain_to_sow_shapefile(merged, shp_file, shape_name)
     merged = ConstrainToYear(merged, YEAR)
     merged = CountryPercentile(merged, percentile)
     merged = TimePercentile(merged, percentile)
 
-    out = f"/data/scratch/bob.potts/sowf/test_output/{Country}_Uncorrected_hist_{forcing_suffix.get(forcing, forcing)}{percentile}%.nc"
+    out = f"/data/scratch/bob.potts/sowf/test_output/Alt_{Country}_Uncorrected_hist_{forcing_suffix.get(forcing, forcing)}{percentile}%.nc"
     iris.save(merged, out)
     print(f"Saved: {out}")
 
