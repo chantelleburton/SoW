@@ -12,10 +12,10 @@ Plot saved: MainFig.png
 
 Things to do: 
 - Take a copy of the above and try to run and get the same plots out for Iberia (Done and optimised to run in <2mins rather than 40)
-- Edit and run for Scotland and North Korea
+- Edit and run for Scotland and North Korea (Done - issues with HadGEM3, get clarification 11/03/26)
 - Chantelle to get FWI date for Feb 2026 once we have ERA5 data (hopefully w/c 9th March)
 - Aim to have plots and Risk Ratios for 3 regions by Friday 13th
-- Update scripts to use 16 HadGEM members (currently just running 1) (Cylc flow set up to now handle this for historical FWI)
+- Update scripts to use 16 HadGEM members (currently just running 1) (Cylc flow set up to now handle this for historical FWI) (Speed up in processing may have rendered cylc not needed)
 - Update bias correction to cover 2025 gap in data
 - Generally tidy up scripts, and put on GitHub
 
