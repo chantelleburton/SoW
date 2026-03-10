@@ -1,111 +1,97 @@
 import glob
 import re
 import iris
-import iris
 import numpy as np
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from utils.constrain_cubes_standard import *
 from utils.cubefuncs import *
 import time
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module='iris')
-
+warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 
 ############# User inputs here #############
-Country = 'Iberia'
+Country = "Iberia"
 YEAR = 2024
-# Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
+FORCINGS = ["historicalExt", "historicalNatExt"]  # set to one or both
+# Options: 'South Korea', 'Iberia', 'Scotland'
 ############# User inputs end here #############
 
-folder = '/data/scratch/chantelle.burton/SoW2526/'
-shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-data_folder = '/data/scratch/chantelle.burton/SoW2526/Y2526FWI/'
-
-# Set up the 2025 files and months automatically
-if Country == 'South Korea':
-    print('Running South Korea')
-    Month = 3
-    month = 'March'
-    percentile = 95
-    shape_name = 'South Korea'
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-31_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
-
-elif Country == 'Iberia':
-    print('Running Iberia')
-    Month = 8
-    month = 'Aug'
-    percentile = 95
-    shape_name = 'Northwest Iberia'
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
-
-elif Country == 'Scotland':
-    print('Running Scotland')
-    Month = 7
-    month = 'July'
-    percentile = 95
-    shape_name = 'Scottish Highlands'
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
-
+folder = "/data/scratch/chantelle.burton/SoW2526/"
+shp_file = "/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp"
+data_folder = "/data/scratch/chantelle.burton/SoW2526/Y2526FWI/"
+index_name = "canadian_fire_weather_index"
 start_time = time.time()
-index_name = 'canadian_fire_weather_index'
 
-print("\n=== Processing historicalExt ===")
-hist_files = sorted(glob.glob(data_folder + 'FWI_HadGEM3-A-N216_r*_historicalExt_20230601-20250201_global_day.nc'))
-print(f"Found {len(hist_files)} historicalExt files")
+if Country == "South Korea":
+    print("Running South Korea")
+    percentile = 95
+    shape_name = "South Korea"
 
-# Regex to extract member and realization from filename
-pattern = r'_r(\d+)i1p(\d+)_'
+elif Country == "Iberia":
+    print("Running Iberia")
+    percentile = 95
+    shape_name = "Northwest Iberia"
 
-# Step 1: Load all files and add coordinates BEFORE merging
-print("\n=== Loading all cubes ===")
-hist_cubes = iris.cube.CubeList()
+elif Country == "Scotland":
+    print("Running Scotland")
+    percentile = 95
+    shape_name = "Scottish Highlands"
 
-for hist_file in hist_files:
-    try:
-        # Extract member and realization from filename
-        match = re.search(pattern, hist_file)
-        if not match:
-            print(f"Warning: Could not extract member/realization from {hist_file}")
-            continue
-        
-        member = int(match.group(1))
-        realization = int(match.group(2))
-        
-        print(f"Loading Member: {member}, Realization: {realization})")
-        hist = iris.load_cube(hist_file, index_name)
-        
-        # Add member and realization as scalar coordinates BEFORE merging
-        hist.add_aux_coord(iris.coords.AuxCoord(member, long_name='ensemble_member', units='1'))
-        hist.add_aux_coord(iris.coords.AuxCoord(realization, long_name='realization', units='1'))
-        
-        hist_cubes.append(hist)
-        
-    except IOError as e:
-        print(f"Error loading {hist_file}: {e}")
+else:
+    raise ValueError(f"Unknown Country: {Country}")
 
-print(f"Loaded {len(hist_cubes)} cubes")    
+pattern = re.compile(r"_r(\d+)i1p(\d+)_")
+forcing_suffix = {"historicalExt": "EXT", "historicalNatExt": "NATEXT"}
 
-# Step 2: Merge all cubes along member/realization dimensions
-print("\n=== Merging cubes ===")
-iris.util.equalise_attributes(hist_cubes)
+def member_realization_key(path):
+    m = pattern.search(path)
+    if not m:
+        return (10**9, 10**9) # chuck unmatched files to the end
+    return (int(m.group(1)), int(m.group(2)))
 
-hist_merged = hist_cubes.merge_cube()
-#this is approx 350gb of data
-print(f"Merged cube shape: {hist_merged.shape}")
-print(hist_merged)
+for forcing in FORCINGS:
+    print(f"\n=== Processing {forcing} ===")
+    files = sorted(
+        glob.glob(f"{data_folder}FWI_HadGEM3-A-N216_r*_{forcing}_20230601-20250201_global_day.nc"),
+        key=member_realization_key
+    )
+    print(f"Found {len(files)} files")
 
-# Step 3: Apply operations to the merged cube (single operation on 525 ensemble members)
-print("\n=== Applying constraints and percentiles ===")
-hist_merged = contrain_to_sow_shapefile(hist_merged, shp_file, shape_name)
-hist_merged = ConstrainToYear(hist_merged, YEAR)
-hist_merged = CountryPercentile(hist_merged, percentile)
-hist_merged = TimePercentile(hist_merged, percentile)
+    cubes = iris.cube.CubeList()
+    for f in files:
+        try:
+            match = pattern.search(f)
+            if not match:
+                print(f"Skipping (no member/realization match): {f}")
+                continue
 
-print(f"Processed cube shape: {hist_merged.shape}")
-print(hist_merged)
+            member = int(match.group(1))
+            realization = int(match.group(2))
+            print(f"Loading member={member}, realization={realization}")
 
-# Step 4: Save and extract
-print("\n=== Saving merged cube ===")
-output_file = f'/data/scratch/bob.potts/sowf/test_output/{Country}_Uncorrected_hist_EXT{percentile}%.nc'
+            cube = iris.load_cube(f, index_name)
+            cube.add_aux_coord(iris.coords.AuxCoord(member, long_name="ensemble_member", units="1"))
+            cube.add_aux_coord(iris.coords.AuxCoord(realization, long_name="realization_number", units="1"))
+            cubes.append(cube)
 
+        except IOError as e:
+            print(f"Error loading {f}: {e}")
 
-print(f"Saved to: {output_file}")
+    print(f"Loaded {len(cubes)} cubes")
+
+    iris.util.equalise_attributes(cubes)
+    merged = cubes.merge_cube()
+    print(f"Merged shape: {merged.shape}")
+
+    merged = contrain_to_sow_shapefile(merged, shp_file, shape_name)
+    merged = ConstrainToYear(merged, YEAR)
+    merged = CountryPercentile(merged, percentile)
+    merged = TimePercentile(merged, percentile)
+
+    out = f"/data/scratch/bob.potts/sowf/test_output/{Country}_Uncorrected_hist_{forcing_suffix.get(forcing, forcing)}{percentile}%.nc"
+    iris.save(merged, out)
+    print(f"Saved: {out}")
+
+print(f"--- {np.round(time.time() - start_time, 2)} seconds ---")
