@@ -35,3 +35,12 @@ def TimePercentile(cube, percentile):
     cube = cube.collapsed(['time'], iris.analysis.PERCENTILE, percent=percentile)
     return cube 
 
+def ConstrainToYear(cube, target_year):
+    year_constraint = iris.Constraint(time=lambda cell: cell.point.year == target_year)
+    out = cube.extract(year_constraint)
+    if out is None:
+        t = cube.coord('time')
+        dts = t.units.num2date(t.points)
+        years_present = sorted({dt.year for dt in dts})
+        raise ValueError(f"No data for year {target_year}. Years present: {years_present[:5]} ... {years_present[-5:]}")
+    return out 

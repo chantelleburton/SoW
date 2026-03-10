@@ -13,6 +13,8 @@ import os
 import glob
 import iris.coord_categorisation as icc
 import re
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from utils.constrain_cubes_standard import *
 from utils.cubefuncs import *
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -22,6 +24,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 Country = 'Iberia'
 START_YEAR = 1960
 END_YEAR = 2013
+CSV_EXPORT = True #True for CSV, False for .dat
 # Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
 ############# User inputs end here #############
 
@@ -81,7 +84,7 @@ if not hist_files:
 
 # Load + concatenate
 cubes = iris.load(hist_files, 'canadian_fire_weather_index')
-print(cubes[0])
+
 for cube in cubes:
     for coord_name in ("year", "season_year"):
         if cube.coords(coord_name):
@@ -111,10 +114,27 @@ yr_country_p = yr_time_p.collapsed(['latitude', 'longitude'], iris.analysis.PERC
 HadGEM3_Arr = np.ravel(yr_country_p.data)
 
 # Save HadGEM3 text out to a file
-f = open(f'/data/scratch/bob.potts/sowf/test_output/HadGEM3_FWI_{START_YEAR}-{END_YEAR}_{Country}_{member}_{percentile}%.dat','w')
-np.savetxt(f, HadGEM3_Arr)
-f.close()
+output_file = f'/data/scratch/bob.potts/sowf/test_output/HadGEM3_FWI_{START_YEAR}-{END_YEAR}_{Country}_{member}_{percentile}%'
 
+if CSV_EXPORT:
+    # Get the years from the cube
+    years = yr_country_p.coord('year').points
+    
+    # Create YEAR-MONTH strings
+    year_month = [f'{int(y)}-{Month:02d}' for y in years]
+
+    # Save HadGEM3 out to a text file with YEAR-MONTH,VALUE format
+    with open(f'{output_file}.csv', 'w') as f:
+        f.write('Date,FWI\n')
+        for ym, value in zip(year_month, HadGEM3_Arr):
+            f.write(f'{ym},{value:.6f}\n')
+    print(f"Saved to: {output_file}.csv")
+
+else:
+    np.savetxt(f'{output_file}.dat', HadGEM3_Arr)
+    print(f"Saved to: {output_file}.dat")
+    
 print('Finished')
 print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
+print(f"Data shape: {HadGEM3_Arr.shape}")
 #single member takes approx 8 minutes.

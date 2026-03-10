@@ -1,7 +1,5 @@
 import iris
 import numpy as np
-from utils.constrain_cubes_standard import *
-from utils.cubefuncs import *
 import time
 import glob
 import iris.coord_categorisation as icc
@@ -9,19 +7,25 @@ import warnings
 import re
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
-# CONFIG
-country = 'Iberia'
-# Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from utils.constrain_cubes_standard import *
+from utils.cubefuncs import *
 
+############# User inputs here #############
+Country = 'Iberia'
 START_YEAR = 1960
 END_YEAR = 2013
-CSV_EXPORT = False #True for CSV, False for .dat
+CSV_EXPORT = True #True for CSV, False for .dat
+# Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
+############# User inputs end here #############
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 
 # Set up the 2025 files and months automatically
-if country == 'South Korea':
+if Country == 'South Korea':
     print('Running South Korea')
     Month = 3
     month = 'March'
@@ -29,7 +33,7 @@ if country == 'South Korea':
     shape_name = 'South Korea'
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-31_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
-elif country == 'Iberia':
+elif Country == 'Iberia':
     print('Running Iberia')
     Month = 8
     month = 'Aug'
@@ -37,7 +41,7 @@ elif country == 'Iberia':
     shape_name = 'Northwest Iberia'
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
-elif country == 'Scotland':
+elif Country == 'Scotland':
     print('Running Scotland')
     Month = 7
     month = 'July'
@@ -96,7 +100,7 @@ yr_country_p = yr_time_p.collapsed(['latitude', 'longitude'], iris.analysis.PERC
 ERA5_ImpactsToolBox_Arr = np.ravel(yr_country_p.data)
 
 # Save ERA5 out to a text file
-output_file = f'/data/scratch/bob.potts/sowf/test_output/ERA5_FWI_{START_YEAR}-{END_YEAR}_'+country+str(percentile)+'%'
+output_file = f'/data/scratch/bob.potts/sowf/test_output/ERA5_FWI_{START_YEAR}-{END_YEAR}_{Country}_{percentile}%'
 
 if CSV_EXPORT:
     # Get the years from the cube
@@ -111,15 +115,12 @@ if CSV_EXPORT:
         f.write('Date,FWI\n')
         for ym, value in zip(year_month, ERA5_ImpactsToolBox_Arr):
             f.write(f'{ym},{value:.6f}\n')
-
-    print('Finished')
-    print(f"Data shape: {ERA5_ImpactsToolBox_Arr.shape}")
-    print(f"Saved to: {output_file}")
-    print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
+    print(f"Saved to: {output_file}.csv")
 
 else:
     np.savetxt(f'{output_file}.dat', ERA5_ImpactsToolBox_Arr)
-    print('Finished')
-    print(f"Data shape: {ERA5_ImpactsToolBox_Arr.shape}")
-    print(f"Saved to: {output_file}+'.dat')")
-    print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
+    print(f"Saved to: {output_file}.dat")
+
+print('Finished')
+print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
+print(f"Data shape: {ERA5_ImpactsToolBox_Arr.shape}")
