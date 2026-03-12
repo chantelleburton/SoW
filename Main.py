@@ -27,8 +27,11 @@ from scipy.stats import genextreme as gev, kstest
 import pandas as pd
 import statsmodels.api as sm
 from pdb import set_trace
-from constrain_cubes_standard import *
-
+from utils.constrain_cubes_standard import *
+from utils.cubefuncs import *
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="iris")
+warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
 ############# User inputs here #############
 Country = 'Iberia'
@@ -135,7 +138,6 @@ def GetERA5(ERA5_2025,Country):
     return ERA5_2025
 
 
-'''
 
 ############## 1) Create .dat files and save out to save time in plotting #################
 
@@ -184,7 +186,7 @@ for histmember in np.arange(10,11): #TEST
 
     
     #### First do for hist array  ####
-    members = np.arange(1,106)
+    members = np.arange(1,2)
     histarray = []
     for member in members:
         print ('hist',member)
@@ -200,6 +202,7 @@ for histmember in np.arange(10,11): #TEST
                 hist = ConstrainToYear(hist) 
                 hist = CountryPercentile(hist, percentile)
                 hist = TimePercentile(hist, percentile)
+                iris.save(hist, '/data/scratch/bob.potts/sowf/test_output/'+'Interm_TEST'+Country+'_'+str(member)+'_hist'+str(percentile)+'%_LogTransform.nc')
                 hist = np.ravel(hist.data)
 
                 ####Log transform the data here#### 
@@ -210,8 +213,8 @@ for histmember in np.arange(10,11): #TEST
                
                 ####inverse Log (exponential) transform here####      
                 Endhist = np.log(np.exp(Endhist)+1)
- 
-                f = open(folder+'output/'+Country+'_'+str(member)+'_hist'+str(percentile)+'%_LogTransform.dat','a')
+                #/data/scratch/bob.potts/sowf/test_output/Iberia_Uncorrected_hist_EXT95%.nc
+                f = open('/data/scratch/bob.potts/sowf/test_output/'+Country+'_'+str(member)+'_hist'+str(percentile)+'%_LogTransform.dat','a')
                 np.savetxt(f,(Endhist),newline=',',fmt='%s')
                 f.write('\n')
                 f.close()
@@ -224,7 +227,7 @@ for histmember in np.arange(10,11): #TEST
     print(repr(histarray)) 
     exit()
 
-
+'''
 
     ##### Repeat for histnat array (can run this separately in parallel to save time) ####
     histnatarray = []
@@ -266,7 +269,7 @@ for histmember in np.arange(10,11): #TEST
     histnatarray = np.ravel(histnatarray)
 
 
-'''
+
 
 ############## 2) Create 3 subplots #################
 Countries = ('Iberia', 'Iberia', 'Iberia')
@@ -340,7 +343,6 @@ exit()
 
 
 
-'''
 PRINTED RESULTS
 
 
