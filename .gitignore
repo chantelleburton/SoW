@@ -7,3 +7,6 @@ __pycache__/constrain_cubes_standard.cpython-312.pyc
 *.err
 submit*.sh
 explore_DataPrep.ipynb # this is used for exploratory testing 
+/Shapefiles
+/__pycache__
+/spice_scripts/logs
