@@ -9,24 +9,10 @@
 
 import numpy as np
 import iris
-import datetime
-import matplotlib
-import iris.quickplot as qplt
 import matplotlib.pyplot as plt
-import iris.analysis
-import iris.plot as iplt
-import iris.coord_categorisation
-import os
-import cartopy.io.shapereader as shpreader
-import iris.analysis.stats
-import scipy.stats
-from scipy import stats
-import cf_units
 import seaborn as sns
-from scipy.stats import genextreme as gev, kstest
 import pandas as pd
 import statsmodels.api as sm
-from pdb import set_trace
 from utils.constrain_cubes_standard import *
 from utils.cubefuncs import *
 import warnings
@@ -34,7 +20,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
 ############# User inputs here #############
-Country = 'Iberia'
+Country = 'South Korea'
 # Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
 ############# User inputs end here #############
 
@@ -46,6 +32,7 @@ if Country == 'South Korea':
     Month = 3
     month = 'March'
     percentile = 95
+    shape_name = 'Southeast South Korea'
     daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-31_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
       
@@ -54,6 +41,7 @@ elif Country == 'Iberia':
     Month = 8
     month = 'Aug'
     percentile = 95
+    shape_name = 'Northwest Iberia'
     daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
@@ -61,6 +49,7 @@ elif Country == 'Scotland':
     print('Running Scotland')
     Month = 7
     month = 'July'
+    shape_name = 'Scottish Highlands'
     percentile = 95
     daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
@@ -107,7 +96,7 @@ def TimePercentile(cube, percentile):
     cube = cube.collapsed(['time'], iris.analysis.PERCENTILE, percent=percentile)
     return cube 
 
-def RiskRatio(Alldata,Natdata, Threshold):
+def RiskRatio(Alldata,Natdata):
     ALL = (np.count_nonzero(Alldata > ERA5_2025))
     NAT = (np.count_nonzero(Natdata > ERA5_2025))
     RR = ALL/NAT
@@ -131,7 +120,7 @@ def draw_bs_replicates(ALL, NAT, ERA5, func, size):
 
 def GetERA5(ERA5_2025,Country):
 #Get the ERA5 2025 data for the threshold line
-    ERA5_2025 = contrain_to_sow_shapefile(ERA5_2025, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', 'Northwest Iberia')
+    ERA5_2025 = contrain_to_sow_shapefile(ERA5_2025, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
     ERA5_2025 = CountryPercentile(ERA5_2025, percentile)
     ERA5_2025 = TimePercentile(ERA5_2025, percentile)
     ERA5_2025 = np.array(ERA5_2025.data)
@@ -142,6 +131,7 @@ def GetERA5(ERA5_2025,Country):
 ############## 1) Create .dat files and save out to save time in plotting #################
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
+baseline_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
 index_filestem1 = 'historicalExt'
 index_filestem2 = 'historicalNatExt'
 index_name = 'canadian_fire_weather_index'
@@ -153,8 +143,8 @@ BiasCorrDict = {}
 for histmember in np.arange(10,11): #TEST
     print(histmember)
     # Step 0; Load fwi data from CSV using pandas
-    df_obs = pd.read_csv(folder+'/output/ERA5_FWI_1960-2013_'+Country+str(percentile)+'%.dat')#This is the historical ERA5 array made in Historical_FWI.py/ Supplement.py
-    df_sim = pd.read_csv(folder+'output/HadGEM3_FWI_1960-2013_'+Country+'_'+str(histmember)+'_'+str(percentile)+'%.dat')#This is the historical HadGEM array made in Historical_FWI.py/ Supplement.py
+    df_obs = pd.read_csv(baseline_folder+'ERA5_FWI_1960-2013_'+Country+str(percentile)+'%.dat')#This is the historical ERA5 array made in Historical_FWI.py/ Supplement.py
+    df_sim = pd.read_csv(baseline_folder+'HadGEM3_FWI_1960-2013_'+Country+'_'+str(histmember)+'_'+str(percentile)+'%.dat')#This is the historical HadGEM array made in Historical_FWI.py/ Supplement.py
     df_obs[np.isnan(df_obs)] = 0.000000000001 
     df_sim[np.isnan(df_sim)] = 0.000000000001 
 
@@ -183,53 +173,53 @@ for histmember in np.arange(10,11): #TEST
 
     fwi0_sim, delta_sim, std_sim =  find_regression_parameters(fwi_sim)
     fwi0_obs, delta_obs, std_obs =  find_regression_parameters(fwi_obs)
+ 
 
-    
-    #### First do for hist array  ####
-    members = np.arange(1,2)
-    histarray = []
-    for member in members:
-        print ('hist',member)
-        for n in np.arange(1,6):
-            try:
-                if member < 10:
-                    hist = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(member)+'i1p'+str(n)+'_'+index_filestem1+'_20230601-20250201_global_day.nc', index_name)
-                elif member > 9 and member < 100:
-                    hist = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(member)+'i1p'+str(n)+'_'+index_filestem1+'_20230601-20250201_global_day.nc', index_name)
-                else:
-                    hist = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(member)+'i1p'+str(n)+'_'+index_filestem1+'_20230601-20250201_global_day.nc', index_name)           
-                hist = contrain_to_sow_shapefile(hist, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', 'Northwest Iberia')
-                hist = ConstrainToYear(hist) 
-                hist = CountryPercentile(hist, percentile)
-                hist = TimePercentile(hist, percentile)
-                iris.save(hist, '/data/scratch/bob.potts/sowf/test_output/'+'Interm_TEST'+Country+'_'+str(member)+'_hist'+str(percentile)+'%_LogTransform.nc')
-                hist = np.ravel(hist.data)
+    # # #### First do for hist array  ####
+    # members = np.arange(1,106) #105 members
+    # histarray = []
+    # for member in members:
+    #     print ('hist',member)
+    #     for n in np.arange(1,6): #5 realisations per member
+    #         try:
+    #             if member < 10:
+    #                 hist = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(member)+'i1p'+str(n)+'_'+index_filestem1+'_20230601-20250201_global_day.nc', index_name)
+    #             elif member > 9 and member < 100:
+    #                 hist = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(member)+'i1p'+str(n)+'_'+index_filestem1+'_20230601-20250201_global_day.nc', index_name)
+    #             else:
+    #                 hist = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(member)+'i1p'+str(n)+'_'+index_filestem1+'_20230601-20250201_global_day.nc', index_name)           
+    #             hist = contrain_to_sow_shapefile(hist, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
+    #             hist = ConstrainToYear(hist) 
+    #             hist = CountryPercentile(hist, percentile)
+    #             hist = TimePercentile(hist, percentile)
+    #             
+    #             #iris.save(hist, '/data/scratch/bob.potts/sowf/test_output/Historical_Ensembles/'+Country+'_'+str(member)+'_hist'+str(percentile)+'%_LogTransform.nc')
+    #             hist = np.ravel(hist.data)
 
-                ####Log transform the data here#### 
-                hist = np.log(np.exp(hist)-1)
+    #             ####Log transform the data here#### 
+    #             hist = np.log(np.exp(hist)-1)
 
-                # Step 2: Detrend the sim and scale to obs
-                Endhist = fwi0_obs + (hist - delta_sim * t - fwi0_sim)
+    #             # Step 2: Detrend the sim and scale to obs
+    #             Endhist = fwi0_obs + (hist - delta_sim * t - fwi0_sim)
                
-                ####inverse Log (exponential) transform here####      
-                Endhist = np.log(np.exp(Endhist)+1)
-                #/data/scratch/bob.potts/sowf/test_output/Iberia_Uncorrected_hist_EXT95%.nc
-                f = open('/data/scratch/bob.potts/sowf/test_output/'+Country+'_'+str(member)+'_hist'+str(percentile)+'%_LogTransform.dat','a')
-                np.savetxt(f,(Endhist),newline=',',fmt='%s')
-                f.write('\n')
-                f.close()
-                histarray.append(hist)
-            except IOError:
-                pass 
+    #             ####inverse Log (exponential) transform here####      
+    #             Endhist = np.log(np.exp(Endhist)+1)
+    #             #/data/scratch/bob.potts/sowf/test_output/Iberia_Uncorrected_hist_EXT95%.nc
+    #             f = open('/data/scratch/bob.potts/sowf/test_output/Original_Log_Transforms/'+Country+'_'+str(member)+'_hist'+str(percentile)+'percent_LogTransform.dat','a')
+    #             np.savetxt(f,(Endhist),newline=',',fmt='%s')
+    #             f.write('\n')
+    #             f.close()
+    #             histarray.append(hist)
+    #         except IOError:
+    #             pass 
      
-    histarray = np.array(histarray)
-    histarray = np.ravel(histarray)
-    print(repr(histarray)) 
-    exit()
+    # histarray = np.array(histarray)
+    # histarray = np.ravel(histarray)
+    # print(repr(histarray)) 
+    # exit()
 
-'''
 
-    ##### Repeat for histnat array (can run this separately in parallel to save time) ####
+    # ##### Repeat for histnat array (can run this separately in parallel to save time) ####
     histnatarray = []
     members = np.arange(1,106)
     for member in members:
@@ -242,10 +232,10 @@ for histmember in np.arange(10,11): #TEST
                     histnat = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(member)+'i1p'+str(n)+'_'+index_filestem2+'_20230601-20250201_global_day.nc', index_name)
                 else:
                     histnat = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(member)+'i1p'+str(n)+'_'+index_filestem2+'_20230601-20250201_global_day.nc', index_name)           
-                histnat = contrain_to_sow_shapefile(histnat, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', 'Northwest Iberia')
+                histnat = contrain_to_sow_shapefile(histnat, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
                 histnat = ConstrainToYear(histnat)  
                 histnat = CountryPercentile(histnat, percentile)
-                histnat = TimePercentile(histnat, percentile)
+                histnat = TimePercentile(histnat, percentile) 
                 histnat = np.ravel(histnat.data)
 
                 ####Log transform the data here#### 
@@ -257,8 +247,8 @@ for histmember in np.arange(10,11): #TEST
                 ####inverse Log (exponential) transform here####      
                 Endhist = np.log(np.exp(Endhist)+1)
 
-                f = open(folder+'output/'+Country+'_'+str(member)+'_histnat'+str(percentile)+'%_LogTransform.dat','a')
-                np.savetxt(f,(Endhist),newline=',',fmt='  %s')
+                f = open('/data/scratch/bob.potts/sowf/test_output/Original_Log_Transforms/'+Country+'_'+str(member)+'_histnat'+str(percentile)+'percent_LogTransform.dat','a')
+                np.savetxt(f,(Endhist),newline=',',fmt='%s')
                 f.write('\n')
                 f.close()
                 histnatarray.append(histnat)
@@ -269,95 +259,91 @@ for histmember in np.arange(10,11): #TEST
     histnatarray = np.ravel(histnatarray)
 
 
-
-
-############## 2) Create 3 subplots #################
-Countries = ('Iberia', 'Iberia', 'Iberia')
-#Countries = ('Iberia', 'South Korea', 'Scotland')
-n = 1
-ERA5_2025 = GetERA5(ERA5_2025,Country)
-for Country in Countries:
-    print(Country)
-    #month,percentile,daterange,ERA5_2025 = Country
+# # ############## 2) Create 3 subplots #################
+# Countries = ('Iberia', 'Iberia', 'Iberia')
+# #Countries = ('Iberia', 'South Korea', 'Scotland')
+# n = 1
+# ERA5_2025 = GetERA5(ERA5_2025,Country)
+# for Country in Countries:
+#     print(Country)
+#     #month,percentile,daterange,ERA5_2025 = Country
     
 
-    #Read in data files for each historical member (each one has 525 values for the 2023 data), for ALL and NAT
-    AllDict = {}
-    NatDict = {}
-    AllDict[Country] = []  
-    NatDict[Country] = []  
+#     #Read in data files for each historical member (each one has 525 values for the 2023 data), for ALL and NAT
+#     AllDict = {}
+#     NatDict = {}
+#     AllDict[Country] = []  
+#     NatDict[Country] = []  
 
-    members = np.arange(1,106)
-    for member in members:
-        print(member)                       
-        all_file = folder+'output/'+Country+'_'+str(member)+'_hist'+str(percentile)+'%_LogTransform.dat'
-        nat_file = folder+'output/'+Country+'_'+str(member)+'_histnat'+str(percentile)+'%_LogTransform.dat'
-        with open(all_file) as f:
-             all_lines=f.readlines()
+#     members = np.arange(1,106)
+#     for member in members:
+#         print(member)                       
+#         all_file = folder+'output/'+Country+'_'+str(member)+'_hist'+str(percentile)+'%_LogTransform.dat'
+#         nat_file = folder+'output/'+Country+'_'+str(member)+'_histnat'+str(percentile)+'%_LogTransform.dat'
+#         with open(all_file) as f:
+#              all_lines=f.readlines()
 
-        for line in all_lines:
-            numbers = line.strip().split(',')   # split by comma
-            AllDict[Country] += [float(num) for num in numbers if num]
+#         for line in all_lines:
+#             numbers = line.strip().split(',')   # split by comma
+#             AllDict[Country] += [float(num) for num in numbers if num]
 
-        with open(nat_file) as f:
-            nat_lines = f.readlines()
+#         with open(nat_file) as f:
+#             nat_lines = f.readlines()
 
-        for line in nat_lines:
-            numbers = line.strip().split(',')   # split by comma
-            NatDict[Country] += [float(num) for num in numbers if num]
+#         for line in nat_lines:
+#             numbers = line.strip().split(',')   # split by comma
+#             NatDict[Country] += [float(num) for num in numbers if num]
 
-    #Make sure they are arrays, so we can plot them
-    NatDict[Country] = np.array(NatDict[Country])
-    AllDict[Country] = np.array(AllDict[Country])
-    print(len(NatDict[Country]))
+#     #Make sure they are arrays, so we can plot them
+#     NatDict[Country] = np.array(NatDict[Country])
+#     AllDict[Country] = np.array(AllDict[Country])
+#     print(len(NatDict[Country]))
 
-    ### Bootstrap and print the Risk Ratio Results when cycling through each country ###
-    RR = draw_bs_replicates(AllDict[Country], NatDict[Country], ERA5_2025, RiskRatio, 10000)
-    print(len(RR))
-    print(np.percentile(RR, 5))
-    print(np.percentile(RR, 95))
+#     ### Bootstrap and print the Risk Ratio Results when cycling through each country ###
+#     RR = draw_bs_replicates(AllDict[Country], NatDict[Country], ERA5_2025, RiskRatio, 10000)
+#     print(len(RR))
+#     print(np.percentile(RR, 5))
+#     print(np.percentile(RR, 95))
 
-    #Make the plot
-    plt.subplot(1,3,n)
-    sns.distplot(AllDict[Country], hist=True, kde_kws={"clip": (0, None)}, 
-             color = 'orange', fit_kws={"linewidth":2.5,"color":"orange"}, label='ALL')
-    sns.distplot(NatDict[Country], hist=True, kde_kws={"clip": (0, None)},
-             color = 'blue', fit_kws={"linewidth":2.5,"color":"blue"}, label='NAT')
-    plt.axvline(x=ERA5_2025, color='black', linewidth=2.5, label='ERA5')
-    plt.ylabel(' ')
-    #if Country == 'SAM':
-    #    Country = 'Western Amazonia'
-    plt.title(Country+' FWI '+month+' 2025')
-    if n == 1:
-        plt.ylabel('Density')
-    if n == 2:
-        plt.xlabel('Fire Weather Index')
-    if n == 3:
-        plt.legend()
-    n = n+1
+#     #Make the plot
+#     plt.subplot(1,3,n)
+#     sns.distplot(AllDict[Country], hist=True, kde_kws={"clip": (0, None)}, 
+#              color = 'orange', fit_kws={"linewidth":2.5,"color":"orange"}, label='ALL')
+#     sns.distplot(NatDict[Country], hist=True, kde_kws={"clip": (0, None)},
+#              color = 'blue', fit_kws={"linewidth":2.5,"color":"blue"}, label='NAT')
+#     plt.axvline(x=ERA5_2025, color='black', linewidth=2.5, label='ERA5')
+#     plt.ylabel(' ')
+#     #if Country == 'SAM':
+#     #    Country = 'Western Amazonia'
+#     plt.title(Country+' FWI '+month+' 2025')
+#     if n == 1:
+#         plt.ylabel('Density')
+#     if n == 2:
+#         plt.xlabel('Fire Weather Index')
+#     if n == 3:
+#         plt.legend()
+#     n = n+1
 
-plt.show()
+# plt.show()
 
-exit()
-
-
+# exit()
 
 
-PRINTED RESULTS
 
 
-- Transformed & Corrected Canada  
-2.8517158325517946
-3.59375
+# #PRINTED RESULTS
 
 
-- Transformed and corrected Greece 
-1.8518518518518519
-4.130434782608695
+# - Transformed & Corrected Canada  
+# 2.8517158325517946
+# 3.59375
 
-- Transformed & corrected SAM
-20.03417354773287
-28.542385822359204
 
-'''
+# - Transformed and corrected Greece 
+# 1.8518518518518519
+# 4.130434782608695
+
+# - Transformed & corrected SAM
+# 20.03417354773287
+# 28.542385822359204
 
