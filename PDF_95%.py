@@ -22,15 +22,17 @@ from scipy import stats
 import cf_units
 import seaborn as sns
 from scipy.stats import genextreme as gev, kstest
-from constrain_cubes_standard import *
+from utils.constrain_cubes_standard import *
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module='iris')
 
 ############# User inputs here #############
-Country = 'Iberia'
+Country = 'Scotland'
 # Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
 ############# User inputs end here #############
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
-
+output_folder = '/data/scratch/bob.potts/sowf/test_output/Historical_Ensembles/'
 #Set up the 2025 files and months automatically
 if Country == 'South Korea':
     print('Running South Korea')
@@ -130,56 +132,64 @@ for member in members:
             else:
                 hist = iris.load_cube(folder+'FWI_HadGEM3-A-N216_r'+str(member)+'i1p'+str(n)+'_'+index_filestem1+'_20230601-20250201_global_day.nc', index_name)           
             hist = contrain_to_sow_shapefile(hist, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', 'Northwest Iberia')
+            
             hist = ConstrainToYear(hist) 
-            iris.save(hist,'/data/scratch/chantelle.burton/SoW2526/output/HadGEMtest.nc')
+            
+            #iris.save(hist,'/data/scratch/chantelle.burton/SoW2526/output/HadGEMtest.nc')
             hist = CountryPercentile(hist, percentile)
+            
             hist = TimePercentile(hist, percentile)
+            
             hist = np.ravel(hist.data)
-            f = open('/data/scratch/chantelle.burton/SoW2526/output/'+Country+'_UNCORRECTED_hist'+str(percentile)+'%.dat','a')
+            
+            
+            f = open(output_folder+'ORIGINAL_PDF95'+Country+'_UNCORRECTED_hist'+str(percentile)+'%.dat','a')
             np.savetxt(f,(hist),newline=',',fmt='%s')
             f.write('\n')
             f.close()
             histarray.append(hist)
         except IOError:
              pass 
-     
+
 histarray = np.array(histarray)
+
 histarray = np.ravel(histarray)
+
 print(repr(histarray)) 
 exit()
 
 
 # can do this in paralell to save time
-histnatarray = []
-members = np.arange(1,106)
-for member in members:
-    print ('histnat',member)
-    for n in np.arange(1,6):
-        try:
-            if member < 10:
-                histnat = iris.load_cube(folder+'FWI_HadGEM3-A-N216_r00'+str(member)+'i1p'+str(n)+'_'+index_filestem2+'_20230601-20250201_global_day.nc', index_name)
-            elif member > 9 and member < 100:
-                histnat = iris.load_cube(folder+'FWI_HadGEM3-A-N216_r0'+str(member)+'i1p'+str(n)+'_'+index_filestem2+'_20230601-20250201_global_day.nc', index_name)
-            else:
-                histnat = iris.load_cube(folder+'FWI_HadGEM3-A-N216_r'+str(member)+'i1p'+str(n)+'_'+index_filestem2+'_20230601-20250201_global_day.nc', index_name)           
-            histnat = contrain_to_sow_shapefile(histnat, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', 'Northwest Iberia')
-            histnat = ConstrainToYear(histnat)  
-            histnat = CountryPercentile(histnat, percentile)
-            histnat = TimePercentile(histnat, percentile)
-            histnat = np.ravel(histnat.data)
-            f = open('/data/scratch/chantelle.burton/SoW2526/output/'+Country+'_UNCORRECTED_histnat'+str(percentile)+'%.dat','a')
-            np.savetxt(f,(histnat),newline=',',fmt='  %s')
-            f.write('\n')
-            f.close()
-            histnatarray.append(histnat)
-        except IOError:
-            pass 
-        
-histnatarray = np.array(histnatarray)
-histnatarray = np.ravel(histnatarray)
-print(repr(histnatarray))
+# histnatarray = []
+# members = np.arange(1,106)
+# for member in members:
+#     print ('histnat',member)
+#     for n in np.arange(1,6):
+#         try:
+#             if member < 10:
+#                 histnat = iris.load_cube(folder+'FWI_HadGEM3-A-N216_r00'+str(member)+'i1p'+str(n)+'_'+index_filestem2+'_20230601-20250201_global_day.nc', index_name)
+#             elif member > 9 and member < 100:
+#                 histnat = iris.load_cube(folder+'FWI_HadGEM3-A-N216_r0'+str(member)+'i1p'+str(n)+'_'+index_filestem2+'_20230601-20250201_global_day.nc', index_name)
+#             else:
+#                 histnat = iris.load_cube(folder+'FWI_HadGEM3-A-N216_r'+str(member)+'i1p'+str(n)+'_'+index_filestem2+'_20230601-20250201_global_day.nc', index_name)           
+#             histnat = contrain_to_sow_shapefile(histnat, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', 'Northwest Iberia')
+#             histnat = ConstrainToYear(histnat)
+#             histnat = CountryPercentile(histnat, percentile)
+#             histnat = TimePercentile(histnat, percentile)
+#             histnat = np.ravel(histnat.data)
+#             f = open(output_folder+'ORIGINAL_PDF95'+Country+'_UNCORRECTED_histnat'+str(percentile)+'%.dat','a')
+#             np.savetxt(f,(histnat),newline=',',fmt='  %s')
+#             f.write('\n')
+#             f.close()
+#             histnatarray.append(histnat)
+#         except IOError:
+#             pass 
 
-exit()
+# histnatarray = np.array(histnatarray)
+# histnatarray = np.ravel(histnatarray)
+# print(repr(histnatarray))
+
+# exit()
 
 
 

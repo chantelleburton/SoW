@@ -1,0 +1,239 @@
+"""
+Explore Risk Ratios for State of Fires 2025-26 Attribution Study.
+
+This script calculates and visualises Risk Ratios comparing ALL (anthropogenic)
+and NAT (natural-only) climate scenarios for multiple regions.
+"""
+
+import numpy as np
+import iris
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+import sys
+
+sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
+
+from utils.cubefuncs import *
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+
+############# Configuration #############
+
+FOLDER = '/data/scratch/chantelle.burton/SoW2526/'
+LOG_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Log_Transforms/'
+SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
+PLOT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Plots'
+BOOTSTRAP_SIZE = 10000
+N_MEMBERS = 105
+N_BASELINES = 15
+
+REGION_CONFIGS = {
+    'Iberia': {
+        'Month': 8,
+        'month_name': 'Aug',
+        'event_year':2025,
+        'percentile': 95,
+        'shape_name': 'Northwest Iberia',
+        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+    },
+    'Korea': {
+        'Month': 3,
+        'month_name': 'March',
+        'event_year':2025,
+        'percentile': 95,
+        'shape_name': 'Southeast South Korea',
+        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+    },
+    'Scotland': {
+        'Month': 7,
+        'month_name': 'July',
+        'event_year':2026,
+        'percentile': 95,
+        'shape_name': 'Scottish Highlands',
+        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+    },
+    'Chile': {
+        'Month': (1, 2),
+        'month_name': 'January-February',
+        'event_year':2026,
+        'percentile': 95,
+        'shape_name': 'Chilean Temperate Forests and Matorral',
+        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-11-01-2026-02-28_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+            },
+    'Canada': {
+        'Month': (7, 8),
+        'month_name': 'July-August',
+        'percentile': 95,
+        'event_year':2025,
+        'shape_name': 'Midwestern Canadian Shield forests',
+        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+    }
+ }
+
+############# Helper Functions #############
+
+def load_ensemble_data(country, percentile, n_baselines, n_members, log_folder):
+    """
+    Load ALL and NAT ensemble data from .dat files for all baselines.
+
+    Parameters
+    ----------
+    country : str
+        Country/region name
+    percentile : int
+        Percentile used in filenames
+    n_baselines : int
+        Number of baseline runs
+    n_members : int
+        Number of ensemble members
+    log_folder : str
+        Path to folder containing .dat files
+
+    Returns
+    -------
+    tuple
+        (ALL_data, NAT_data) as numpy arrays
+    """
+    all_data = []
+    nat_data = []
+
+    for baseline in range(1, n_baselines + 1):
+        for member in range(1, n_members + 1):
+            all_file = f"{log_folder}{country}_baseline{baseline}_ens{member}_hist{percentile}percent_LogTransform.dat"
+            nat_file = f"{log_folder}{country}_baseline{baseline}_ens{member}_histnat{percentile}percent_LogTransform.dat"
+
+            try:
+                with open(all_file) as f:
+                    for line in f:
+                        numbers = line.strip().split(',')
+                        all_data.extend([float(num) for num in numbers if num])
+
+                with open(nat_file) as f:
+                    for line in f:
+                        numbers = line.strip().split(',')
+                        nat_data.extend([float(num) for num in numbers if num])
+            except FileNotFoundError:
+                print(f"Warning: Missing files for baseline {baseline}, member {member}")
+                continue
+
+    return np.array(all_data), np.array(nat_data)
+
+
+def calculate_risk_ratio_with_ci(all_data, nat_data, threshold, bootstrap_size=10000):
+    """
+    Calculate Risk Ratio with confidence intervals via bootstrapping.
+    
+    Parameters
+    ----------
+    all_data : np.ndarray
+        ALL forcing scenario data
+    nat_data : np.ndarray
+        NAT forcing scenario data
+    threshold : float
+        Threshold for exceedance counting
+    bootstrap_size : int
+        Number of bootstrap samples
+    
+    Returns
+    -------
+    dict
+        Dictionary with 'median', 'ci_5', 'ci_95' keys
+    """
+    rr_replicates = draw_bs_replicates(
+        all_data, nat_data, threshold, RiskRatio, bootstrap_size
+    )
+    
+    return {
+        'median': np.median(rr_replicates),
+        'ci_5': np.percentile(rr_replicates, 5),
+        'ci_95': np.percentile(rr_replicates, 95),
+        'replicates': rr_replicates
+    }
+
+
+############# Main Analysis #############
+
+def main():
+    """Run the Risk Ratio analysis for all configured regions."""
+    
+    n_regions = len(REGION_CONFIGS)
+    fig, axes = plt.subplots(1, n_regions, figsize=(5 * n_regions, 4))
+    
+    if n_regions == 1:
+        axes = [axes]
+    
+    results = {}
+    
+    for idx, (country, config) in enumerate(REGION_CONFIGS.items()):
+        print(f"\n{'='*50}")
+        print(f"Processing {country}")
+        print('='*50)
+        
+        # Load ERA5 threshold
+        print("Loading ERA5 threshold...")
+        threshold = GetERA5Threshold(
+            config['era5_file'], SHP_FILE, config['shape_name'], config['Month'], config['percentile']
+        )
+        print(f"ERA5 threshold: {threshold:.2f}")
+        print(config['era5_file'])
+        
+        # Load ensemble data
+        print("Loading ensemble data...")
+        all_data, nat_data = load_ensemble_data(
+            country, config['percentile'], N_BASELINES, N_MEMBERS, LOG_FOLDER
+        )
+        print(f"Number of ALL samples: {len(all_data)}, Number of NAT samples: {len(nat_data)}")
+        
+        print(f"Loaded {len(all_data)} ALL values, {len(nat_data)} NAT values")
+        
+        # Calculate Risk Ratio with bootstrapped confidence intervals
+        print("Calculating Risk Ratio...")
+        rr_results = calculate_risk_ratio_with_ci(
+            all_data, nat_data, threshold, BOOTSTRAP_SIZE
+        )
+        
+        results[country] = {
+            'threshold': threshold,
+            'rr': rr_results,
+            'all_data': all_data,
+            'nat_data': nat_data
+        }
+        
+        print(f"Risk Ratio: {rr_results['median']:.2f} "
+              f"[{rr_results['ci_5']:.2f} - {rr_results['ci_95']:.2f}]")
+        print(rr_results['replicates'])
+        # Plot
+        ax = axes[idx]
+        sns.histplot(all_data, kde=True, color='orange', label='ALL', 
+                     alpha=0.5, ax=ax, stat='density')
+        sns.histplot(nat_data, kde=True, color='blue', label='NAT', 
+                     alpha=0.5, ax=ax, stat='density')
+        ax.axvline(x=threshold, color='black', linewidth=2.5, label='ERA5 2025')
+        
+        ax.set_title(f"{country} FWI {config['month_name']} ")
+        ax.set_xlabel('Fire Weather Index')
+        
+        if idx == 0:
+            ax.set_ylabel('Density')
+        if idx == n_regions - 1:
+            ax.legend()
+    
+    plt.tight_layout()
+    plt.savefig(f'{PLOT_FOLDER}/{country}_Risk_Ratio_PDFs.png', dpi=150, bbox_inches='tight')
+    plt.show()
+    
+    # Print summary
+    print("\n" + "="*60)
+    print("SUMMARY OF RESULTS")
+    print("="*60)
+    for country, res in results.items():
+        rr = res['rr']
+        print(f"{country}: RR = {rr['median']:.2f} [{rr['ci_5']:.2f} - {rr['ci_95']:.2f}]")
+    
+    return results
+
+
+if __name__ == "__main__":
+    results = main()

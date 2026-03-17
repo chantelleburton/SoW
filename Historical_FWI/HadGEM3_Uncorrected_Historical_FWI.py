@@ -13,13 +13,14 @@ warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
 ############# User inputs here #############
-Country = "South Korea"  # Options: 'South Korea', 'Iberia', 'Scotland'
+Country = "Scotland"  # Options: 'South Korea', 'Iberia', 'Scotland'
 YEAR = 2024
 FORCINGS = ["historicalExt", "historicalNatExt"]  # set to one or both
 # Options: 'South Korea', 'Iberia', 'Scotland'
 ############# User inputs end here #############
 
 folder = "/data/scratch/chantelle.burton/SoW2526/"
+output_folder = "/data/scratch/bob.potts/sowf/test_output/Historical_Ensembles/"
 shp_file = "/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp"
 data_folder = "/data/scratch/chantelle.burton/SoW2526/Y2526FWI/"
 index_name = "canadian_fire_weather_index"
@@ -44,7 +45,7 @@ else:
     raise ValueError(f"Unknown Country: {Country}")
 
 pattern = re.compile(r"_r(\d+)i1p(\d+)_")
-forcing_suffix = {"historicalExt": "EXT", "historicalNatExt": "NATEXT"}
+
 
 def member_realization_key(path):
     m = pattern.search(path)
@@ -85,14 +86,20 @@ for forcing in FORCINGS:
     iris.util.equalise_attributes(cubes)
     merged = cubes.merge_cube()
     print(f"Merged shape: {merged.shape}")
-    print(shape_name)
     merged = contrain_to_sow_shapefile(merged, shp_file, shape_name)
     merged = ConstrainToYear(merged, YEAR)
     merged = CountryPercentile(merged, percentile)
     merged = TimePercentile(merged, percentile)
 
-    out = f"/data/scratch/bob.potts/sowf/test_output/Alt_{Country}_Uncorrected_hist_{forcing_suffix.get(forcing, forcing)}{percentile}%.nc"
-    iris.save(merged, out)
+    if forcing == "historicalExt":
+        out = output_folder+f"{Country}_Uncorrected_hist_{percentile}_percent"
+    elif forcing == "historicalNatExt":
+        out = output_folder+f"{Country}_Uncorrected_histnat_{percentile}_percent"
+    else:
+        out = output_folder+f"{Country}_Uncorrected_{forcing}_{percentile}_percent"
+    #iris.save(merged, out+'.nc')
+    np.savetxt(out+'.dat', merged.data.ravel(), fmt='%s', delimiter=',')
+
     print(f"Saved: {out}")
 
 print(f"--- {np.round(time.time() - start_time, 2)} seconds ---")

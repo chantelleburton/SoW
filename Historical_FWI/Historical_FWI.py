@@ -22,18 +22,21 @@ import scipy.stats
 from scipy import stats
 import cf_units
 import seaborn as sns
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from contrain_cubes_standard import *
-
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 
 ############# User inputs here #############
-Country = 'Scotland'
+Country = 'Iberia'
 # Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
 ############# User inputs end here #############
 
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
-
+output_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
 #Set up the 2025 files and months automatically
 if Country == 'South Korea':
     print('Running South Korea')
@@ -107,7 +110,7 @@ def TimePercentile(cube, percentile):
 
 
 
-
+'''
 #1)  Get the historical FWI arrays from ERA5 and from HadGEM3 first, and save out to save time and memory (only need to do this once)
 
 # ERA5 from toolbox - create historical array of country percentile, month percentile FWI 
@@ -124,52 +127,52 @@ for year in np.arange(1960, 2013):
     print(ERA5_ImpactsToolBox)
 
 #Save ERA5 out to a text file
-f = open(folder+'/output/ERA5_FWI_1960-2013_'+Country+str(percentile)+'%.dat','a')
+f = open(output_folder+'ORIGINAL_ERA5_FWI_1960-2013_'+Country+str(percentile)+'%.dat','a')
 np.savetxt(f,(ERA5_ImpactsToolBox_Arr))
 f.close()    
 print('finished')
 exit()
-
+'''
 # HadGEM3
 #for member in np.arange(1,16):
 # '''
-# for member in np.arange(10,11): #TEST
-#     HadGEM3_Arr = []
-#     for year in np.arange(1960, 2014):
-#         print('HadGEM',member,year)
-#         HadGEM3 = iris.load_cube(folder+'/historicalFWI/HadGEM/FWI_HadGEM3-A-N216_r1i1p'+str(member)+'_historical_gwl'+str(year)+'0'+str(Month)+'01*.nc', 'canadian_fire_weather_index')
-#         #HadGEM3 = iris.load_cube(folder+'/historicalFWI/HadGEM/FWI_HadGEM3-A-N216_r1i1p10_historical_gwl'+str(year)+'0'+str(Month)+'01*.nc', 'canadian_fire_weather_index')#TEST
-#         if HadGEM3 == None:
-#             pass
-#         else:
-#            daterange = iris.Constraint(time=lambda cell: cell.point.year == year)
-#         if HadGEM3 == None:
-#             pass
-#         else:
-#             HadGEM3 = HadGEM3.extract(daterange)
-#         if HadGEM3 == None:
-#             pass
-#         else:            
-#             HadGEM3 = HadGEM3.extract(daterange)
-#         if HadGEM3 == None:
-#             pass
-#         else:
-#             print('Selected times :\n' + str(HadGEM3.coord('time')))
-#             HadGEM3 = TimePercentile(HadGEM3, percentile)
-#             HadGEM3 = contrain_to_sow_shapefile(HadGEM3, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp','Northwest Iberia')
-#             #HadGEM3 = CountryConstrain(HadGEM3, Country)
-#             HadGEM3 = CountryPercentile(HadGEM3, percentile)
-#             HadGEM3 = np.ravel(HadGEM3.data)
-#             HadGEM3_Arr.append(HadGEM3)
+for member in np.arange(10,11): #TEST
+    HadGEM3_Arr = []
+    for year in np.arange(1960, 2014):
+        print('HadGEM',member,year)
+        HadGEM3 = iris.load_cube(folder+'/historicalFWI/HadGEM/FWI_HadGEM3-A-N216_r1i1p'+str(member)+'_historical_gwl'+str(year)+'0'+str(Month)+'01*.nc', 'canadian_fire_weather_index')
+        #HadGEM3 = iris.load_cube(folder+'/historicalFWI/HadGEM/FWI_HadGEM3-A-N216_r1i1p10_historical_gwl'+str(year)+'0'+str(Month)+'01*.nc', 'canadian_fire_weather_index')#TEST
+        if HadGEM3 == None:
+            pass
+        else:
+           daterange = iris.Constraint(time=lambda cell: cell.point.year == year)
+        if HadGEM3 == None:
+            pass
+        else:
+            HadGEM3 = HadGEM3.extract(daterange)
+        if HadGEM3 == None:
+            pass
+        else:            
+            HadGEM3 = HadGEM3.extract(daterange)
+        if HadGEM3 == None:
+            pass
+        else:
+            print('Selected times :\n' + str(HadGEM3.coord('time')))
+            HadGEM3 = TimePercentile(HadGEM3, percentile)
+            HadGEM3 = contrain_to_sow_shapefile(HadGEM3, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp','Northwest Iberia')
+            #HadGEM3 = CountryConstrain(HadGEM3, Country)
+            HadGEM3 = CountryPercentile(HadGEM3, percentile)
+            HadGEM3 = np.ravel(HadGEM3.data)
+            HadGEM3_Arr.append(HadGEM3)
 
 
-#     #Save HaGEM3 text out to a file
-#     print(HadGEM3_Arr)
-#     f = open(folder+'output/HadGEM3_FWI_1960-2013_'+Country+'_'+str(member)+'_'+str(percentile)+'%.dat','a')
-#     np.savetxt(f,(HadGEM3_Arr))
-#     f.close()  
-# print('finished')
-# exit()
+    #Save HaGEM3 text out to a file
+    print(HadGEM3_Arr)
+    f = open(output_folder+'ORIGINAL_HadGEM3_FWI_1960-2013_'+Country+'_'+str(member)+'_'+str(percentile)+'%.dat','a')
+    np.savetxt(f,(HadGEM3_Arr))
+    f.close()  
+print('finished')
+exit()
 '''
 print('starting')
 
@@ -222,15 +225,3 @@ plt.show()
 exit()
 
 '''
-
-
-
-
-
-
-
-
-
-
-
-
