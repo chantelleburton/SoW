@@ -3,7 +3,7 @@
 
 [task parameters]
     
-    member = 10,11
+    member = 1..15
 
 [scheduling]
 
@@ -17,14 +17,14 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
-        python hadgem_historical_fwi.py
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Historical_FWI/
+        python HadGEM3_Historical_FWI.py
         """
 
         platform = spice
 
         [[[directives]]]
             --mem = 60G
-            --time = 60
+            --time = 120
             --cpus-per-task = 1
             --ntasks = 1
