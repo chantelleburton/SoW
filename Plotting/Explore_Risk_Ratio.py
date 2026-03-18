@@ -8,9 +8,12 @@ and NAT (natural-only) climate scenarios for multiple regions.
 import numpy as np
 import iris
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.rcParams['font.family'] = 'Work Sans'
 import seaborn as sns
 import warnings
 import sys
+import pandas as pd
 
 sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
 
@@ -25,6 +28,7 @@ FOLDER = '/data/scratch/chantelle.burton/SoW2526/'
 LOG_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Log_Transforms/'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 PLOT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Plots'
+EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Exports'
 BOOTSTRAP_SIZE = 10000
 N_MEMBERS = 105
 N_BASELINES = 15
@@ -204,6 +208,8 @@ def main():
         print(f"Risk Ratio: {rr_results['median']:.2f} "
               f"[{rr_results['ci_5']:.2f} - {rr_results['ci_95']:.2f}]")
         print(rr_results['replicates'])
+        pd.Series(rr_results['replicates']).to_csv(f'{EXPORT_FOLDER}/{country}_Risk_Ratio_Bootstrap_Replicates.csv', index=False)
+
         # Plot
         ax = axes[idx]
         sns.histplot(all_data, kde=True, color='orange', label='ALL', 
