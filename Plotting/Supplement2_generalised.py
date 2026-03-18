@@ -399,8 +399,6 @@ def main():
             create_supplement2_plot(country, config)
         except Exception as e:
             print(f"Error processing {country}: {e}")
-            import traceback
-            traceback.print_exc()
             continue
 
 
