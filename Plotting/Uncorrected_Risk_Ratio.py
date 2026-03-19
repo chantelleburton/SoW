@@ -76,6 +76,15 @@ REGION_CONFIGS = {
     }
  }
 
+DISPLAY_NAMES = {
+    'Northwest Iberia': 'NW Iberia',
+    'Southeast South Korea': 'SE S. Korea',
+    'Scottish Highlands': 'Scottish Highlands',
+    'Chilean Temperate Forests and Matorral': 'Chile Forests & Matorral',
+    'Midwestern Canadian Shield forests': 'Canadian Shield Forests'
+}
+
+
 ############# Helper Functions #############
 
 def load_uncorrected_ensemble_data(country, percentile, uncorrected_folder):
@@ -220,13 +229,16 @@ def main():
         
         # Plot
         ax = axes[idx]
-        sns.histplot(all_data, kde=True, color='orange', label='ALL', 
-                     alpha=0.5, ax=ax, stat='density')
-        sns.histplot(nat_data, kde=True, color='blue', label='NAT', 
-                     alpha=0.5, ax=ax, stat='density')
-        ax.axvline(x=threshold, color='black', linewidth=2.5, label='ERA5 2025')
-        
-        ax.set_title(f"{country} FWI {config['month_name']} (Uncorrected)")
+        sns.histplot(all_data, kde=True, color='#C7403D', label='Factual', 
+                    alpha=0.5, ax=ax, stat='density')
+        sns.histplot(nat_data, kde=True, color='#008787', label='Counterfactual', 
+                    alpha=0.5, ax=ax, stat='density')
+        ax.axvline(x=threshold, color='black', linewidth=2.5, label=f'ERA5 {config["month_name"]} {config["event_year"]}')
+
+        # Use shorter display name for plotting
+        display_name = DISPLAY_NAMES.get(config['shape_name'], config['shape_name'])
+        title = f"{display_name}\nFWI {config['month_name']} (Uncorrected)"
+        ax.set_title(title)
         ax.set_xlabel('Fire Weather Index')
         
         if idx == 0:

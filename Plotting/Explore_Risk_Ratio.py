@@ -76,6 +76,14 @@ REGION_CONFIGS = {
     }
  }
 
+DISPLAY_NAMES = {
+    'Northwest Iberia': 'NW Iberia',
+    'Southeast South Korea': 'SE S. Korea',
+    'Scottish Highlands': 'Scottish Highlands',
+    'Chilean Temperate Forests and Matorral': 'Chile Forests & Matorral',
+    'Midwestern Canadian Shield forests': 'Canadian Shield Forests'
+}
+
 ############# Helper Functions #############
 
 def load_ensemble_data(country, percentile, n_baselines, n_members, log_folder):
@@ -208,17 +216,20 @@ def main():
         print(f"Risk Ratio: {rr_results['median']:.2f} "
               f"[{rr_results['ci_5']:.2f} - {rr_results['ci_95']:.2f}]")
         print(rr_results['replicates'])
-        pd.Series(rr_results['replicates']).to_csv(f'{EXPORT_FOLDER}/{country}_Risk_Ratio_Bootstrap_Replicates.csv', index=False)
+        pd.DataFrame({'rr_replicates': rr_results['replicates']}).to_csv(f'{EXPORT_FOLDER}/{country}_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False)
 
         # Plot
         ax = axes[idx]
-        sns.histplot(all_data, kde=True, color='orange', label='ALL', 
+        sns.histplot(all_data, kde=True, color='#C7403D', label='Factual', 
                      alpha=0.5, ax=ax, stat='density')
-        sns.histplot(nat_data, kde=True, color='blue', label='NAT', 
+        sns.histplot(nat_data, kde=True, color='#008787', label='Counterfactual', 
                      alpha=0.5, ax=ax, stat='density')
-        ax.axvline(x=threshold, color='black', linewidth=2.5, label='ERA5 2025')
+        ax.axvline(x=threshold, color='black', linewidth=2.5, label=f'ERA5 {config["month_name"]} {config["event_year"]}')
         
-        ax.set_title(f"{country} FWI {config['month_name']} ")
+        # Use shorter display name for plotting
+        display_name = DISPLAY_NAMES.get(config['shape_name'], config['shape_name'])
+        title = f"{display_name}\nFWI {config['month_name']}"
+        ax.set_title(title)
         ax.set_xlabel('Fire Weather Index')
         
         if idx == 0:
@@ -227,7 +238,7 @@ def main():
             ax.legend()
     
     plt.tight_layout()
-    plt.savefig(f'{PLOT_FOLDER}/{country}_Risk_Ratio_PDFs.png', dpi=150, bbox_inches='tight')
+    plt.savefig(f'{PLOT_FOLDER}/Risk_Ratio_PDFs.png', dpi=150, bbox_inches='tight')
     plt.show()
     
     # Print summary
