@@ -3,67 +3,94 @@ import matplotlib.pyplot as plt
 import iris
 import os
 import sys
+import pandas as pd
 import numpy as np
+import datetime
+try:
+    import cftime
+except ImportError:
+    cftime = None
+import warnings 
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)   
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from utils.constrain_cubes_standard import contrain_to_sow_shapefile
-# Directory containing 1990s ERA5 files for Korea
-data_dir = '/data/scratch/bob.potts/sowf/ERA5_Checks/2m_temperature/daily_mean/'
-file_pattern = data_dir + 'era5_daily_mean_2m_temperature_199*.nc'
-shapefile = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-region_name = 'Southeast South Korea'
-PLOT_DIR = '/data/scratch/bob.potts/sowf/test_output/Plots'
-files = sorted(glob.glob(file_pattern))
 
-# Load all cubes and concatenate
-cubelist = iris.cube.CubeList()
-for f in files:
-    cube = iris.load_cube(f)
-    cubelist.append(cube)
+def convert_to_datetime(d):
+    if hasattr(d, 'to_datetime'):
+        return d.to_datetime()
+    elif cftime and isinstance(d, cftime.datetime):
+        return datetime.datetime(d.year, d.month, d.day, d.hour, d.minute, d.second)
+    elif isinstance(d, np.datetime64):
+        return pd.to_datetime(d).to_pydatetime()
+    else:
+        return d
 
-# Equalise attributes and concatenate
-iris.util.equalise_attributes(cubelist)
-# Manually stack cubes along time axis
-data = np.concatenate([cube.data for cube in cubelist], axis=0)
-valid_times = np.concatenate([cube.coord('valid_time').points for cube in cubelist])
+def process_era5(variable, file_pattern, plot_label, plot_filename):
+    shapefile = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
+    region_name = 'Southeast South Korea'
+    PLOT_DIR = '/data/scratch/bob.potts/sowf/test_output/Plots'
+    files = sorted(glob.glob(file_pattern))
 
-# Sort by valid_times to ensure monotonicity
-sort_idx = np.argsort(valid_times)
-valid_times_sorted = valid_times[sort_idx]
-data_sorted = data[sort_idx]
+    all_dates = []
+    all_means = []
 
-latitude = cubelist[0].coord('latitude')
-longitude = cubelist[0].coord('longitude')
+    for f in files:
+        cube = iris.load_cube(f)
+        #print(cube)
+        cube_region = contrain_to_sow_shapefile(cube, shapefile, region_name)
+        mean_cube = cube_region.collapsed(['latitude', 'longitude'], iris.analysis.MEAN)
 
-# Create new valid_time coordinate
-valid_time_coord = iris.coords.DimCoord(
-    valid_times_sorted,
-    standard_name='time',
-    units=cubelist[0].coord('valid_time').units
+        try:
+            mean_cube = mean_cube.collapsed('time', iris.analysis.MEAN)
+            time_coord = mean_cube.coord('time')
+        except iris.exceptions.CoordinateNotFoundError:
+            try:
+                mean_cube = mean_cube.collapsed('valid_time', iris.analysis.MEAN)
+                time_coord = mean_cube.coord('valid_time')
+            except iris.exceptions.CoordinateNotFoundError:
+                exit(f"Error: Neither 'time' nor 'valid_time' coordinate found in cube from file {f}.")
+        dates = time_coord.units.num2date(time_coord.points)
+        all_dates.extend(dates)
+        # Multiply rainfall by 1000 if variable is precipitation (convert m to mm)
+        data = mean_cube.data * 1000 if variable.lower() in ["precipitation", "rainfall", "total_precipitation"] else mean_cube.data
+        # Always treat data as array for extension
+        data_arr = np.atleast_1d(data)
+        all_means.extend(data_arr.tolist())
+
+    all_dates_py = [convert_to_datetime(d) for d in all_dates]
+    sorted_data = sorted(zip(all_dates_py, all_means), key=lambda x: x[0])
+    all_dates_py, all_means = zip(*sorted_data)
+
+    plt.figure(figsize=(14,5))
+    plt.plot(all_dates_py, all_means, marker='.', linestyle='-', color='teal')
+    plt.xlabel('Date')
+    plt.ylabel(plot_label)
+    plt.title(f'ERA5 Daily {plot_label} 1990s Korea')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(PLOT_DIR, plot_filename), dpi=300)
+    #plt.show()
+
+# #Temperature
+process_era5(
+    variable='temperature',
+    file_pattern='/data/scratch/bob.potts/sowf/ERA5_Checks/2m_temperature/daily_mean/era5_daily_mean_2m_temperature_199*.nc',
+    plot_label='Mean 2m Temperature (K)',
+    plot_filename='mean_monthly_era5_daily_mean_2m_temperature_korea.png'
 )
 
-# Create new cube
-cube_all = iris.cube.Cube(
-    data_sorted,
-    dim_coords_and_dims=[(valid_time_coord, 0), (latitude, 1), (longitude, 2)],
-    attributes=cubelist[0].attributes,
-    long_name=cubelist[0].long_name,
-    units=cubelist[0].units
+# Precipitation
+process_era5(
+    variable='precipitation',
+    file_pattern='/data/scratch/bob.potts/sowf/ERA5_Checks/precipitation/daily_sum/era5_daily_sum_total_precipitation_199*.nc',
+    plot_label='Total Precipitation (mm)',
+    plot_filename='mean_monthly_era5_sum_total_precipitation_korea.png'
 )
 
-# Apply shapefile mask once to the concatenated cube
-cube_korea = contrain_to_sow_shapefile(cube_all, shapefile, region_name)
-
-# Get time coordinate and daily spatial mean
-mean_cube_korea = cube_korea.collapsed(['latitude', 'longitude'], iris.analysis.MEAN)
-dates = mean_cube_korea.coord('valid_time').units.num2date(mean_cube_korea.coord('time').points)
-daily_means = mean_cube_korea.data
-
-plt.figure(figsize=(14,5))
-plt.plot(dates, daily_means, marker='.', linestyle='-', color='teal')
-plt.xlabel('Date')
-plt.ylabel('Mean 2m Temperature (K)')
-plt.title('ERA5 Daily Mean 2m Temperature (1990s, Korea region via shapefile)')
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.savefig(os.path.join(PLOT_DIR, 'era5_daily_mean_2m_temperature_korea.png'), dpi=300)
-plt.show()
+process_era5(
+    variable='relative_humidity',
+    file_pattern='/data/scratch/bob.potts/sowf/ERA5_Checks/relative_humidity/daily_mean/era5_daily_mean_relative_humidity_199*.nc',
+    plot_label='Mean Relative Humidity (%)',
+    plot_filename='mean_monthly_era5_relative_humidity_korea.png'
+)
