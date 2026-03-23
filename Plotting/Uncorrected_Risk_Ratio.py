@@ -176,12 +176,12 @@ def main():
     """Run the Risk Ratio analysis for all configured regions using UNCORRECTED data."""
     
     n_regions = len(REGION_CONFIGS)
-    fig, axes = plt.subplots(1, n_regions, figsize=(5 * n_regions, 4))
-    
-    if n_regions == 1:
-        axes = [axes]
-    
+    # 2 rows: 3 on top, 2 on bottom, 3rd space in bottom row for summary
+    nrows, ncols = 2, 3
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
+    axes = axes.flatten()
     results = {}
+    plot_idxs = [0, 1, 2, 3, 4]  # 5 regions, 5 axes for plots, 6th for summary
     
     for idx, (country, config) in enumerate(REGION_CONFIGS.items()):
         print(f"\n{'='*50}")
@@ -228,10 +228,10 @@ def main():
         )
         
         # Plot
-        ax = axes[idx]
-        sns.histplot(all_data, kde=True, color='#C7403D', label='Factual', 
+        ax = axes[plot_idxs[idx]]
+        sns.histplot(all_data, kde=True, color='#C7403D', label='Factual (Current Climate)', 
                     alpha=0.5, ax=ax, stat='density')
-        sns.histplot(nat_data, kde=True, color='#008787', label='Counterfactual', 
+        sns.histplot(nat_data, kde=True, color='#008787', label='Counterfactual (Natural Only Climate)', 
                     alpha=0.5, ax=ax, stat='density')
         ax.axvline(x=threshold, color='black', linewidth=2.5, label=f'ERA5 {config["month_name"]} {config["event_year"]}')
 
@@ -241,15 +241,25 @@ def main():
         ax.set_title(title)
         ax.set_xlabel('Fire Weather Index')
         
-        if idx == 0:
+        if idx % ncols == 0:
             ax.set_ylabel('Density')
         if idx == n_regions - 1:
             ax.legend()
     
+    # Add summary of risk ratios in the last subplot (bottom right)
+    summary_ax = axes[-1]
+    summary_ax.axis('off')
+    summary_lines = ["SUMMARY OF RESULTS (UNCORRECTED)", ""]
+    for country, res in results.items():
+        rr = res['rr']
+        summary_lines.append(f"{country}: RR = {rr['median']:.2f} [{rr['ci_5']:.2f} - {rr['ci_95']:.2f}]")
+    summary_text = "\n".join(summary_lines)
+    summary_ax.text(0.5, 0.5, summary_text, ha='center', va='center', fontsize=12, wrap=True, family='monospace')
+
     plt.tight_layout()
     plt.savefig(f'{PLOT_FOLDER}/All_Regions_Uncorrected_Risk_Ratio_PDFs.png', dpi=150, bbox_inches='tight')
     plt.show()
-    
+
     # Print summary
     print("\n" + "="*60)
     print("SUMMARY OF RESULTS (UNCORRECTED)")
@@ -257,7 +267,7 @@ def main():
     for country, res in results.items():
         rr = res['rr']
         print(f"{country}: RR = {rr['median']:.2f} [{rr['ci_5']:.2f} - {rr['ci_95']:.2f}]")
-    
+
     return results
 
 
