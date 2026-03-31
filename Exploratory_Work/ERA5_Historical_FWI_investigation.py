@@ -14,7 +14,7 @@ from utils.constrain_cubes_standard import *
 from utils.cubefuncs import *
 
 ############# User inputs here #############
-Country = 'Scotland'
+Country = 'Korea'
 START_YEAR = 1960
 END_YEAR = 2013
 
@@ -90,7 +90,10 @@ except ValueError:
     pass  # already exists
 
 # Export the final cube to NetCDF
-ERA5_hist_all['time'] = ERA5_hist_all['time'].astype(np.float64)
+# Ensure time coordinate is float64
+time_coord = ERA5_hist_all.coord('time')
+if time_coord.points.dtype != np.float64:
+    time_coord.points = time_coord.points.astype(np.float64)
 output_nc = os.path.join(OUTPUT_DIR, f"ERA5_{Country}_{START_YEAR}_{END_YEAR}_clipped.nc")
 iris.save(ERA5_hist_all, output_nc)
 print(f"Exported clipped cube to {output_nc}")
