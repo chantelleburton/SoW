@@ -110,7 +110,7 @@ fwi_obs = df_obs.values
 fwi_obs = fwi_obs[:, 0]
 
 # Step 1a: Fit a linear regression model to obs and sim
-t = years - 2025  # shift years to be relative to 2025
+t = years - 2024#{set this as a new TARGET_YEAR parameter}  # shift years to be relative to 2025
 X = sm.add_constant(t)  # add a constant term for intercept
 
 def find_regression_parameters(fwi):
