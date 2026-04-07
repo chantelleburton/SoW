@@ -39,7 +39,7 @@ if Country == 'Korea':
     percentile = 95
     shape_name = 'Southeast South Korea'
     daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-31_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
+    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
       
 elif Country == 'Iberia':
     print('Running Iberia')
@@ -110,7 +110,7 @@ fwi_obs = df_obs.values
 fwi_obs = fwi_obs[:, 0]
 
 # Step 1a: Fit a linear regression model to obs and sim
-t = years - 2024#{set this as a new TARGET_YEAR parameter}  # shift years to be relative to 2025
+t = years - 2025 #2024#{set this as a new TARGET_YEAR parameter}  # shift years to be relative to 2025
 X = sm.add_constant(t)  # add a constant term for intercept
 
 def find_regression_parameters(fwi):
@@ -124,88 +124,53 @@ fwi0_sim, delta_sim, std_sim = find_regression_parameters(fwi_sim)
 fwi0_obs, delta_obs, std_obs = find_regression_parameters(fwi_obs)
 
 
-#### Process hist array ####
-if run_type == 'hist':
-    index_filestem = index_filestem1
-    ensemble_members = np.arange(1, 106)  # 105 ensemble members
-    histarray = []
-    for ensemble_member in ensemble_members:
-        print(f'hist ensemble_member={ensemble_member}, baseline_member={baseline_member}, country={Country}')
-        for realisation in np.arange(1, 6):  # 5 realisations per ensemble member
-            try:
-                if ensemble_member < 10:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-                elif ensemble_member < 100:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-                else:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)           
-                cube = contrain_to_sow_shapefile(cube, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
-                cube = ConstrainToYear(cube,YEAR) 
-                cube = CountryPercentile(cube, percentile)
-                cube = TimePercentile(cube, percentile)
-                data = np.ravel(cube.data)
 
-                #### Log transform the data here #### 
-                data = np.log(np.exp(data)-1)
+# --- Refactored output: collect all data, write one CSV per baseline member/run type ---
+index_filestem = index_filestem1 if run_type == 'hist' else index_filestem2
+ensemble_members = np.arange(1, 106)  # 105 ensemble members
+realisations = np.arange(1, 6)        # 5 realisations per ensemble member
+n_years = len(years)
+n_cols = len(ensemble_members) * len(realisations)
+data_matrix = np.full((n_years, n_cols), np.nan)
+col_names = []
 
-                # Step 2: Detrend the sim and scale to obs
-                data_corrected = fwi0_obs + (data - delta_sim * t - fwi0_sim)
-               
-                #### Inverse log (exponential) transform here ####      
-                data_corrected = np.log(np.exp(data_corrected)+1)
+for e_idx, ensemble_member in enumerate(ensemble_members):
+    for r_idx, realisation in enumerate(realisations):
+        col_idx = e_idx * len(realisations) + r_idx
+        col_names.append(f"Ens{ensemble_member}_Real{realisation}")
+        try:
+            if ensemble_member < 10:
+                cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
+            elif ensemble_member < 100:
+                cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
+            else:
+                cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
+            cube = contrain_to_sow_shapefile(cube, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
+            cube = ConstrainToYear(cube, YEAR)
+            cube = CountryPercentile(cube, percentile)
+            cube = TimePercentile(cube, percentile)
+            data = np.ravel(cube.data)
 
-                f = open('/data/scratch/bob.potts/sowf/test_output/Log_Transforms/'+Country+'_baseline'+str(baseline_member)+'_ens'+str(ensemble_member)+'_hist'+str(percentile)+'percent_LogTransform.dat', 'a')
-                np.savetxt(f, (data_corrected), newline=',', fmt='%s')
-                f.write('\n')
-                f.close()
-                histarray.append(data)
-            except IOError:
-                pass 
-     
-    histarray = np.array(histarray)
-    histarray = np.ravel(histarray)
-    print(repr(histarray)) 
+            # Log transform
+            data = np.log(np.exp(data)-1)
+            # Detrend and scale
+            data_corrected = fwi0_obs + (data - delta_sim * t - fwi0_sim)
+            # Inverse log transform
+            data_corrected = np.log(np.exp(data_corrected)+1)
 
-#### Process histnat array ####
-elif run_type == 'histnat':
-    index_filestem = index_filestem2
-    histnatarray = []
-    ensemble_members = np.arange(1, 106)
-    for ensemble_member in ensemble_members:
-        print(f'histnat ensemble_member={ensemble_member}, baseline_member={baseline_member}, country={Country}')
-        for realisation in np.arange(1, 6):
-            try:
-                if ensemble_member < 10:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-                elif ensemble_member < 100:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-                else:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)           
-                cube = contrain_to_sow_shapefile(cube, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
-                cube = ConstrainToYear(cube,YEAR)  
-                cube = CountryPercentile(cube, percentile)
-                cube = TimePercentile(cube, percentile) 
-                data = np.ravel(cube.data)
+            # Store in matrix
+            if len(data_corrected) == n_years:
+                data_matrix[:, col_idx] = data_corrected
+            else:
+                print(f"Warning: Data length mismatch for Ens{ensemble_member} Real{realisation}")
+        except IOError:
+            print(f"Missing data for Ens{ensemble_member} Real{realisation}")
+            continue
 
-                #### Log transform the data here #### 
-                data = np.log(np.exp(data)-1)
-
-                # Step 2: Detrend the sim and scale to obs
-                data_corrected = fwi0_obs + (data - delta_sim * t - fwi0_sim)
-
-                #### Inverse log (exponential) transform here ####      
-                data_corrected = np.log(np.exp(data_corrected)+1)
-
-                f = open('/data/scratch/bob.potts/sowf/test_output/Log_Transforms/'+Country+'_baseline'+str(baseline_member)+'_ens'+str(ensemble_member)+'_histnat'+str(percentile)+'percent_LogTransform.dat', 'a')
-                np.savetxt(f, (data_corrected), newline=',', fmt='%s')
-                f.write('\n')
-                f.close()
-                histnatarray.append(data)
-            except IOError:
-                pass 
-        
-    histnatarray = np.array(histnatarray)
-    histnatarray = np.ravel(histnatarray)
-
-else:
-    raise ValueError(f"Unknown run_type: {run_type}. Expected 'hist' or 'histnat'")
+# Build DataFrame and write CSV
+df_out = pd.DataFrame(data_matrix, columns=col_names)
+df_out.insert(0, "Year", years)
+output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
+output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform.csv"
+df_out.to_csv(output_file, index=False)
+print(f"Wrote output to {output_file}")

@@ -18,7 +18,7 @@
         set -eux
         conda activate sowf
         cd /data/users/bob.potts/StateOfFires_2025-26/code/Bias_Correction/
-        python HadGEM3_LogBiasCorrection.py
+        python HadGEM3_LogBiasCorrection_MultiYear.py
         """
 
         platform = spice
