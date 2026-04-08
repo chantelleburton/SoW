@@ -4,7 +4,7 @@
 [task parameters]
     member = 1..15
     runtype = hist,histnat
-    country = Korea, Iberia, Scotland, Chile, Canada
+    country =  Iberia, Scotland, Chile, Canada, Korea
 
 [scheduling]
     [[graph]]
@@ -25,6 +25,6 @@
 
         [[[directives]]]
             --mem = 30G
-            --time = 300
+            --time = 60
             --cpus-per-task = 2
             --ntasks = 1

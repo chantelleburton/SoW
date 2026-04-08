@@ -30,10 +30,10 @@ run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")  # 'hist' or 'histn
 print(f'Processing Country: {Country}, baseline member: {baseline_member}, run type: {run_type}')
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
-DATA_YEAR = 2024 #this is the year that we're pulling out from the historical and historical-natural attribution ensembles. #TO GENERALISE to 2020-2024 once we have that data.
+DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 untill 2020-2024 attribtution ensemble runs are done.
 TARGET_YEAR = 2024 # this is the year we want the regression to be relative to (i.e. the year we want to bias correct to). 
 BASELINE_START_YEAR = 1960
-BASELINE_END_YEAR = 2012
+BASELINE_END_YEAR = 2013
 
 #Set up the 2025 files and months automatically
 if Country == 'Korea':
@@ -97,8 +97,8 @@ index_name = 'canadian_fire_weather_index'
 BiasCorrDict = {}
 
 # Step 0: Load fwi data from CSV using pandas
-df_obs = pd.read_csv(baseline_folder+'ERA5_FWI_1960-2013_'+Country+'_'+str(percentile)+'%.dat')  # Historical ERA5 array
-df_sim = pd.read_csv(baseline_folder+'HadGEM3_FWI_1960-2013_'+Country+'_'+str(baseline_member)+'_'+str(percentile)+'%.dat')  # Historical HadGEM array
+df_obs = pd.read_csv(baseline_folder+'ERA5_FWI_1960-2013_'+Country+'_'+str(percentile)+'%.dat',header=None)  # Historical ERA5 array
+df_sim = pd.read_csv(baseline_folder+'HadGEM3_FWI_1960-2013_'+Country+'_'+str(baseline_member)+'_'+str(percentile)+'%.dat',header=None)  # Historical HadGEM array
 df_obs[np.isnan(df_obs)] = 0.000000000001 #nans break the soft log transform so fill val ~ 0 to avoid issues.
 df_sim[np.isnan(df_sim)] = 0.000000000001 
 
@@ -107,7 +107,7 @@ df_obs = np.log(np.exp(df_obs)-1)
 df_sim = np.log(np.exp(df_sim)-1)
 
 # Extract years and FWI values
-years = np.arange(BASELINE_START_YEAR, BASELINE_END_YEAR + 1) #arange uses the stop value as exclusive, so add 1 to include the end year.
+years = np.arange(BASELINE_START_YEAR, (BASELINE_END_YEAR + 1)) #arange uses the stop value as exclusive, so add 1 to include the end year.
 fwi_sim = df_sim.values
 fwi_sim = fwi_sim[:, 0]
 fwi_obs = df_obs.values
@@ -130,50 +130,54 @@ fwi0_obs, delta_obs, std_obs = find_regression_parameters(fwi_obs)
 
 
 index_filestem = index_filestem1 if run_type == 'hist' else index_filestem2 #pull cylc run_type parameter in and do a hist or histnat run. 
-ensemble_members = np.arange(1, 106)  # 105 ensemble members
-realisations = np.arange(1, 6)        # 5 realisations per ensemble member
-n_years = len(years)
-n_cols = len(ensemble_members) * len(realisations)
-data_matrix = np.full((n_years, n_cols), np.nan)
-col_names = []
 
-for e_idx, ensemble_member in enumerate(ensemble_members): # loop through all 105 ensemble members
-    for r_idx, realisation in enumerate(realisations): #loop through physics realisations 1-5 for each of the 105 ensemble members
-        col_idx = e_idx * len(realisations) + r_idx #number of columns (should be 5 * 105)
-        col_names.append(f"Ens{ensemble_member}_Real{realisation}")
-        try:
-            if ensemble_member < 10:
-                cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-            elif ensemble_member < 100:
-                cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-            else:
-                cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-            cube = contrain_to_sow_shapefile(cube, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
-            cube = ConstrainToYear(cube, DATA_YEAR)
-            cube = CountryPercentile(cube, percentile)
-            cube = TimePercentile(cube, percentile)
-            data = np.ravel(cube.data)
+# Loop over each DATA_YEAR
+for DATA_YEAR in DATA_YEARS:
+    print(f"Processing DATA_YEAR: {DATA_YEAR}")
+    ensemble_members = np.arange(1, 106)  # 105 ensemble members
+    realisations = np.arange(1, 6)        # 5 realisations per ensemble member
+    n_years = len(years)
+    n_cols = len(ensemble_members) * len(realisations)
+    data_matrix = np.full((n_years, n_cols), np.nan)
+    col_names = []
 
-            # Soft Log transform
-            data = np.log(np.exp(data)-1)
-            # Detrend and scale
-            data_corrected = fwi0_obs + (data - delta_sim * t - fwi0_sim)
-            # Inverse soft log transform
-            data_corrected = np.log(np.exp(data_corrected)+1)
+    for e_idx, ensemble_member in enumerate(ensemble_members): # loop through all 105 ensemble members
+        for r_idx, realisation in enumerate(realisations): #loop through physics realisations 1-5 for each of the 105 ensemble members
+            col_idx = e_idx * len(realisations) + r_idx #number of columns (should be 5 * 105)
+            col_names.append(f"Ens{ensemble_member}_Real{realisation}")
+            try:
+                if ensemble_member < 10:
+                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name) 
+                elif ensemble_member < 100:
+                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
+                else:
+                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
+                cube = contrain_to_sow_shapefile(cube, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
+                cube = ConstrainToYear(cube, DATA_YEAR)
+                cube = CountryPercentile(cube, percentile)
+                cube = TimePercentile(cube, percentile)
+                data = np.ravel(cube.data)
 
-            # Store in matrix
-            if len(data_corrected) == n_years: #check that the length of the data matches the number of years (BASELINE_START_YEAR to BASELINE_END_YEAR)
-                data_matrix[:, col_idx] = data_corrected
-            else:
-                print(f"Warning: Data length mismatch for Ens{ensemble_member} Real{realisation}")
-        except IOError:
-            print(f"Missing data for Ens{ensemble_member} Real{realisation}")
-            continue
+                # Soft Log transform
+                data = np.log(np.exp(data)-1)
+                # Detrend and scale
+                data_corrected = fwi0_obs + (data - delta_sim * t - fwi0_sim)
+                # Inverse soft log transform
+                data_corrected = np.log(np.exp(data_corrected)+1)
 
-# Build DataFrame and write CSV
-df_out = pd.DataFrame(data_matrix, columns=col_names)
-df_out.insert(0, "Year", years)
-output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
-output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
-df_out.to_csv(output_file, index=False)
-print(f"Wrote output to {output_file}")
+                # Store in matrix
+                if len(data_corrected) == n_years: #check that the length of the data matches the number of years (BASELINE_START_YEAR to BASELINE_END_YEAR)
+                    data_matrix[:, col_idx] = data_corrected
+                else:
+                    print(f"Warning: Data length mismatch for Ens{ensemble_member} Real{realisation}")
+            except IOError:
+                print(f"Missing data for Ens{ensemble_member} Real{realisation}")
+                continue
+
+    # Build DataFrame and write CSV
+    df_out = pd.DataFrame(data_matrix, columns=col_names)
+    df_out.insert(0, "Year", years)
+    output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
+    output_file = f"{output_dir}TEST_{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
+    df_out.to_csv(output_file, index=False)
+    print(f"Wrote output to {output_file}")
