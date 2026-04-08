@@ -174,6 +174,6 @@ for e_idx, ensemble_member in enumerate(ensemble_members): # loop through all 10
 df_out = pd.DataFrame(data_matrix, columns=col_names)
 df_out.insert(0, "Year", years)
 output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
-output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform.csv"
+output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
 df_out.to_csv(output_file, index=False)
 print(f"Wrote output to {output_file}")
