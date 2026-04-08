@@ -122,30 +122,20 @@ def load_historical_ensemble(country, percentile, run_type):
     return np.array(data)
 
 
-def load_bias_corrected_data(country, percentile, n_baselines, n_members, run_type):
+
+# New loader for bias-corrected data from CSVs (new format)
+def load_bias_corrected_data_csv(country, percentile, baseline_member, run_type, target_year, baseline_start, baseline_end):
     """
-    Load pre-computed bias-corrected log-transformed data from .dat files.
-    
-    File naming scheme: {country}_baseline{baseline}_ens{member}_{run_type}{percentile}percent_LogTransform.dat
+    Load bias-corrected data from the new CSV format.
+    Returns: years (np.array), data_matrix (np.array: years x (n_ens*n_real)), col_names (list)
     """
-    all_data = []
-    files_found = 0
-    
-    for baseline in range(1, n_baselines + 1):
-        for member in range(1, n_members + 1):
-            filepath = f"{LOG_TRANSFORMS_FOLDER}{country}_baseline{baseline}_ens{member}_{run_type}{percentile}percent_LogTransform.dat"
-            
-            try:
-                with open(filepath) as f:
-                    for line in f:
-                        numbers = line.strip().split(',')
-                        all_data.extend([float(num) for num in numbers if num])
-                files_found += 1
-            except FileNotFoundError:
-                continue
-    
-    print(f"  Found {files_found} files for {run_type}")
-    return np.array(all_data)
+    filename = f"{country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{target_year}_DataYear_{target_year}_BaselinePeriod_{baseline_start}_{baseline_end}.csv"
+    filepath = os.path.join(LOG_TRANSFORMS_FOLDER, filename)
+    df = pd.read_csv(filepath)
+    years = df['Year'].values
+    col_names = [col for col in df.columns if col != 'Year']
+    data_matrix = df[col_names].values  # shape: (years, n_ens*n_real)
+    return years, data_matrix, col_names
 
 
 def compute_bias_correction(country, percentile, n_baselines):

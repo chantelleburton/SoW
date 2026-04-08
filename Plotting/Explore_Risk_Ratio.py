@@ -14,7 +14,7 @@ import seaborn as sns
 import warnings
 import sys
 import pandas as pd
-
+import os
 sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
 
 from utils.cubefuncs import *
@@ -25,7 +25,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 ############# Configuration #############
 
 FOLDER = '/data/scratch/chantelle.burton/SoW2526/'
-LOG_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Log_Transforms/'
+LOG_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 PLOT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Plots'
 EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Exports'
@@ -86,51 +86,30 @@ DISPLAY_NAMES = {
 
 ############# Helper Functions #############
 
-def load_ensemble_data(country, percentile, n_baselines, n_members, log_folder):
+
+# New loader for ALL and NAT ensemble data from new CSV outputs
+
+# Fixed loader for ALL and NAT ensemble data from new CSV outputs (all baselines)
+def load_ensemble_data_csv(country, percentile, run_type, folder, target_year, n_baselines, baseline_start, baseline_end):
     """
-    Load ALL and NAT ensemble data from .dat files for all baselines.
-
-    Parameters
-    ----------
-    country : str
-        Country/region name
-    percentile : int
-        Percentile used in filenames
-    n_baselines : int
-        Number of baseline runs
-    n_members : int
-        Number of ensemble members
-    log_folder : str
-        Path to folder containing .dat files
-
-    Returns
-    -------
-    tuple
-        (ALL_data, NAT_data) as numpy arrays
+    Load ALL or NAT ensemble data from the new CSV format for all baselines.
+    Returns: flattened numpy array of all values (all years, all Ens/Real columns, all baselines)
     """
     all_data = []
-    nat_data = []
-
     for baseline in range(1, n_baselines + 1):
-        for member in range(1, n_members + 1):
-            all_file = f"{log_folder}{country}_baseline{baseline}_ens{member}_hist{percentile}percent_LogTransform.dat"
-            nat_file = f"{log_folder}{country}_baseline{baseline}_ens{member}_histnat{percentile}percent_LogTransform.dat"
-
-            try:
-                with open(all_file) as f:
-                    for line in f:
-                        numbers = line.strip().split(',')
-                        all_data.extend([float(num) for num in numbers if num])
-
-                with open(nat_file) as f:
-                    for line in f:
-                        numbers = line.strip().split(',')
-                        nat_data.extend([float(num) for num in numbers if num])
-            except FileNotFoundError:
-                print(f"Warning: Missing files for baseline {baseline}, member {member}")
-                continue
-
-    return np.array(all_data), np.array(nat_data)
+        filename = f"{country}_baseline{baseline}_{run_type}{percentile}percent_LogTransform_Target_{target_year}_DataYear_{target_year}_BaselinePeriod_{baseline_start}_{baseline_end}.csv"
+        filepath = os.path.join(folder, filename)
+        try:
+            df = pd.read_csv(filepath)
+            col_names = [col for col in df.columns if col != 'Year']
+            all_data.append(df[col_names].values.flatten())
+        except FileNotFoundError:
+            print(f"Warning: Missing file {filepath}")
+            continue
+    if all_data:
+        return np.concatenate(all_data)
+    else:
+        return np.array([])
 
 
 def calculate_risk_ratio_with_ci(all_data, nat_data, threshold, bootstrap_size=10000):
@@ -170,19 +149,19 @@ def calculate_risk_ratio_with_ci(all_data, nat_data, threshold, bootstrap_size=1
 def main():
     """Run the Risk Ratio analysis for all configured regions."""
     
+
     n_regions = len(REGION_CONFIGS)
-    fig, axes = plt.subplots(1, n_regions, figsize=(5 * n_regions, 4))
-    
-    if n_regions == 1:
-        axes = [axes]
-    
+    # 2 rows: 3 on top, 2 on bottom, 3rd space in bottom row for summary
+    nrows, ncols = 2, 3
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
+    axes = axes.flatten()
     results = {}
-    
+    plot_idxs = [0, 1, 2, 3, 4]  # 5 regions, 5 axes for plots, 6th for summary
+
     for idx, (country, config) in enumerate(REGION_CONFIGS.items()):
         print(f"\n{'='*50}")
         print(f"Processing {country}")
         print('='*50)
-        
         # Load ERA5 threshold
         print("Loading ERA5 threshold...")
         threshold = GetERA5Threshold(
@@ -190,65 +169,70 @@ def main():
         )
         print(f"ERA5 threshold: {threshold:.2f}")
         print(config['era5_file'])
-        
-        # Load ensemble data
-        print("Loading ensemble data...")
-        all_data, nat_data = load_ensemble_data(
-            country, config['percentile'], N_BASELINES, N_MEMBERS, LOG_FOLDER
+        # Load ensemble data from new CSVs
+        print("Loading ensemble data from CSVs...")
+        all_data = load_ensemble_data_csv(
+            country, config['percentile'], 'hist', LOG_FOLDER, 2024, N_BASELINES, 1960, 2012
+        )
+        nat_data = load_ensemble_data_csv(
+            country, config['percentile'], 'histnat', LOG_FOLDER, 2024, N_BASELINES, 1960, 2012
         )
         print(f"Number of ALL samples: {len(all_data)}, Number of NAT samples: {len(nat_data)}")
-        
         print(f"Loaded {len(all_data)} ALL values, {len(nat_data)} NAT values")
-        
         # Calculate Risk Ratio with bootstrapped confidence intervals
         print("Calculating Risk Ratio...")
         rr_results = calculate_risk_ratio_with_ci(
             all_data, nat_data, threshold, BOOTSTRAP_SIZE
         )
-        
         results[country] = {
             'threshold': threshold,
             'rr': rr_results,
             'all_data': all_data,
             'nat_data': nat_data
         }
-        
         print(f"Risk Ratio: {rr_results['median']:.2f} "
               f"[{rr_results['ci_5']:.2f} - {rr_results['ci_95']:.2f}]")
-        print(rr_results['replicates'])
         pd.DataFrame({'rr_replicates': rr_results['replicates']}).to_csv(f'{EXPORT_FOLDER}/{country}_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False)
 
         # Plot
-        ax = axes[idx]
+        ax = axes[plot_idxs[idx]]
         sns.histplot(all_data, kde=True, color='#C7403D', label='Factual', 
                      alpha=0.5, ax=ax, stat='density')
         sns.histplot(nat_data, kde=True, color='#008787', label='Counterfactual', 
                      alpha=0.5, ax=ax, stat='density')
         ax.axvline(x=threshold, color='black', linewidth=2.5, label=f'ERA5 {config["month_name"]} {config["event_year"]}')
-        
         # Use shorter display name for plotting
         display_name = DISPLAY_NAMES.get(config['shape_name'], config['shape_name'])
         title = f"{display_name}\nFWI {config['month_name']}"
         ax.set_title(title)
         ax.set_xlabel('Fire Weather Index')
-        
-        if idx == 0:
+        if idx % ncols == 0:
             ax.set_ylabel('Density')
         if idx == n_regions - 1:
             ax.legend()
-    
+
+    # Add summary of risk ratios in the last subplot (bottom right)
+    summary_ax = axes[-1]
+    summary_ax.axis('off')
+    summary_lines = ["SUMMARY OF RESULTS (CORRECTED)", ""]
+    for country, res in results.items():
+        rr = res['rr']
+        summary_lines.append(f"{country}: RR = {rr['median']:.2f} [{rr['ci_5']:.2f} - {rr['ci_95']:.2f}]")
+    summary_text = "\n".join(summary_lines)
+    summary_ax.text(0.5, 0.5, summary_text, ha='center', va='center', fontsize=12, wrap=True, family='monospace')
+
     plt.tight_layout()
     plt.savefig(f'{PLOT_FOLDER}/Risk_Ratio_PDFs.png', dpi=150, bbox_inches='tight')
     plt.show()
-    
+
     # Print summary
     print("\n" + "="*60)
-    print("SUMMARY OF RESULTS")
+    print("SUMMARY OF RESULTS (CORRECTED)")
     print("="*60)
     for country, res in results.items():
         rr = res['rr']
         print(f"{country}: RR = {rr['median']:.2f} [{rr['ci_5']:.2f} - {rr['ci_95']:.2f}]")
-    
+
     return results
 
 

@@ -257,7 +257,7 @@ def main():
     summary_ax.text(0.5, 0.5, summary_text, ha='center', va='center', fontsize=12, wrap=True, family='monospace')
 
     plt.tight_layout()
-    plt.savefig(f'{PLOT_FOLDER}/All_Regions_Uncorrected_Risk_Ratio_PDFs.png', dpi=150, bbox_inches='tight')
+    plt.savefig(f'{PLOT_FOLDER}/Uncorrected_Risk_Ratio.png', dpi=150, bbox_inches='tight')
     plt.show()
 
     # Print summary
