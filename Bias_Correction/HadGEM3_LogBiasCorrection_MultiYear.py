@@ -1,16 +1,5 @@
-# Plot PDFs for 2023 HadGEM3 ALL and NAT, plus ERA5 line
-######### NOTE: Need to run Supplement2.pr first to get df_obs and df_sim files ######
-
-
-#module load scitools/default-current
-#python3
-#-*- coding: iso-8859-1 -*-
-
-
 import numpy as np
 import iris
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 import statsmodels.api as sm
 import os
@@ -32,8 +21,8 @@ print(f'Processing Country: {Country}, baseline member: {baseline_member}, run t
 folder = '/data/scratch/chantelle.burton/SoW2526/'
 DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 untill 2020-2024 attribtution ensemble runs are done.
 TARGET_YEAR = 2024 # this is the year we want the regression to be relative to (i.e. the year we want to bias correct to). 
-BASELINE_START_YEAR = 1960
-BASELINE_END_YEAR = 2013
+BASELINE_START_YEAR = 1960 # start of the regression baseline period (inclusive)
+BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
 
 #Set up the 2025 files and months automatically
 if Country == 'Korea':
@@ -178,6 +167,6 @@ for DATA_YEAR in DATA_YEARS:
     df_out = pd.DataFrame(data_matrix, columns=col_names)
     df_out.insert(0, "Year", years)
     output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
-    output_file = f"{output_dir}TEST_{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
+    output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
     df_out.to_csv(output_file, index=False)
     print(f"Wrote output to {output_file}")
