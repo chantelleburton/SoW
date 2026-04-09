@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
 ############# Get parameters from Cylc (or defaults for local testing) #############
-Country = os.environ.get("CYLC_TASK_PARAM_country", "Iberia") #fallback value of iberia
+Country = os.environ.get("CYLC_TASK_PARAM_country", "Korea") #fallback value of Iberia
 baseline_member = int(os.environ.get("CYLC_TASK_PARAM_member", 1)) #if in doubt, use just ensemble member 1.
 run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")  # 'hist' or 'histnat'
 
@@ -21,7 +21,7 @@ print(f'Processing Country: {Country}, baseline member: {baseline_member}, run t
 folder = '/data/scratch/chantelle.burton/SoW2526/'
 DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 untill 2020-2024 attribtution ensemble runs are done.
 TARGET_YEAR = 2024 # this is the year we want the regression to be relative to (i.e. the year we want to bias correct to). 
-BASELINE_START_YEAR = 1960 # start of the regression baseline period (inclusive)
+BASELINE_START_YEAR = 1997 # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
 
 #Set up the 2025 files and months automatically
@@ -87,6 +87,7 @@ BiasCorrDict = {}
 
 # Step 0: Load fwi data from CSV using pandas
 df_obs = pd.read_csv(baseline_folder+'ERA5_FWI_1960-2013_'+Country+'_'+str(percentile)+'%.dat',header=None)  # Historical ERA5 array
+
 df_sim = pd.read_csv(baseline_folder+'HadGEM3_FWI_1960-2013_'+Country+'_'+str(baseline_member)+'_'+str(percentile)+'%.dat',header=None)  # Historical HadGEM array
 df_obs[np.isnan(df_obs)] = 0.000000000001 #nans break the soft log transform so fill val ~ 0 to avoid issues.
 df_sim[np.isnan(df_sim)] = 0.000000000001 
@@ -95,12 +96,12 @@ df_sim[np.isnan(df_sim)] = 0.000000000001
 df_obs = np.log(np.exp(df_obs)-1)
 df_sim = np.log(np.exp(df_sim)-1)
 
-# Extract years and FWI values
-years = np.arange(BASELINE_START_YEAR, (BASELINE_END_YEAR + 1)) #arange uses the stop value as exclusive, so add 1 to include the end year.
-fwi_sim = df_sim.values
-fwi_sim = fwi_sim[:, 0]
-fwi_obs = df_obs.values
-fwi_obs = fwi_obs[:, 0]
+# Subset the data to the selected baseline years
+all_years = np.arange(1960, (2013+1))   # this is hardcoded to the PRESUMED length of the CSVs and I don't like this method. 2013 +1 because by default it's exclusive of the end year, but we want to include 2013 so add 1 to make it inclusive.  
+baseline_mask = (all_years >= BASELINE_START_YEAR) & (all_years <= BASELINE_END_YEAR) #segment to just the time interval we want to use for the regression baseline.   
+years = all_years[baseline_mask]
+fwi_obs = df_obs.values[baseline_mask, 0]
+fwi_sim = df_sim.values[baseline_mask, 0]
 
 # Step 1a: Fit a linear regression model to obs and sim
 t = years - TARGET_YEAR #shift years relative to the target year.
