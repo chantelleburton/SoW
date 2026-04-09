@@ -2,18 +2,18 @@
     allow implicit tasks = True
 
 [task parameters]
-    
     member = 1..15
+    country = Chile, Canada #Korea, Iberia, Scotland, 
 
 [scheduling]
 
     [[graph]]
         R1 = """
-            hadgem_historical_fwi<member>
+            hadgem_historical_fwi<member,country>
         """
 
 [runtime]
-    [[hadgem_historical_fwi<member>]]
+    [[hadgem_historical_fwi<member,country>]]
         script = """
         set -eux
         conda activate sowf
@@ -24,7 +24,7 @@
         platform = spice
 
         [[[directives]]]
-            --mem = 30G
+            --mem = 20G
             --time = 120
             --cpus-per-task = 1
             --ntasks = 1

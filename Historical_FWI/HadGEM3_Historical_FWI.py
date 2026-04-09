@@ -21,13 +21,13 @@ warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 ############# User inputs here #############
-Country = 'Korea'
 START_YEAR = 1960
 END_YEAR = 2013
-CSV_EXPORT = False #True for CSV, False for .dat
+CSV_EXPORT = True #True for CSV, False for .dat
 # Options: 'Korea' (3), 'Iberia' (8), 'Scotland' (7)
 ############# User inputs end here #############
-
+member = os.environ["CYLC_TASK_PARAM_member"] #when running in cylc wrapped, use this to enable all 16 members to be run in parallel.
+Country = os.environ.get("CYLC_TASK_PARAM_country", 'Korea') #fallback to user input if not running in cylc wrapped
 
 folder = '/data/scratch/bob.potts/sowf/historicalFWI/HadGEM/'
 c_folder = '/data/scratch/chantelle.burton/SoW2526/'
@@ -39,7 +39,7 @@ if Country == 'Korea':
     percentile = 95
     shape_name = 'Southeast South Korea'
     daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
-    ERA5_2025 = iris.load_cube(c_folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-31_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
+    ERA5_2025 = iris.load_cube(c_folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
       
 elif Country == 'Iberia':
     print('Running Iberia')
@@ -77,7 +77,6 @@ elif Country == 'Canada':
     daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
     ERA5_2025 = iris.load_cube(c_folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
-member = os.environ["CYLC_TASK_PARAM_member"] #when running in cylc wrapped, use this to enable all 16 members to be run in parallel.
 
 
 start_time = time.time()  
@@ -146,9 +145,12 @@ output_file = f'/data/scratch/bob.potts/sowf/test_output/Baseline/HadGEM3_FWI_{S
 if CSV_EXPORT:
     # Get the years from the cube
     years = yr_country_p.coord('year').points
-    
+    if isinstance(Month, tuple):
+        month_str = '-'.join(f'{m:02d}' for m in Month)  # e.g., "01-02"
+    else:
+        month_str = f'{Month:02d}'
     # Create YEAR-MONTH strings
-    year_month = [f'{int(y)}-{Month:02d}' for y in years]
+    year_month = [f'{int(y)}-{month_str}' for y in years]
 
     # Save HadGEM3 out to a text file with YEAR-MONTH,VALUE format
     with open(f'{output_file}.csv', 'w') as f:
