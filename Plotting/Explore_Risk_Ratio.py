@@ -32,6 +32,11 @@ EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Exports'
 BOOTSTRAP_SIZE = 10000
 N_MEMBERS = 105
 N_BASELINES = 15
+BASELINE_START_YEAR = 1960
+BASELINE_END_YEAR = 2013
+TARGET_YEAR = 2024
+DATA_YEARS = 2024
+
 
 REGION_CONFIGS = {
     'Iberia': {
@@ -172,10 +177,10 @@ def main():
         # Load ensemble data from new CSVs
         print("Loading ensemble data from CSVs...")
         all_data = load_ensemble_data_csv(
-            country, config['percentile'], 'hist', LOG_FOLDER, 2024, N_BASELINES, 1960, 2012
+            country, config['percentile'], 'hist', LOG_FOLDER, DATA_YEARS, N_BASELINES, BASELINE_START_YEAR, BASELINE_END_YEAR
         )
         nat_data = load_ensemble_data_csv(
-            country, config['percentile'], 'histnat', LOG_FOLDER, 2024, N_BASELINES, 1960, 2012
+            country, config['percentile'], 'histnat', LOG_FOLDER, DATA_YEARS, N_BASELINES, BASELINE_START_YEAR, BASELINE_END_YEAR
         )
         print(f"Number of ALL samples: {len(all_data)}, Number of NAT samples: {len(nat_data)}")
         print(f"Loaded {len(all_data)} ALL values, {len(nat_data)} NAT values")
@@ -222,7 +227,7 @@ def main():
     summary_ax.text(0.5, 0.5, summary_text, ha='center', va='center', fontsize=12, wrap=True, family='monospace')
 
     plt.tight_layout()
-    plt.savefig(f'{PLOT_FOLDER}/Risk_Ratio_PDFs.png', dpi=150, bbox_inches='tight')
+    plt.savefig(f'{PLOT_FOLDER}/Risk_Ratio_PDFs.png', dpi=300, bbox_inches='tight')
     plt.show()
 
     # Print summary
