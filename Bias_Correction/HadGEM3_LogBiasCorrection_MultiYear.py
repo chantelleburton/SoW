@@ -21,7 +21,7 @@ print(f'Processing Country: {Country}, baseline member: {baseline_member}, run t
 folder = '/data/scratch/chantelle.burton/SoW2526/'
 DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 untill 2020-2024 attribtution ensemble runs are done.
 TARGET_YEAR = 2024 # this is the year we want the regression to be relative to (i.e. the year we want to bias correct to). 
-BASELINE_START_YEAR = 1997 # start of the regression baseline period (inclusive)
+BASELINE_START_YEAR = 1960 # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
 
 #Set up the 2025 files and months automatically
@@ -45,11 +45,11 @@ elif Country == 'Iberia':
 
 elif Country == 'Scotland':
     print('Running Scotland')
-    Month = 7
-    month = 'July'
+    Month = 6,7
+    month = 'June-July'
     shape_name = 'Scottish Highlands'
     percentile = 95
-    daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
+    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Chile':
@@ -85,23 +85,24 @@ index_name = 'canadian_fire_weather_index'
 ## Bias correct 525 ensemble members for 2024/2025 using this baseline member
 BiasCorrDict = {}
 
-# Step 0: Load fwi data from CSV using pandas
-df_obs = pd.read_csv(baseline_folder+'ERA5_FWI_1960-2013_'+Country+'_'+str(percentile)+'%.dat',header=None)  # Historical ERA5 array
+# Step 0: Load FWI data from new CSVs using pandas
+df_obs = pd.read_csv(baseline_folder+f'ERA5_FWI_1960-2013_{Country}_{percentile}%.csv')
+df_sim = pd.read_csv(baseline_folder+f'HadGEM3_FWI_1960-2013_{Country}_{baseline_member}_{percentile}%.csv')
 
-df_sim = pd.read_csv(baseline_folder+'HadGEM3_FWI_1960-2013_'+Country+'_'+str(baseline_member)+'_'+str(percentile)+'%.dat',header=None)  # Historical HadGEM array
-df_obs[np.isnan(df_obs)] = 0.000000000001 #nans break the soft log transform so fill val ~ 0 to avoid issues.
-df_sim[np.isnan(df_sim)] = 0.000000000001 
+# Replace NaNs with small value to avoid log issues
+df_obs['FWI'] = df_obs['FWI'].replace(np.nan, 0.000000000001)
+df_sim['FWI'] = df_sim['FWI'].replace(np.nan, 0.000000000001)
 
-#### Log transform the data here #### 
-df_obs = np.log(np.exp(df_obs)-1)
-df_sim = np.log(np.exp(df_sim)-1)
+#### Log transform the data here ####
+df_obs_log = np.log(np.exp(df_obs['FWI'])-1)
+df_sim_log = np.log(np.exp(df_sim['FWI'])-1)
 
-# Subset the data to the selected baseline years
-all_years = np.arange(1960, (2013+1))   # this is hardcoded to the PRESUMED length of the CSVs and I don't like this method. 2013 +1 because by default it's exclusive of the end year, but we want to include 2013 so add 1 to make it inclusive.  
-baseline_mask = (all_years >= BASELINE_START_YEAR) & (all_years <= BASELINE_END_YEAR) #segment to just the time interval we want to use for the regression baseline.   
-years = all_years[baseline_mask]
-fwi_obs = df_obs.values[baseline_mask, 0]
-fwi_sim = df_sim.values[baseline_mask, 0]
+# Extract years from the 'Date' column (assumes format YYYY-MM or YYYY-MM/MM)
+all_years = df_obs['Date'].apply(lambda x: int(x.split('-')[0]))
+baseline_mask = (all_years >= BASELINE_START_YEAR) & (all_years <= BASELINE_END_YEAR)
+years = all_years[baseline_mask].values
+fwi_obs = df_obs_log[baseline_mask].values
+fwi_sim = df_sim_log[baseline_mask].values
 
 # Step 1a: Fit a linear regression model to obs and sim
 t = years - TARGET_YEAR #shift years relative to the target year.

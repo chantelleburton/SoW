@@ -52,11 +52,11 @@ elif Country == 'Iberia':
 
 elif Country == 'Scotland':
     print('Running Scotland')
-    Month = 7
-    month = 'July'
+    Month = 6,7
+    month = 'June-July'
     percentile = 95
     shape_name = 'Scottish Highlands'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
+    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
     ERA5_2025 = iris.load_cube(c_folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Chile':
@@ -146,7 +146,7 @@ if CSV_EXPORT:
     # Get the years from the cube
     years = yr_country_p.coord('year').points
     if isinstance(Month, tuple):
-        month_str = '-'.join(f'{m:02d}' for m in Month)  # e.g., "01-02"
+        month_str = '/'.join(f'{m:02d}' for m in Month)  # e.g., "01/02"
     else:
         month_str = f'{Month:02d}'
     # Create YEAR-MONTH strings

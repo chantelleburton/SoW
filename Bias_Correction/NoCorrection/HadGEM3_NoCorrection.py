@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import iris
-import statsmodels.api as sm
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
@@ -43,11 +42,11 @@ elif Country == 'Iberia':
 
 elif Country == 'Scotland':
     print('Running Scotland')
-    Month = 7
-    month = 'July'
+    Month = 6,7
+    month = 'June-July'
     shape_name = 'Scottish Highlands'
     percentile = 95
-    daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
+    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Chile':
@@ -109,13 +108,14 @@ for e_idx, ensemble_member in enumerate(ensemble_members):
             data = np.ravel(cube.data)
             # On first successful cube, set up years and matrix
             
-            years = np.array([dt.year for dt in cube.coord('time').units.num2date(cube.coord('time').points)])
-            n_years = len(years)
-            data_matrix = np.full((n_years, n_cols), np.nan)
+            if data_matrix is None:
+                years = np.array([dt.year for dt in cube.coord('time').units.num2date(cube.coord('time').points)])
+                n_years = len(years)
+                data_matrix = np.full((n_years, n_cols), np.nan)
             if len(data) == n_years:
                 data_matrix[:, col_idx] = data
             else:
-                print(f"Warning: Data length mismatch for Ens{ensemble_member} Real{realisation}")
+                print(f"Warning: Data length mismatch for Ens{ensemble_member} Real{realisation}")        
         except IOError:
             print(f"Missing data for Ens{ensemble_member} Real{realisation}")
             continue

@@ -14,24 +14,25 @@ from utils.constrain_cubes_standard import *
 from utils.cubefuncs import *
 
 ############# User inputs here #############
-Country = 'Chile'
+Country = 'Chile' # Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7), 'Chile' (1,2), 'Canada' (7,8)
 START_YEAR = 1960
 END_YEAR = 2013
-CSV_EXPORT = False #True for CSV, False for .dat
-# Options: 'South Korea' (3), 'Iberia' (8), 'Scotland' (7)
+CSV_EXPORT = True #True for CSV, False for .dat
+# Options: 'Korea' (3), 'Iberia' (8), 'Scotland' (7)
 ############# User inputs end here #############
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 
 # Set up the 2025 files and months automatically
-if Country == 'South Korea':
+if Country == 'Korea':
     print('Running South Korea')
     Month = 3
     month = 'March'
     percentile = 95
     shape_name = 'South Korea'
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-31_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
+    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
+    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Iberia':
     print('Running Iberia')
@@ -39,14 +40,16 @@ elif Country == 'Iberia':
     month = 'Aug'
     percentile = 95
     shape_name = 'Northwest Iberia'
+    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Scotland':
     print('Running Scotland')
-    Month = 7
-    month = 'July'
+    Month = 6,7
+    month = 'June-July'
     percentile = 95
     shape_name = 'Scottish Highlands'
+    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
     ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Chile':
@@ -134,7 +137,7 @@ if CSV_EXPORT:
     
     # Create YEAR-MONTH strings (handle single or multi-month)
     if isinstance(Month, tuple):
-        month_str = '-'.join(f'{m:02d}' for m in Month)  # e.g., "01-02"
+        month_str = '/'.join(f'{m:02d}' for m in Month)  # e.g., "01/02"
     else:
         month_str = f'{Month:02d}'
     
