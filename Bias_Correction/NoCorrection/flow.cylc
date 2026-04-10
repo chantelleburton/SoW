@@ -4,7 +4,7 @@
 [task parameters]
     
     runtype = hist,histnat
-    country = Korea, Iberia, Scotland, Chile, Canada
+    country = Korea#, Iberia, Scotland, Chile, Canada
 
 [scheduling]
     [[graph]]
@@ -17,14 +17,14 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/
-        python HadGEM3_HistoricalEnsembles.py
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Bias_Correction/NoCorrection/
+        python HadGEM3_NoCorrection.py
         """
 
         platform = spice
 
         [[[directives]]]
             --mem = 30G
-            --time = 300
+            --time = 60
             --cpus-per-task = 2
             --ntasks = 1
