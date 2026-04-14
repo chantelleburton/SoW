@@ -51,14 +51,14 @@ REGION_CONFIGS = {
         'shape_name': 'Southeast South Korea',
         'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
     },
-    # 'Scotland': {
-    #     'Month': 7,
-    #     'month_name': 'July',
-    #     'event_year':2026,
-    #     'percentile': 95,
-    #     'shape_name': 'Scottish Highlands',
-    #     'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
-    # },
+    'Scotland': {
+        'Month': (6,7),
+        'month_name': 'June-July',
+        'event_year':2026,
+        'percentile': 95,
+        'shape_name': 'Scottish Highlands',
+        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+    },
     'Chile': {
         'Month': (1, 2),
         'month_name': 'January-February',
@@ -169,7 +169,7 @@ def main():
         all_data = load_uncorrected_ensemble_data_csv(
             country, config['percentile'], 'hist', UNCORRECTED_FOLDER, DATA_YEARS
         )
-        print(all_data)
+
         nat_data = load_uncorrected_ensemble_data_csv(
             country, config['percentile'], 'histnat', UNCORRECTED_FOLDER, DATA_YEARS
         )
@@ -177,7 +177,7 @@ def main():
         if len(all_data) == 0 or len(nat_data) == 0:
             print(f"Skipping {country} due to missing data")
             continue
-        print(nat_data)
+
         # Calculate Risk Ratio with bootstrapped confidence intervals
         print("Calculating Risk Ratio...")
         rr_results = calculate_risk_ratio_with_ci(

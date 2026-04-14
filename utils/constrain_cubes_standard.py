@@ -304,14 +304,16 @@ def contrain_to_shape(cube, geom, constrain = True):
     return masked_cube
 
 
-def contrain_to_sow_shapefile(cube, shp_filename, name, *args, **kw):
-    shp = gp.read_file(shp_filename)  
+def contrain_to_sow_shapefile(cube, shp_filename, name, column='name', *args, **kw):
+    """
+    Mask cube to region(s) in shapefile by name, using specified column (default 'name').
+    """
+    shp = gp.read_file(shp_filename)
     try:
-        geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
-    except:
+        geom = shp[shp[column].str.contains(name, case=False, na=False)].geometry.unary_union
+    except Exception:
         shp["geometry"] = shp["geometry"].buffer(0)
-        geom = shp[shp['name'].str.contains(name, case=False, na=False)].geometry.unary_union
-    
+        geom = shp[shp[column].str.contains(name, case=False, na=False)].geometry.unary_union
     return contrain_to_shape(cube, geom, *args, **kw)
     
 
