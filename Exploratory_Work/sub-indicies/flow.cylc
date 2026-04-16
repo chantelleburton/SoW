@@ -1,0 +1,30 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+
+    country = Chile, Canada, Korea, Iberia, Scotland, 
+
+[scheduling]
+
+    [[graph]]
+        R1 = """
+            contiuity_check<country>
+        """
+
+[runtime]
+    [[contiuity_check<country>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/sub-indicies/
+        python contiuity_check.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 60G
+            --time = 180
+            --cpus-per-task = 4
+            --ntasks = 1
