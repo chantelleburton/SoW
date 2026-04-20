@@ -41,7 +41,7 @@ if Country == 'Korea':
     Month = 3
     month = 'March'
     percentile = 95
-    shape_name = 'South Korea'
+    shape_name = 'Southeast South Korea'
 
 elif Country == 'Iberia':
     print('Running Iberia')
@@ -102,7 +102,6 @@ if not hist_files:
 
 
 cubes = iris.load(hist_files, INDEX)
-print(cubes)
 for cube in cubes:
     
     for coord_name in ("year", "season_year",'month','month_number'): #scalar coords prevent concat so drop them - datetime integrity maintained by regular coords and year coord below.
@@ -112,7 +111,7 @@ for cube in cubes:
 ERA5_hist_all = cubes.concatenate_cube()
 # Cut to shapefile 
 print("Applying shapefile")
-ERA5_hist_all = contrain_to_sow_shapefile(ERA5_hist_all, shp_file, shape_name) #SLOW operation, keep out of loop. Could be replaced with the new iris.util.mask_cube_from_shape but works as is.
+ERA5_hist_all = apply_shapefile_inclusive(shp_file, shape_name, ERA5_hist_all) 
 
 # Add year coordinate
 try:

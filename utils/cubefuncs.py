@@ -1,5 +1,6 @@
 import iris
 import numpy as np
+import geopandas as gpd
 from .constrain_cubes_standard import contrain_to_sow_shapefile
 
 def CountryMean(cube):
@@ -163,3 +164,25 @@ def GetERA5Threshold(era5_file, shp_file, shape_name, month, percentile):
     era5_cube = TimePercentile(era5_cube, percentile)
     
     return float(np.array(era5_cube.data))
+
+def apply_shapefile_inclusive(shp_file, shape_name, cube):
+    
+    shapefile = gpd.read_file(shp_file)
+    
+    # Set coordinate system for iris.util.mask_cube_from_shape
+    cube.coord('latitude').coord_system = iris.coord_systems.GeogCS(iris.fileformats.pp.EARTH_RADIUS)
+    cube.coord('longitude').coord_system = iris.coord_systems.GeogCS(iris.fileformats.pp.EARTH_RADIUS)
+    
+    # Get geometry for this region
+    region_gdf = shapefile[shapefile['name'] == shape_name]
+    region_geom = region_gdf['geometry'].values[0]
+    
+    # Step 1: Crop to bounding box to reduce data volume
+    from .constrain_cubes_standard import contrain_coords
+    minx, miny, maxx, maxy = region_geom.bounds
+    cube = contrain_coords(cube, (minx, maxx, miny, maxy))
+    
+    # Step 2: Apply inclusive mask via iris
+    masked_cube = iris.util.mask_cube_from_shape(cube, region_geom)
+    
+    return masked_cube

@@ -12,6 +12,7 @@ import shapely.geometry as sgeom
 import shapely.ops as ops
 from shapely.geometry import Point
 from shapely.vectorized import contains
+from shapely import intersects
 import numpy as np
 import cartopy.crs as ccrs
 import geopandas as gp
