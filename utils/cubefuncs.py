@@ -155,7 +155,7 @@ def GetERA5Threshold(era5_file, shp_file, shape_name, month, percentile):
     era5_cube = era5_cube.extract(daterange)
     
     # 2. Apply shapefile mask
-    era5_cube = contrain_to_sow_shapefile(era5_cube, shp_file, shape_name)
+    era5_cube = apply_shapefile_inclusive(shp_file, shape_name, era5_cube)
     
     # 3. Spatial percentile
     era5_cube = CountryPercentile(era5_cube, percentile)
