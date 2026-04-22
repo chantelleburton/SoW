@@ -134,6 +134,8 @@ def calculate_risk_ratio_with_ci(all_data, nat_data, threshold, bootstrap_size=1
     return {
         'median': np.median(rr_replicates),
         'ci_5': np.percentile(rr_replicates, 5),
+        'ci_25': np.percentile(rr_replicates, 25),
+        'ci_75': np.percentile(rr_replicates, 75),
         'ci_95': np.percentile(rr_replicates, 95),
         'replicates': rr_replicates
     }
@@ -239,6 +241,25 @@ def main():
     for country, res in results.items():
         rr = res['rr']
         print(f"{country}: RR = {rr['median']:.2f} [{rr['ci_5']:.2f} - {rr['ci_95']:.2f}]")
+
+    # Export summary CSV
+    summary_rows = []
+    for country, res in results.items():
+        rr = res['rr']
+        summary_rows.append({
+            'Country': country,
+            'ERA5_Threshold': res['threshold'],
+            'RR_Median': rr['median'],
+            'RR_5th': rr['ci_5'],
+            'RR_25th': rr['ci_25'],
+            'RR_50th': rr['median'],
+            'RR_75th': rr['ci_75'],
+            'RR_95th': rr['ci_95'],
+        })
+    summary_df = pd.DataFrame(summary_rows)
+    summary_path = f'{EXPORT_FOLDER}/Uncorrected_Risk_Ratio_Summary.csv'
+    summary_df.to_csv(summary_path, index=False)
+    print(f"\nSummary exported to: {summary_path}")
 
     return results
 

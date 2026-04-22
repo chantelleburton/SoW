@@ -1,6 +1,6 @@
 """
 Plotting-only version of Supplement2.py
-Loads pre-computed .dat files and creates 4-panel PDF/timeseries plots.
+Loads pre-computed CSV files and creates 4-panel PDF/timeseries plots.
 Generalised to all 15 baseline members.
 """
 
@@ -12,11 +12,9 @@ import statsmodels.api as sm
 import warnings
 import os
 import sys
-import iris
 
 sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
 from utils.cubefuncs import GetERA5Threshold
-from utils.constrain_cubes_standard import contrain_to_sow_shapefile
 
 warnings.filterwarnings("ignore", module=r"^seaborn(\.|$)")
 warnings.filterwarnings("ignore", module=r"^iris(\.|$)")
@@ -26,13 +24,15 @@ warnings.filterwarnings("ignore", module=r"^iris(\.|$)")
 FOLDER = '/data/scratch/bob.potts/sowf/'
 OUTPUT_FOLDER = FOLDER + 'test_output/Plots/'
 BASELINE_FOLDER = FOLDER + 'test_output/Baseline/'
-HISTORICAL_FOLDER = FOLDER + 'test_output/Historical_Ensembles/'
-LOG_TRANSFORMS_FOLDER = FOLDER + 'test_output/Log_Transforms/'
+UNCORRECTED_ENSEMBLE_FOLDER = FOLDER + 'test_output/Uncorrected_Attribution_Ensembles/'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 
+BASELINE_START_YEAR = 1980
+BASELINE_END_YEAR = 2013
+DATA_YEAR = 2024
 N_BASELINES = 15
 N_MEMBERS = 105
-YEARS = np.arange(1960, 2014)
+YEARS = np.arange(BASELINE_START_YEAR, BASELINE_END_YEAR + 1)
 
 REGION_CONFIGS = {
     'Korea': {
@@ -74,73 +74,51 @@ REGION_CONFIGS = {
 
 ############# Helper Functions #############
 
-def load_dat_file(filepath):
-    """Load a .dat file and return as numpy array."""
-    data = []
-    with open(filepath, 'r') as f:
-        for line in f.readlines():
-            try:
-                data.append(float(line.strip()))
-            except ValueError:
-                continue
-    return np.array(data)
+def _baseline_years_str():
+    """Return the baseline year range string used in filenames."""
+    return f"{BASELINE_START_YEAR}-{BASELINE_END_YEAR}"
 
 
 def load_era5_baseline(country, percentile):
-    """Load ERA5 baseline data."""
-    filepath = f"{BASELINE_FOLDER}ERA5_FWI_1960-2013_{country}_{percentile}%.dat"
-    return load_dat_file(filepath)
+    """Load ERA5 baseline FWI from CSV (Date,FWI columns)."""
+    filepath = f"{BASELINE_FOLDER}ERA5_FWI_{_baseline_years_str()}_{country}_{percentile}%.csv"
+    df = pd.read_csv(filepath)
+    return df['FWI'].values
 
 
 def load_hadgem3_baseline(country, percentile, n_members=15):
-    """Load all HadGEM3 baseline members."""
+    """Load all HadGEM3 baseline members from CSV (Date,FWI columns)."""
     all_data = []
     for member in range(1, n_members + 1):
-        filepath = f"{BASELINE_FOLDER}HadGEM3_FWI_1960-2013_{country}_{member}_{percentile}%.dat"
+        filepath = f"{BASELINE_FOLDER}HadGEM3_FWI_{_baseline_years_str()}_{country}_{member}_{percentile}%.csv"
         try:
-            data = load_dat_file(filepath)
-            all_data.append(data)
+            df = pd.read_csv(filepath)
+            all_data.append(df['FWI'].values)
         except FileNotFoundError:
             print(f"Warning: Missing file for member {member}")
             continue
     return all_data
 
 
-def load_historical_ensemble(country, percentile, run_type):
-    """Load historical ensemble data (hist or histnat)."""
-    filepath = f"{HISTORICAL_FOLDER}{country}_Uncorrected_{run_type}{percentile}%.dat"
-    data = []
+def load_uncorrected_ensemble(country, percentile, run_type):
+    """Load uncorrected attribution ensemble from CSV (Year + Ens columns)."""
+    filepath = f"{UNCORRECTED_ENSEMBLE_FOLDER}{country}_NoCorrection_{run_type}_{percentile}percent_DataYear_{DATA_YEAR}.csv"
     try:
-        with open(filepath) as f:
-            for line in f.readlines():
-                try:
-                    data.append(float(line.rstrip(',\n')))
-                except ValueError:
-                    continue
+        df = pd.read_csv(filepath)
+        col_names = [col for col in df.columns if col != 'Year']
+        return df[col_names].values.ravel()
     except FileNotFoundError:
         print(f"Warning: File not found: {filepath}")
-    return np.array(data)
+        return np.array([])
 
 
-
-# New loader for bias-corrected data from CSVs (new format)
-def load_bias_corrected_data_csv(country, percentile, baseline_member, run_type, target_year, baseline_start, baseline_end):
+def compute_bias_correction(era5_baseline, hadgem3_members):
     """
-    Load bias-corrected data from the new CSV format.
-    Returns: years (np.array), data_matrix (np.array: years x (n_ens*n_real)), col_names (list)
-    """
-    filename = f"{country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{target_year}_DataYear_{target_year}_BaselinePeriod_{baseline_start}_{baseline_end}.csv"
-    filepath = os.path.join(LOG_TRANSFORMS_FOLDER, filename)
-    df = pd.read_csv(filepath)
-    years = df['Year'].values
-    col_names = [col for col in df.columns if col != 'Year']
-    data_matrix = df[col_names].values  # shape: (years, n_ens*n_real)
-    return years, data_matrix, col_names
-
-
-def compute_bias_correction(country, percentile, n_baselines):
-    """
-    Compute bias correction for all baseline members.
+    Compute bias correction for all baseline members using pre-loaded data.
+    
+    Args:
+        era5_baseline: 1D array of ERA5 FWI baseline values
+        hadgem3_members: list of 1D arrays, one per HadGEM3 baseline member
     
     Returns:
         fwi_obs: observed ERA5 FWI values (inverse log transformed)
@@ -158,14 +136,11 @@ def compute_bias_correction(country, percentile, n_baselines):
         fwi0, delta = results.params
         return fwi0, delta, np.std(fwi - delta * t)
     
-    # Load ERA5 observations
-    era5_filepath = f"{BASELINE_FOLDER}ERA5_FWI_1960-2013_{country}_{percentile}%.dat"
-    df_obs = pd.read_csv(era5_filepath, header=None)
-    df_obs[np.isnan(df_obs)] = 0.000000000001
+    # Replace NaNs without modifying original arrays
+    obs_arr = np.where(np.isnan(era5_baseline), 1e-12, era5_baseline)
     
     # Log transform observations
-    df_obs_log = np.log(np.exp(df_obs) - 1)
-    fwi_obs_log = df_obs_log.values[:, 0]
+    fwi_obs_log = np.log(np.exp(obs_arr) - 1)
     
     # Get regression parameters for observations
     fwi0_obs, delta_obs, std_obs = find_regression_parameters(fwi_obs_log)
@@ -173,33 +148,24 @@ def compute_bias_correction(country, percentile, n_baselines):
     fwi_sim_all = []
     fwi_detrended_all = []
     
-    for member in range(1, n_baselines + 1):
-        hadgem3_filepath = f"{BASELINE_FOLDER}HadGEM3_FWI_1960-2013_{country}_{member}_{percentile}%.dat"
+    for sim_arr in hadgem3_members:
+        sim_clean = np.where(np.isnan(sim_arr), 1e-12, sim_arr)
         
-        try:
-            df_sim = pd.read_csv(hadgem3_filepath, header=None)
-            df_sim[np.isnan(df_sim)] = 0.000000000001
-            
-            # Log transform simulation
-            df_sim_log = np.log(np.exp(df_sim) - 1)
-            fwi_sim_log = df_sim_log.values[:, 0]
-            
-            # Get regression parameters for simulation
-            fwi0_sim, delta_sim, std_sim = find_regression_parameters(fwi_sim_log)
-            
-            # Detrend and shift to observations
-            fwi_detrended_log = fwi0_obs + (fwi_sim_log - delta_sim * t - fwi0_sim)
-            
-            # Inverse log transform
-            fwi_sim_inv = np.log(np.exp(fwi_sim_log) + 1)
-            fwi_detrended_inv = np.log(np.exp(fwi_detrended_log) + 1)
-            
-            fwi_sim_all.append(fwi_sim_inv)
-            fwi_detrended_all.append(fwi_detrended_inv)
-            
-        except FileNotFoundError:
-            print(f"  Warning: Missing HadGEM3 baseline file for member {member}")
-            continue
+        # Log transform simulation
+        fwi_sim_log = np.log(np.exp(sim_clean) - 1)
+        
+        # Get regression parameters for simulation
+        fwi0_sim, delta_sim, std_sim = find_regression_parameters(fwi_sim_log)
+        
+        # Detrend and shift to observations
+        fwi_detrended_log = fwi0_obs + (fwi_sim_log - delta_sim * t - fwi0_sim)
+        
+        # Inverse log transform
+        fwi_sim_inv = np.log(np.exp(fwi_sim_log) + 1)
+        fwi_detrended_inv = np.log(np.exp(fwi_detrended_log) + 1)
+        
+        fwi_sim_all.append(fwi_sim_inv)
+        fwi_detrended_all.append(fwi_detrended_inv)
     
     # Inverse log transform observations
     fwi_obs_inv = np.log(np.exp(fwi_obs_log) + 1)
@@ -220,7 +186,7 @@ def plot_subplot_a(ax, hadgem3_arr, era5_arr, era5_2025, month_name):
     if era5_2025 is not None:
         ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} 2025')
     ax.set_xlabel('')
-    ax.set_title(f'a) {month_name} 1960-2013 (Uncorrected)')
+    ax.set_title(f'a) {month_name} {BASELINE_START_YEAR}-{BASELINE_END_YEAR} (Uncorrected)')
     ax.legend(loc='best')
 
 
@@ -237,7 +203,7 @@ def plot_subplot_b(ax, fwi_detrended_all, era5_arr, era5_2025, month_name):
     if era5_2025 is not None:
         ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} 2025')
     ax.set_xlabel('')
-    ax.set_title(f'b) {month_name} 1960-2013 (Corrected)')
+    ax.set_title(f'b) {month_name} {BASELINE_START_YEAR}-{BASELINE_END_YEAR} (Corrected)')
     ax.legend(loc='best')
 
 
@@ -335,11 +301,11 @@ def create_supplement2_plot(country, config, save=True):
         print(f"  Warning: Could not compute ERA5 threshold: {e}")
         era5_2025 = None
     
-    # Compute bias correction for subplots (b) and (c)
+    # Compute bias correction for subplots (b) and (c) using already-loaded data
     print("Computing bias correction for all baseline members...")
     try:
         fwi_obs, fwi_sim_all, fwi_detrended_all, years = compute_bias_correction(
-            country, percentile, N_BASELINES)
+            era5_arr, hadgem3_members)
         print(f"  Processed {len(fwi_sim_all)} baseline members")
     except Exception as e:
         print(f"  Warning: Could not compute bias correction: {e}")
@@ -347,10 +313,10 @@ def create_supplement2_plot(country, config, save=True):
         traceback.print_exc()
         fwi_obs, fwi_sim_all, fwi_detrended_all, years = np.array([]), [], [], YEARS
     
-    # Load uncorrected historical ensemble data for subplot (d)
-    print("Loading uncorrected historical ensemble data...")
-    all_uncorrected = load_historical_ensemble(country, percentile, 'hist')
-    nat_uncorrected = load_historical_ensemble(country, percentile, 'histnat')
+    # Load uncorrected attribution ensemble data for subplot (d)
+    print("Loading uncorrected attribution ensemble data...")
+    all_uncorrected = load_uncorrected_ensemble(country, percentile, 'hist')
+    nat_uncorrected = load_uncorrected_ensemble(country, percentile, 'histnat')
     print(f"  Loaded {len(all_uncorrected)} ALL uncorrected, {len(nat_uncorrected)} NAT uncorrected")
     
     # Create figure
@@ -373,7 +339,7 @@ def create_supplement2_plot(country, config, save=True):
     
     if save:
         os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-        output_file = f"{OUTPUT_FOLDER}{country}_Supplement2.png"
+        output_file = f"{OUTPUT_FOLDER}{country}_NewSupplement2.png"
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
         print(f"Saved: {output_file}")
     
