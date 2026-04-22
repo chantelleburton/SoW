@@ -3,7 +3,7 @@
 
 [task parameters]
 
-    country = Chile, Canada, Korea, Iberia, Scotland, 
+    country = Canada,Iberia,Korea#Chile, Canada, Korea, Iberia, Scotland, 
 
 [scheduling]
 

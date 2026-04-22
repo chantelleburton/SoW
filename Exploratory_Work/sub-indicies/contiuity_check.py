@@ -5,16 +5,17 @@ import iris
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
-from utils.constrain_cubes_standard import contrain_to_sow_shapefile
+
+from utils.cubefuncs import apply_shapefile_inclusive
 import glob
 import re
 
 # --- Subindex dictionary ---
 index_dict = {
-	# 'canadian_fire_weather_index': 'FWI',
-	# 'fine_fuel_moisture_content': 'FFMC',
-	# 'duff_moisture_content': 'DMC',
-	# 'drought_code': 'DC',
+	'canadian_fire_weather_index': 'FWI',
+	'fine_fuel_moisture_content': 'FFMC',
+	'duff_moisture_content': 'DMC',
+	'drought_code': 'DC',
 	'initial_spread_index': 'ISI',
 	'build_up_index': 'BUI'
 }
@@ -22,7 +23,7 @@ index_dict = {
 # --- Country/region config ---
 country_config = {
 	'Korea': {
-		'shape_name': 'South Korea',
+		'shape_name': 'Southeast South Korea',
 	},
 	'Iberia': {
 		'shape_name': 'Northwest Iberia',
@@ -56,9 +57,7 @@ all_files = sorted(glob.glob(os.path.join(data_dir, file_prefix + '*.nc')))
 selected_files = [f for f in all_files if extract_year_from_filename(f) in [2023, 2024, 2025, 2026]]
 
 
-# --- Efficient: load all cubes per file, crop all indices, then merge per index and region ---
 
-# --- Efficient: concat first, then crop ---
 from collections import defaultdict
 
 index_cubes = defaultdict(list)
@@ -102,10 +101,7 @@ for subindex_name, cubes in index_cubes.items():
 		print(f"No data for {short_label}")
 		continue
 	try:
-		# print(cubes[0].coord('time'))  # Check time coordinate before merging
-		# print(cubes[1].coord('time'))
-		# print(cubes[2].coord('time'))
-		# print(cubes[3].coord('time'))
+
 		merged = iris.cube.CubeList(cubes).concatenate_cube()
 	except Exception as e:
 		print(f"Failed to merge {short_label}: {e}")
@@ -113,7 +109,7 @@ for subindex_name, cubes in index_cubes.items():
 	for region, reg_cfg in country_config.items():
 		print(f"  Cropping {short_label} to {region}")
 		try:
-			cropped = contrain_to_sow_shapefile(merged, shp_file, reg_cfg['shape_name'])
+			cropped = apply_shapefile_inclusive(shp_file, reg_cfg['shape_name'], merged)
 			out_path = os.path.join(output_dir, f"{short_label}_{region}_2023-2026.nc")
 			iris.save(cropped, out_path)
 			print(f"    Saved: {out_path}")
