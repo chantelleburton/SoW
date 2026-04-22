@@ -1,0 +1,30 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    index = canadian_fire_weather_index #fine_fuel_moisture_content,duff_moisture_content, drought_code, initial_spread_index, build_up_index,canadian_fire_weather_index,
+    country = Chile, Canada, Korea, Iberia, Scotland, 
+
+[scheduling]
+
+    [[graph]]
+        R1 = """
+            era5_baseline_allmonths<index,country>
+        """
+
+[runtime]
+    [[era5_baseline_allmonths<index,country>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/CDS_Comparison/ERA5_Baseline/
+        python ERA5_Baseline_allmonths.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 10G
+            --time = 30
+            --cpus-per-task = 1
+            --ntasks = 1

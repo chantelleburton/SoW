@@ -12,3 +12,4 @@ explore_DataPrep.ipynb # this is used for exploratory testing
 /__pycache__
 /spice_scripts/logs
 PDF_95%.py
+spice_scripts/CDS-FWI-1980-1989.nc
