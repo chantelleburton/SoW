@@ -17,11 +17,11 @@ baseline_member = int(os.environ.get("CYLC_TASK_PARAM_member", 1)) #if in doubt,
 run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")  # 'hist' or 'histnat'
 
 print(f'Processing Country: {Country}, baseline member: {baseline_member}, run type: {run_type}')
-
+shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 folder = '/data/scratch/chantelle.burton/SoW2526/'
 DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 untill 2020-2024 attribtution ensemble runs are done.
 TARGET_YEAR = 2024 # this is the year we want the regression to be relative to (i.e. the year we want to bias correct to). 
-BASELINE_START_YEAR = 1960 # start of the regression baseline period (inclusive)
+BASELINE_START_YEAR = 1997 # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
 
 #Set up the 2025 files and months automatically
@@ -31,17 +31,13 @@ if Country == 'Korea':
     month = 'March'
     percentile = 95
     shape_name = 'Southeast South Korea'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
-      
+
 elif Country == 'Iberia':
     print('Running Iberia')
     Month = 8
     month = 'Aug'
     percentile = 95
     shape_name = 'Northwest Iberia'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Scotland':
     print('Running Scotland')
@@ -49,8 +45,6 @@ elif Country == 'Scotland':
     month = 'June-July'
     shape_name = 'Scottish Highlands'
     percentile = 95
-    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Chile':
     print('Running Chile')
@@ -58,8 +52,6 @@ elif Country == 'Chile':
     month = 'January-February'
     percentile = 95
     shape_name = 'Chilean Temperate Forests and Matorral'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-11-01-2026-02-28_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Canada':
     print('Running Canada')
@@ -67,8 +59,6 @@ elif Country == 'Canada':
     month = 'July-August'
     percentile = 95
     shape_name = 'Midwestern Canadian Shield forests'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 else:
     raise ValueError(f"Unknown Country: {Country}. Expected one of: SouthKorea, Iberia, Scotland, Chile, Canada")
@@ -86,8 +76,8 @@ index_name = 'canadian_fire_weather_index'
 BiasCorrDict = {}
 
 # Step 0: Load FWI data from new CSVs using pandas
-df_obs = pd.read_csv(baseline_folder+f'ERA5_FWI_1960-2013_{Country}_{percentile}%.csv')
-df_sim = pd.read_csv(baseline_folder+f'HadGEM3_FWI_1960-2013_{Country}_{baseline_member}_{percentile}%.csv')
+df_obs = pd.read_csv(baseline_folder+f'ERA5_FWI_{BASELINE_START_YEAR}-{BASELINE_END_YEAR}_{Country}_{percentile}%.csv')
+df_sim = pd.read_csv(baseline_folder+f'HadGEM3_FWI_{BASELINE_START_YEAR}-{BASELINE_END_YEAR}_{Country}_{baseline_member}_{percentile}%.csv')
 
 # Replace NaNs with small value to avoid log issues
 df_obs['FWI'] = df_obs['FWI'].replace(np.nan, 0.000000000001)
@@ -97,7 +87,7 @@ df_sim['FWI'] = df_sim['FWI'].replace(np.nan, 0.000000000001)
 df_obs_log = np.log(np.exp(df_obs['FWI'])-1)
 df_sim_log = np.log(np.exp(df_sim['FWI'])-1)
 
-# Extract years from the 'Date' column (assumes format YYYY-MM or YYYY-MM/MM)
+# Extract years from the 'Date' column (assumes format YYYY-MM or YYYY-MM/MM) #technically reducdant with the file read but double checks.
 all_years = df_obs['Date'].apply(lambda x: int(x.split('-')[0]))
 baseline_mask = (all_years >= BASELINE_START_YEAR) & (all_years <= BASELINE_END_YEAR)
 years = all_years[baseline_mask].values
@@ -143,7 +133,7 @@ for DATA_YEAR in DATA_YEARS:
                     cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
                 else:
                     cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-                cube = contrain_to_sow_shapefile(cube, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
+                cube = apply_shapefile_inclusive(shp_file, shape_name, cube)
                 cube = ConstrainToYear(cube, DATA_YEAR)
                 cube = CountryPercentile(cube, percentile)
                 cube = TimePercentile(cube, percentile)

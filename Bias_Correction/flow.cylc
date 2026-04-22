@@ -4,7 +4,7 @@
 [task parameters]
     member = 1..15
     runtype = hist,histnat
-    country =  Iberia, Scotland, Chile, Canada, Korea
+    country =  Korea#Iberia, Scotland, Chile, Canada, Korea
 
 [scheduling]
     [[graph]]

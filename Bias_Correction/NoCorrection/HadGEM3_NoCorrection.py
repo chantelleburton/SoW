@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 Country = os.environ.get("CYLC_TASK_PARAM_country", "Iberia") #fallback value of iberia
 run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")  # 'hist' or 'histnat'
 output_folder = '/data/scratch/bob.potts/sowf/test_output/Uncorrected_Attribution_Ensembles/'
-
+shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 print(f'Processing Country: {Country}, run type: {run_type}')
 
 
@@ -28,8 +28,7 @@ if Country == 'Korea':
     month = 'March'
     percentile = 95
     shape_name = 'Southeast South Korea'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
+
       
 elif Country == 'Iberia':
     print('Running Iberia')
@@ -37,8 +36,7 @@ elif Country == 'Iberia':
     month = 'Aug'
     percentile = 95
     shape_name = 'Northwest Iberia'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month == Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
+
 
 elif Country == 'Scotland':
     print('Running Scotland')
@@ -46,8 +44,6 @@ elif Country == 'Scotland':
     month = 'June-July'
     shape_name = 'Scottish Highlands'
     percentile = 95
-    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 elif Country == 'Chile':
     print('Running Chile')
@@ -55,8 +51,7 @@ elif Country == 'Chile':
     month = 'January-February'
     percentile = 95
     shape_name = 'Chilean Temperate Forests and Matorral'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-11-01-2026-02-28_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
+
 
 elif Country == 'Canada':
     print('Running Canada')
@@ -64,8 +59,6 @@ elif Country == 'Canada':
     month = 'July-August'
     percentile = 95
     shape_name = 'Midwestern Canadian Shield forests'
-    daterange = iris.Constraint(time=lambda cell: cell.point.month in Month)
-    ERA5_2025 = iris.load_cube(folder+'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc', 'canadian_fire_weather_index')
 
 else:
     raise ValueError(f"Unknown Country: {Country}. Expected one of: Korea, Iberia, Scotland, Chile, Canada")
@@ -101,7 +94,7 @@ for e_idx, ensemble_member in enumerate(ensemble_members):
                 cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
             else:
                 cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-            cube = contrain_to_sow_shapefile(cube, '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp', shape_name)
+            cube = apply_shapefile_inclusive(shp_file, shape_name, cube)
             cube = ConstrainToYear(cube, DATA_YEAR)
             cube = CountryPercentile(cube, percentile)
             cube = TimePercentile(cube, percentile)
