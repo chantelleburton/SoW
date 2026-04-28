@@ -2,29 +2,28 @@
     allow implicit tasks = True
 
 [task parameters]
-
-    country = Chile, Canada, Korea, Iberia, Scotland, 
+    dataset = CDS, XClim
+    country = Chile, Canada, Korea, Iberia, Scotland
 
 [scheduling]
-
     [[graph]]
         R1 = """
-            CDS_FWI_TimeSeries<country>
+            calc_95th<dataset><country>
         """
 
 [runtime]
-    [[CDS_FWI_TimeSeries<country>]]
+    [[calc_95th<dataset><country>]]
         script = """
         set -eux
         conda activate sowf
         cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/CDS_Comparison/
-        python CDS_FWI_TimeSeries.py
+        python calc_95th_monthly.py
         """
 
         platform = spice
 
         [[[directives]]]
-            --mem = 200G
-            --time = 180
-            --cpus-per-task = 4
+            --mem = 20G
+            --time = 60
+            --cpus-per-task = 1
             --ntasks = 1

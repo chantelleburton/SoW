@@ -1,0 +1,29 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    start_year = 1979, 1989, 1999, 2009, 2019
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            xclim_fwi<start_year>
+        """
+
+[runtime]
+    [[xclim_fwi<start_year>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/xclim_work/
+        python explore_xclim_FWI.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 100G
+            --partition = cpu-long
+            --time = 360
+            --cpus-per-task = 4
+            --ntasks = 1

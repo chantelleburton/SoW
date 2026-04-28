@@ -1,3 +1,4 @@
+import xarray 
 import xarray as xr
 import numpy as np
 import pandas as pd
@@ -7,7 +8,7 @@ import cartopy.feature as cfeature
 import geopandas as gpd
 import os
 
-plot_dir = '/data/scratch/bob.potts/sowf/test_output/Plots/CDS_Comparison'
+plot_dir = '/data/scratch/bob.potts/sowf/test_output/Plots'
 export_dir = '/data/scratch/bob.potts/sowf/test_output/Exports'
 baseline_dir = '/data/scratch/bob.potts/sowf/test_output/AllMonths_Baseline'
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
@@ -94,34 +95,11 @@ grib_files = [
 print("Loading GRIB files...")
 datasets = [xr.open_dataset(f, engine='cfgrib') for f in grib_files]
 ds = xr.concat(datasets, dim='time')
-print(f"CDS full time range: {ds.time.values[0]} to {ds.time.values[-1]}")
+print(f"Full time range: {ds.time.values[0]} to {ds.time.values[-1]}")
 
-# --- Load and merge xclim decade FWI files ---
-import re as _re
-xclim_dir = '/data/scratch/bob.potts/sowf/test_output/XClim_FWI'
-xclim_files = sorted([
-    os.path.join(xclim_dir, f) for f in os.listdir(xclim_dir)
-    if _re.match(r'era5_fwi_\d{4}-\d{4}\.nc$', f)
-])
-print(f"Found {len(xclim_files)} xclim decade files")
-
-xclim_parts = []
-for i, fpath in enumerate(xclim_files):
-    xds = xr.open_dataset(fpath)
-    file_start_year = int(xds.time.dt.year.values[0])
-    # Skip the first year of every file except the earliest to avoid spin-up artefacts
-    if i > 0:
-        xds = xds.sel(time=xds.time.dt.year > file_start_year)
-        print(f"  {os.path.basename(fpath)}: skipped {file_start_year}, using {int(xds.time.dt.year.values[0])}-{int(xds.time.dt.year.values[-1])}")
-    else:
-        print(f"  {os.path.basename(fpath)}: using {file_start_year}-{int(xds.time.dt.year.values[-1])} (first file, no skip)")
-    xclim_parts.append(xds)
-
-# Concatenate and drop duplicate times (keep earlier file's data)
-xclim_ds = xr.concat(xclim_parts, dim='time')
-_, unique_idx = np.unique(xclim_ds.time.values, return_index=True)
-xclim_ds = xclim_ds.isel(time=np.sort(unique_idx))
-print(f"xclim merged time range: {xclim_ds.time.values[0]} to {xclim_ds.time.values[-1]}")
+# --- Subset to 1980-2013 to match ERA5 baseline ---
+ds = ds.sel(time=slice('1980-01-01', '2013-12-31'))
+print(f"After 1980-2013 subset: {ds.time.values[0]} to {ds.time.values[-1]}")
 
 # --- Process selected region ---
 cfg = REGION_CONFIGS[Country]
@@ -186,9 +164,9 @@ for year in years_available:
         cds_results[date_key] = temporal_pct
 
 if not cds_results:
-    raise RuntimeError(f"No CDS results for {region_name}")
+    raise RuntimeError(f"No results for {region_name}")
 
-print(f"  Computed {len(cds_results)} CDS monthly values")
+print(f"  Computed {len(cds_results)} monthly values")
 
 # Save CDS results
 cds_df = pd.DataFrame({
@@ -199,104 +177,54 @@ csv_path = os.path.join(export_dir, f'CDS_FWI_AllMonths_{region_name}.csv')
 cds_df.to_csv(csv_path, index=False)
 print(f"  Saved: {csv_path}")
 
-# --- Compute monthly xclim FWI percentile ---
-xclim_region_ds, _, _ = apply_shapefile_inclusive(xclim_ds, shp_file, cfg['shape_name'])
-xclim_years = np.unique(xclim_region_ds.time.dt.year.values)
-xclim_results = {}
-
-for year in xclim_years:
-    for month in range(1, 13):
-        subset = xclim_region_ds.sel(time=(xclim_region_ds.time.dt.year == year) &
-                                          (xclim_region_ds.time.dt.month == month))
-        fwi = subset['fwi']
-
-        if fwi.size == 0 or np.all(np.isnan(fwi.values)):
-            continue
-
-        spatial_pct = fwi.quantile(pct, dim=['latitude', 'longitude'])
-        temporal_pct = float(spatial_pct.quantile(pct, dim='time').values)
-
-        date_key = f'{year}-{month:02d}'
-        xclim_results[date_key] = temporal_pct
-
-xclim_df = pd.DataFrame({
-    'Date': list(xclim_results.keys()),
-    'XClim_FWI_95': list(xclim_results.values())
-})
-print(f"  Computed {len(xclim_results)} xclim monthly values")
-
 # --- Load ERA5 comparison CSV ---
 era5_csv_path = os.path.join(baseline_dir,
                              f'ERA5_FWI_1980-2013_{region_name}_allmonths_{cfg["percentile"]}%.csv')
-
-era5_df = None
-if os.path.exists(era5_csv_path):
+if not os.path.exists(era5_csv_path):
+    print(f"  ERA5 CSV not found: {era5_csv_path}, skipping comparison.")
+else:
     era5_csv = pd.read_csv(era5_csv_path)
-    era5_df = era5_csv.rename(columns={'FWI': 'ERA5_FWI_95'})
-    print(f"  Loaded ERA5 baseline: {len(era5_df)} months")
-else:
-    print(f"  ERA5 CSV not found: {era5_csv_path}")
 
-# --- 3-way merge (outer join so all dates appear, NaN where a source has no data) ---
-comparison = cds_df.merge(xclim_df, on='Date', how='outer')
-if era5_df is not None:
-    comparison = comparison.merge(era5_df[['Date', 'ERA5_FWI_95']], on='Date', how='outer')
-else:
-    comparison['ERA5_FWI_95'] = np.nan
+    # Merge on Date
+    comparison = pd.merge(cds_df, era5_csv, on='Date')
+    comparison.rename(columns={'FWI': 'ERA5_FWI_95'}, inplace=True)
+    comparison['Difference'] = comparison['CDS_FWI_95'] - comparison['ERA5_FWI_95']
+    comparison['Pct_Diff'] = 100 * comparison['Difference'] / comparison['ERA5_FWI_95']
 
-comparison['DateParsed'] = pd.to_datetime(comparison['Date'], format='%Y-%m')
-comparison = comparison.sort_values('DateParsed').reset_index(drop=True)
+    # Parse dates for plotting
+    comparison['DateParsed'] = pd.to_datetime(comparison['Date'], format='%Y-%m')
 
-# Compute differences where ERA5 exists
-comparison['CDS_minus_ERA5'] = comparison['CDS_FWI_95'] - comparison['ERA5_FWI_95']
-comparison['XClim_minus_ERA5'] = comparison['XClim_FWI_95'] - comparison['ERA5_FWI_95']
+    print(f"\n--- {region_name} All-Months Comparison ---")
+    print(f"  Matched months: {len(comparison)}")
+    print(f"  Mean absolute difference: {comparison['Difference'].abs().mean():.6f}")
+    print(f"  Max absolute difference:  {comparison['Difference'].abs().max():.6f}")
+    print(f"  Mean % difference:        {comparison['Pct_Diff'].mean():.2f}%")
+    print(f"  Correlation:              {comparison['CDS_FWI_95'].corr(comparison['ERA5_FWI_95']):.6f}")
 
-# Save combined CSV
-combined_csv_path = os.path.join(export_dir, f'FWI_3way_AllMonths_{region_name}.csv')
-comparison.drop(columns=['DateParsed']).to_csv(combined_csv_path, index=False)
-print(f"  Saved 3-way CSV: {combined_csv_path}")
+    # --- Plot comparison ---
+    fig, axes = plt.subplots(2, 1, figsize=(16, 8), sharex=True)
 
-# --- Print diagnostics for the overlap window (where all 3 exist) ---
-overlap = comparison.dropna(subset=['CDS_FWI_95', 'ERA5_FWI_95', 'XClim_FWI_95'])
-if len(overlap) > 0:
-    print(f"\n--- {region_name} 3-Way Comparison (overlap: {len(overlap)} months) ---")
-    print(f"  CDS vs ERA5:   mean abs diff = {overlap['CDS_minus_ERA5'].abs().mean():.4f}, "
-          f"corr = {overlap['CDS_FWI_95'].corr(overlap['ERA5_FWI_95']):.4f}")
-    print(f"  XClim vs ERA5:  mean abs diff = {overlap['XClim_minus_ERA5'].abs().mean():.4f}, "
-          f"corr = {overlap['XClim_FWI_95'].corr(overlap['ERA5_FWI_95']):.4f}")
-    print(f"  CDS vs XClim:   corr = {overlap['CDS_FWI_95'].corr(overlap['XClim_FWI_95']):.4f}")
+    ax1 = axes[0]
+    ax1.plot(comparison['DateParsed'], comparison['ERA5_FWI_95'], '-', label='ImpactTB 95%',
+             color='blue', linewidth=0.8, alpha=0.8)
+    ax1.plot(comparison['DateParsed'], comparison['CDS_FWI_95'], '-', label='CDS 95%',
+             color='red', linewidth=0.8, alpha=0.8)
+    ax1.set_ylabel(f'FWI {cfg["percentile"]}th Percentile')
+    ax1.set_title(f'{region_name} Monthly FWI {cfg["percentile"]}th Percentile: '
+                  f'CDS-FWI vs ERA5 Pipeline (1980-2013)')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
 
-# --- 3-way plot ---
-fig, axes = plt.subplots(2, 1, figsize=(18, 9), sharex=True)
+    ax2 = axes[1]
+    ax2.bar(comparison['DateParsed'], comparison['Difference'], color='grey', alpha=0.7, width=20)
+    ax2.axhline(0, color='black', linewidth=0.5)
+    ax2.set_xlabel('Date')
+    ax2.set_ylabel('Difference (CDS - ERA5)')
+    ax2.set_title('Difference')
+    ax2.grid(True, alpha=0.3)
 
-ax1 = axes[0]
-ax1.plot(comparison['DateParsed'], comparison['ERA5_FWI_95'], '-', label='ERA5 Pipeline 95%',
-         color='blue', linewidth=0.8, alpha=0.8)
-ax1.plot(comparison['DateParsed'], comparison['CDS_FWI_95'], '-', label='CDS 95%',
-         color='red', linewidth=0.8, alpha=0.8)
-ax1.plot(comparison['DateParsed'], comparison['XClim_FWI_95'], '-', label='XClim 95%',
-         color='green', linewidth=0.8, alpha=0.8)
-ax1.set_ylabel(f'FWI {cfg["percentile"]}th Percentile')
-ax1.set_title(f'{region_name} Monthly FWI {cfg["percentile"]}th Percentile: '
-              f'CDS vs ERA5 Pipeline vs XClim')
-ax1.legend()
-ax1.grid(True, alpha=0.3)
-
-ax2 = axes[1]
-ax2.plot(comparison['DateParsed'], comparison['CDS_minus_ERA5'], '-', label='CDS - ERA5',
-         color='red', linewidth=0.8, alpha=0.7)
-ax2.plot(comparison['DateParsed'], comparison['XClim_minus_ERA5'], '-', label='XClim - ERA5',
-         color='green', linewidth=0.8, alpha=0.7)
-ax2.axhline(0, color='black', linewidth=0.5)
-ax2.set_xlabel('Date')
-ax2.set_ylabel('Difference vs ERA5')
-ax2.set_title('Differences (where ERA5 baseline available)')
-ax2.legend()
-ax2.grid(True, alpha=0.3)
-
-plt.tight_layout()
-plt.savefig(os.path.join(plot_dir, f'FWI_3way_allmonths_{region_name}.png'),
-            dpi=150, bbox_inches='tight')
-plt.close()
-print(f"  Plot saved: FWI_3way_allmonths_{region_name}.png")
-print("Done.")
+    plt.tight_layout()
+    plt.savefig(os.path.join(plot_dir, f'CDS_vs_ERA5_FWI_allmonths_{region_name}.png'),
+                dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"  Plot saved: CDS_vs_ERA5_FWI_allmonths_{region_name}.png")
