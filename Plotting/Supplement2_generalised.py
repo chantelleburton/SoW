@@ -14,7 +14,7 @@ import os
 import sys
 
 sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
-from utils.cubefuncs import GetERA5Threshold
+from utils.cubefuncs import GetERA5ThresholdFromMonthly
 
 warnings.filterwarnings("ignore", module=r"^seaborn(\.|$)")
 warnings.filterwarnings("ignore", module=r"^iris(\.|$)")
@@ -22,10 +22,11 @@ warnings.filterwarnings("ignore", module=r"^iris(\.|$)")
 ############# Configuration #############
 
 FOLDER = '/data/scratch/bob.potts/sowf/'
-OUTPUT_FOLDER = FOLDER + 'test_output/Plots/'
+OUTPUT_FOLDER = FOLDER + 'test_output/Plots'
 BASELINE_FOLDER = FOLDER + 'test_output/Baseline/'
 UNCORRECTED_ENSEMBLE_FOLDER = FOLDER + 'test_output/Uncorrected_Attribution_Ensembles/'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
+ERA5_FWI_DIR = '/data/scratch/andrew.hartley/impactstoolbox/Data/era5/Fire-Weather/FWI'
 
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013
@@ -40,36 +41,36 @@ REGION_CONFIGS = {
         'percentile': 95,
         'shape_name': 'Southeast South Korea',
         'Month': 3,
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+        'event_year': 2025,
     },
     'Iberia': {
         'month_name': 'Aug',
         'percentile': 95,
         'shape_name': 'Northwest Iberia',
         'Month': 8,
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+        'event_year': 2025,
     },
     'Scotland': {
-        'month_name': 'July',
+        'month_name': 'June-July',
         'percentile': 95,
         'shape_name': 'Scottish Highlands',
-        'Month': 7,
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+        'Month': (6, 7),
+        'event_year': 2025,
     },
     'Chile': {
         'month_name': 'January-February',
         'percentile': 95,
         'shape_name': 'Chilean Temperate Forests and Matorral',
         'Month': (1, 2),
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-11-01-2026-02-28_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+        'event_year': 2026,
     },
     'Canada': {
         'month_name': 'July-August',
         'percentile': 95,
         'shape_name': 'Midwestern Canadian Shield forests',
         'Month': (7, 8),
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
-    }
+        'event_year': 2025,
+    },
 }
 
 ############# Helper Functions #############
@@ -127,7 +128,7 @@ def compute_bias_correction(era5_baseline, hadgem3_members):
         years: array of years
     """
     years = YEARS
-    t = years - 2025  # shift years to be relative to 2025
+    t = years - 2024  # shift years to be relative to 2024
     X = sm.add_constant(t)  # add a constant term for intercept
     
     def find_regression_parameters(fwi):
@@ -175,7 +176,7 @@ def compute_bias_correction(era5_baseline, hadgem3_members):
 
 ############# Plotting Functions #############
 
-def plot_subplot_a(ax, hadgem3_arr, era5_arr, era5_2025, month_name):
+def plot_subplot_a(ax, hadgem3_arr, era5_arr, era5_2025, month_name, event_year):
     """Plot (a): Historical PDF uncorrected."""
     if len(hadgem3_arr) > 0:
         sns.histplot(np.ravel(hadgem3_arr), kde=True, color='yellow', label='HadGEM3', 
@@ -184,13 +185,13 @@ def plot_subplot_a(ax, hadgem3_arr, era5_arr, era5_2025, month_name):
         sns.histplot(era5_arr, kde=True, color='grey', label='ERA5', 
                      alpha=0.5, ax=ax, stat='density')
     if era5_2025 is not None:
-        ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} 2025')
+        ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} {event_year}')
     ax.set_xlabel('')
     ax.set_title(f'a) {month_name} {BASELINE_START_YEAR}-{BASELINE_END_YEAR} (Uncorrected)')
     ax.legend(loc='best')
 
 
-def plot_subplot_b(ax, fwi_detrended_all, era5_arr, era5_2025, month_name):
+def plot_subplot_b(ax, fwi_detrended_all, era5_arr, era5_2025, month_name, event_year):
     """Plot (b): Historical PDF bias-corrected."""
     if len(fwi_detrended_all) > 0:
         # Flatten all detrended members into one array
@@ -201,7 +202,7 @@ def plot_subplot_b(ax, fwi_detrended_all, era5_arr, era5_2025, month_name):
         sns.histplot(era5_arr, kde=True, color='grey', label='ERA5', 
                      alpha=0.5, ax=ax, stat='density')
     if era5_2025 is not None:
-        ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} 2025')
+        ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} {event_year}')
     ax.set_xlabel('')
     ax.set_title(f'b) {month_name} {BASELINE_START_YEAR}-{BASELINE_END_YEAR} (Corrected)')
     ax.legend(loc='best')
@@ -244,8 +245,8 @@ def plot_subplot_c(ax, years, fwi_obs, fwi_sim_all, fwi_detrended_all, month_nam
     ax.grid(True, alpha=0.3)
 
 
-def plot_subplot_d(ax, all_data, nat_data, era5_2025, month_name):
-    """Plot (d): Uncorrected 2025 ALL vs NAT."""
+def plot_subplot_d(ax, all_data, nat_data, era5_2025, month_name, event_year):
+    """Plot (d): Uncorrected ALL vs NAT."""
     if len(all_data) > 0:
         sns.histplot(all_data, kde=True, color='orange', label='ALL', 
                      alpha=0.5, ax=ax, stat='density')
@@ -253,9 +254,9 @@ def plot_subplot_d(ax, all_data, nat_data, era5_2025, month_name):
         sns.histplot(nat_data, kde=True, color='blue', label='NAT', 
                      alpha=0.5, ax=ax, stat='density')
     if era5_2025 is not None:
-        ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} 2025')
+        ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} {event_year}')
     ax.set_xlabel('FWI')
-    ax.set_title(f'd) {month_name} 2025 Uncorrected')
+    ax.set_title(f'd) {month_name} {event_year} Uncorrected')
     ax.legend()
 
 
@@ -287,14 +288,16 @@ def create_supplement2_plot(country, config, save=True):
     hadgem3_arr = np.concatenate(hadgem3_members) if hadgem3_members else np.array([])
     print(f"  Loaded {len(hadgem3_arr)} HadGEM3 baseline values")
     
-    # Compute ERA5 2025 threshold using GetERA5Threshold
-    print("Computing ERA5 2025 threshold...")
+    # Compute ERA5 event-year threshold from monthly files
+    event_year = config['event_year']
+    print(f"Computing ERA5 {event_year} threshold...")
     try:
-        era5_2025 = GetERA5Threshold(
-            config['era5_file'],
+        era5_2025 = GetERA5ThresholdFromMonthly(
+            ERA5_FWI_DIR,
             SHP_FILE,
             config['shape_name'],
             config['Month'],
+            event_year,
             config['percentile'])
         print(f"  Threshold Value: {era5_2025:.2f}")
     except Exception as e:
@@ -323,23 +326,23 @@ def create_supplement2_plot(country, config, save=True):
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     
     # Subplot (a): Historical PDF uncorrected
-    plot_subplot_a(axes[0, 0], hadgem3_arr, era5_arr, era5_2025, month_name)
+    plot_subplot_a(axes[0, 0], hadgem3_arr, era5_arr, era5_2025, month_name, event_year)
     
     # Subplot (b): Historical PDF bias-corrected
-    plot_subplot_b(axes[0, 1], fwi_detrended_all, fwi_obs, era5_2025, month_name)
+    plot_subplot_b(axes[0, 1], fwi_detrended_all, fwi_obs, era5_2025, month_name, event_year)
     
     # Subplot (c): Timeseries of bias correction
     plot_subplot_c(axes[1, 0], years, fwi_obs, fwi_sim_all, fwi_detrended_all, month_name)
     
-    # Subplot (d): Uncorrected 2025 ALL vs NAT
-    plot_subplot_d(axes[1, 1], all_uncorrected, nat_uncorrected, era5_2025, month_name)
+    # Subplot (d): Uncorrected ALL vs NAT
+    plot_subplot_d(axes[1, 1], all_uncorrected, nat_uncorrected, era5_2025, month_name, event_year)
     
     plt.suptitle(f'{country} {percentile}th percentile FWI', y=1.02, fontsize=14)
     plt.tight_layout()
     
     if save:
         os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-        output_file = f"{OUTPUT_FOLDER}{country}_NewSupplement2.png"
+        output_file = f"{OUTPUT_FOLDER}{country}_NewSupplement2024.png"
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
         print(f"Saved: {output_file}")
     

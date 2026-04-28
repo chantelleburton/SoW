@@ -26,7 +26,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 ############# Configuration #############
-LOG_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
+LOG_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 PLOT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Plots'
 EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Exports'
@@ -35,7 +35,8 @@ BOOTSTRAP_SIZE = 10000
 N_BASELINES = 15
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013
-DATA_YEARS = 2024
+TARGET_YEAR = 2024
+DATA_YEARS = [2020,2021,2022,2023,2024]
 
 REGION_CONFIGS = {
     'Korea': {
@@ -153,22 +154,23 @@ def GetERA5ThresholdFromMonthly(era5_dir, shp_file, shape_name, months, event_ye
     return float(np.array(era5_cube.data))
 
 
-def load_ensemble_data_csv(country, percentile, run_type, folder, target_year, n_baselines, baseline_start, baseline_end):
+def load_ensemble_data_csv(country, percentile, run_type, folder, target_year, data_years, n_baselines, baseline_start, baseline_end):
     """
-    Load ALL or NAT ensemble data from the new CSV format for all baselines.
-    Returns: flattened numpy array of all values (all years, all Ens/Real columns, all baselines)
+    Load ALL or NAT ensemble data from the new CSV format for all baselines and data years.
+    Returns: flattened numpy array of all values (all data years, all baselines, all Ens/Real columns)
     """
     all_data = []
-    for baseline in range(1, n_baselines + 1):
-        filename = f"{country}_baseline{baseline}_{run_type}{percentile}percent_LogTransform_Target_{target_year}_DataYear_{target_year}_BaselinePeriod_{baseline_start}_{baseline_end}.csv"
-        filepath = os.path.join(folder, filename)
-        try:
-            df = pd.read_csv(filepath)
-            col_names = [col for col in df.columns if col != 'Year']
-            all_data.append(df[col_names].values.flatten())
-        except FileNotFoundError:
-            print(f"Warning: Missing file {filepath}")
-            continue
+    for data_year in data_years:
+        for baseline in range(1, n_baselines + 1):
+            filename = f"{country}_baseline{baseline}_{run_type}{percentile}percent_LogTransform_Target_{target_year}_DataYear_{data_year}_BaselinePeriod_{baseline_start}_{baseline_end}.csv"
+            filepath = os.path.join(folder, filename)
+            try:
+                df = pd.read_csv(filepath)
+                col_names = [col for col in df.columns if col != 'Year']
+                all_data.append(df[col_names].values.flatten())
+            except FileNotFoundError:
+                print(f"Warning: Missing file {filepath}")
+                continue
     if all_data:
         return np.concatenate(all_data)
     else:
@@ -221,12 +223,12 @@ def main():
         # Load ensemble data from CSVs
         print("Loading ensemble data from CSVs...")
         all_data = load_ensemble_data_csv(
-            country, config['percentile'], 'hist', LOG_FOLDER, DATA_YEARS,
-            N_BASELINES, BASELINE_START_YEAR, BASELINE_END_YEAR
+            country, config['percentile'], 'hist', LOG_FOLDER, TARGET_YEAR,
+            DATA_YEARS, N_BASELINES, BASELINE_START_YEAR, BASELINE_END_YEAR
         )
         nat_data = load_ensemble_data_csv(
-            country, config['percentile'], 'histnat', LOG_FOLDER, DATA_YEARS,
-            N_BASELINES, BASELINE_START_YEAR, BASELINE_END_YEAR
+            country, config['percentile'], 'histnat', LOG_FOLDER, TARGET_YEAR,
+            DATA_YEARS, N_BASELINES, BASELINE_START_YEAR, BASELINE_END_YEAR
         )
         print(f"Loaded {len(all_data)} ALL values, {len(nat_data)} NAT values")
 
@@ -253,7 +255,7 @@ def main():
 
         # Export bootstrap replicates
         pd.DataFrame({'rr_replicates': rr_results['replicates']}).to_csv(
-            f'{EXPORT_FOLDER}/{country}_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False
+            f'{EXPORT_FOLDER}/{country}1997_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False
         )
 
         # Plot
