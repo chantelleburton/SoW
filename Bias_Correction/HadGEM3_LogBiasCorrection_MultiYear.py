@@ -17,9 +17,16 @@ baseline_member = int(os.environ.get("CYLC_TASK_PARAM_member", 1)) #if in doubt,
 run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")  # 'hist' or 'histnat'
 
 print(f'Processing Country: {Country}, baseline member: {baseline_member}, run type: {run_type}')
+
+
+
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 folder = '/data/scratch/chantelle.burton/SoW2526/'
-DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 untill 2020-2024 attribtution ensemble runs are done.
+output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
+baseline_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
+
+
+DATA_YEARS = [2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 until 2020-2024 attribtution ensemble runs are done.
 TARGET_YEAR = 2024 # this is the year we want the regression to be relative to (i.e. the year we want to bias correct to). 
 BASELINE_START_YEAR = 1997 # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
@@ -66,8 +73,6 @@ else:
 
 ############## 1) Create .dat files and save out to save time in plotting #################
 
-folder = '/data/scratch/chantelle.burton/SoW2526/'
-baseline_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
 index_filestem1 = 'historicalExt'
 index_filestem2 = 'historicalNatExt'
 index_name = 'canadian_fire_weather_index'
@@ -158,7 +163,7 @@ for DATA_YEAR in DATA_YEARS:
     # Build DataFrame and write CSV
     df_out = pd.DataFrame(data_matrix, columns=col_names)
     df_out.insert(0, "Year", years)
-    output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
+    
     output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
     df_out.to_csv(output_file, index=False)
     print(f"Wrote output to {output_file}")
