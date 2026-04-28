@@ -1,5 +1,7 @@
 import iris
 import numpy as np
+import os
+from datetime import date
 import geopandas as gpd
 from .constrain_cubes_standard import contrain_to_sow_shapefile
 
@@ -164,6 +166,73 @@ def GetERA5Threshold(era5_file, shp_file, shape_name, month, percentile):
     era5_cube = TimePercentile(era5_cube, percentile)
     
     return float(np.array(era5_cube.data))
+
+
+def get_era5_monthly_files(era5_dir, year, months):
+    """
+    Build file paths for ERA5 monthly FWI files.
+    """
+    if isinstance(months, int):
+        months = (months,)
+
+    files = []
+    for m in months:
+        start = date(year, m, 1)
+        if m == 12:
+            end = date(year + 1, 1, 1)
+        else:
+            end = date(year, m + 1, 1)
+        fname = f"FWI_ERA5_global_day_{start:%Y%m%d}-{end:%Y%m%d}.nc"
+        files.append(os.path.join(era5_dir, fname))
+    return files
+
+
+def GetERA5ThresholdFromMonthly(era5_dir, shp_file, shape_name, months, event_year, percentile):
+    """
+    Compute ERA5 threshold from monthly files.
+
+    Loads the correct monthly file(s), applies shapefile mask,
+    then computes spatial percentile -> temporal percentile.
+    """
+    files = get_era5_monthly_files(era5_dir, event_year, months)
+
+    cubes = iris.cube.CubeList()
+    reference_time_units = None
+    for f in files:
+        print(f"  Loading {f}")
+        cube = iris.load_cube(f, 'Canadian Fire Weather Index')
+        if len(files) > 1:
+            # Remove scalar time-related coordinates that differ between months
+            for coord in list(cube.coords()):
+                if coord.long_name in ('month', 'month_number', 'season', 'season_year', 'year'):
+                    cube.remove_coord(coord)
+            # Standardise time units to the first cube's reference time
+            if cube.coords('time'):
+                time_coord = cube.coord('time')
+                if reference_time_units is None:
+                    reference_time_units = time_coord.units
+                else:
+                    time_coord.convert_units(reference_time_units)
+                time_coord.attributes = {}
+                time_coord.var_name = None
+                time_coord.long_name = None
+                time_coord.standard_name = 'time'
+        cubes.append(cube)
+
+    if len(cubes) > 1:
+        era5_cube = cubes.concatenate_cube()
+    else:
+        era5_cube = cubes[0]
+
+    # Apply shapefile mask
+    era5_cube = apply_shapefile_inclusive(shp_file, shape_name, era5_cube)
+
+    # Spatial percentile then temporal percentile
+    era5_cube = CountryPercentile(era5_cube, percentile)
+    era5_cube = TimePercentile(era5_cube, percentile)
+
+    return float(np.array(era5_cube.data))
+
 
 def apply_shapefile_inclusive(shp_file, shape_name, cube):
     
