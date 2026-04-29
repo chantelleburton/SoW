@@ -121,52 +121,6 @@ def draw_bs_replicates(ALL, NAT, threshold, func, size):
     return RR_replicates
 
 
-def GetERA5Threshold(era5_file, shp_file, shape_name, month, percentile):
-    """
-    Compute ERA5 2025 threshold matching original Supplement2.py methodology.
-    
-    Order: extract month -> shapefile mask -> spatial percentile -> temporal percentile
-    
-    Parameters
-    ----------
-    era5_file : str
-        Path to the ERA5 netCDF file
-    shp_file : str
-        Path to the shapefile for region masking
-    shape_name : str
-        Name of the shape/region within the shapefile
-    month : int or tuple
-        Month(s) to extract (e.g., 7 for July, or (7, 8) for July-August)
-    percentile : float
-        Percentile to compute (e.g., 95)
-    
-    Returns
-    -------
-    float
-        Scalar threshold value
-    """
-    # Load ERA5 cube
-    era5_cube = iris.load_cube(era5_file, 'canadian_fire_weather_index')
-    
-    # 1. Apply month constraint FIRST (matching original)
-    if isinstance(month, tuple):
-        daterange = iris.Constraint(time=lambda cell: cell.point.month in month)
-    else:
-        daterange = iris.Constraint(time=lambda cell: cell.point.month == month)
-    
-    era5_cube = era5_cube.extract(daterange)
-    
-    # 2. Apply shapefile mask
-    era5_cube = apply_shapefile_inclusive(shp_file, shape_name, era5_cube)
-    
-    # 3. Spatial percentile
-    era5_cube = CountryPercentile(era5_cube, percentile)
-    
-    # 4. Temporal percentile
-    era5_cube = TimePercentile(era5_cube, percentile)
-    
-    return float(np.array(era5_cube.data))
-
 
 def get_era5_monthly_files(era5_dir, year, months):
     """
