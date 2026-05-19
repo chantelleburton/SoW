@@ -26,9 +26,9 @@ output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/
 baseline_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
 
 
-DATA_YEARS = [2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 until 2020-2024 attribtution ensemble runs are done.
+DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 until 2020-2024 attribtution ensemble runs are done.
 TARGET_YEAR = 2024 # this is the year we want the regression to be relative to (i.e. the year we want to bias correct to). 
-BASELINE_START_YEAR = 1997 # start of the regression baseline period (inclusive)
+BASELINE_START_YEAR = 1980 # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
 
 #Set up the 2025 files and months automatically
@@ -147,6 +147,7 @@ for DATA_YEAR in DATA_YEARS:
                 # Soft Log transform
                 data = np.log(np.exp(data)-1)
                 # Detrend and scale
+                #data_corrected = fwi0_obs + delta_obs * t + (data - delta_sim * t - fwi0_sim)
                 data_corrected = fwi0_obs + (data - delta_sim * t - fwi0_sim)
                 # Inverse soft log transform
                 data_corrected = np.log(np.exp(data_corrected)+1)
@@ -164,6 +165,6 @@ for DATA_YEAR in DATA_YEARS:
     df_out = pd.DataFrame(data_matrix, columns=col_names)
     df_out.insert(0, "Year", years)
     
-    output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
+    output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_MODIFIEDLogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
     df_out.to_csv(output_file, index=False)
     print(f"Wrote output to {output_file}")
