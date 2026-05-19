@@ -36,7 +36,7 @@ N_BASELINES = 15
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013
 TARGET_YEAR = 2024
-DATA_YEARS = [2020,2021,2022,2023,2024]
+DATA_YEARS = [2024] #CHANGE ME WHEN NEW HADGEM ATTR DATA AVAILABLE: [2020, 2021, 2022, 2023, 2024]
 
 REGION_CONFIGS = {
     'Korea': {
@@ -74,7 +74,7 @@ REGION_CONFIGS = {
         'shape_name': 'Midwestern Canadian Shield forests',
         'event_year': 2025,
     },
-}
+ }
 
 DISPLAY_NAMES = {
     'Northwest Iberia': 'NW Iberia',
@@ -254,9 +254,9 @@ def main():
               f"(Interquartile Range: {rr_results['ci_interquartile'][0]:.2f} - {rr_results['ci_interquartile'][1]:.2f})")
 
         # Export bootstrap replicates
-        pd.DataFrame({'rr_replicates': rr_results['replicates']}).to_csv(
-            f'{EXPORT_FOLDER}/{country}1997_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False
-        )
+        # pd.DataFrame({'rr_replicates': rr_results['replicates']}).to_csv(
+        #     f'{EXPORT_FOLDER}/{country}_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False
+        # )
 
         # Plot
         ax = axes[plot_idxs[idx]]

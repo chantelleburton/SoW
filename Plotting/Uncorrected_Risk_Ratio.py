@@ -23,11 +23,11 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 ############# Configuration #############
 
-FOLDER = '/data/scratch/chantelle.burton/SoW2526/'
 UNCORRECTED_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Uncorrected_Attribution_Ensembles/'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 PLOT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Plots'
 EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Exports'
+ERA5_FWI_DIR = '/data/scratch/andrew.hartley/impactstoolbox/Data/era5/Fire-Weather/FWI'
 BOOTSTRAP_SIZE = 10000
 N_MEMBERS = 105
 N_BASELINES = 15
@@ -35,48 +35,42 @@ DATA_YEARS = 2024
 
 
 REGION_CONFIGS = {
-    'Iberia': {
-        'Month': 8,
-        'month_name': 'Aug',
-        'event_year':2025,
-        'percentile': 95,
-        'shape_name': 'Northwest Iberia',
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
-    },
     'Korea': {
         'Month': 3,
         'month_name': 'March',
-        'event_year':2025,
         'percentile': 95,
         'shape_name': 'Southeast South Korea',
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-01-01-2025-05-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+        'event_year': 2025,
+    },
+    'Iberia': {
+        'Month': 8,
+        'month_name': 'Aug',
+        'percentile': 95,
+        'shape_name': 'Northwest Iberia',
+        'event_year': 2025,
     },
     'Scotland': {
-        'Month': (6,7),
+        'Month': (6, 7),
         'month_name': 'June-July',
-        'event_year':2026,
         'percentile': 95,
         'shape_name': 'Scottish Highlands',
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
+        'event_year': 2025,
     },
     'Chile': {
         'Month': (1, 2),
         'month_name': 'January-February',
-        'event_year':2026,
         'percentile': 95,
         'shape_name': 'Chilean Temperate Forests and Matorral',
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-11-01-2026-02-28_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
-            },
+        'event_year': 2026,
+    },
     'Canada': {
         'Month': (7, 8),
         'month_name': 'July-August',
         'percentile': 95,
-        'event_year':2025,
         'shape_name': 'Midwestern Canadian Shield forests',
-        'era5_file': FOLDER + 'Y2526FWI/FWI_ERA5_std_reanalysis_2025-06-01-2025-10-01_global_day_initialise-from=previous-and-use-numpy=False-and-code-src=copernicus-and-save-input-data=True.nc'
-    }
+        'event_year': 2025,
+    },
  }
-
 DISPLAY_NAMES = {
     'Northwest Iberia': 'NW Iberia',
     'Southeast South Korea': 'SE S. Korea',
@@ -159,10 +153,11 @@ def main():
         print(f"Processing {country} (UNCORRECTED)")
         print('='*50)
         
-        # Load ERA5 threshold
+        # Load ERA5 threshold from monthly files
         print("Loading ERA5 threshold...")
-        threshold = GetERA5Threshold(
-            config['era5_file'], SHP_FILE, config['shape_name'], config['Month'], config['percentile']
+        threshold = GetERA5ThresholdFromMonthly(
+            ERA5_FWI_DIR, SHP_FILE, config['shape_name'],
+            config['Month'], config['event_year'], config['percentile']
         )
         print(f"ERA5 threshold: {threshold:.2f}")
         
