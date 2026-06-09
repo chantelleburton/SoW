@@ -1,4 +1,4 @@
-name: base
+name: sowf
 channels:
   - https://repo.anaconda.com/pkgs/main
   - conda-mo-internal
