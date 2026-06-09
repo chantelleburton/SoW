@@ -1,3 +1,4 @@
+#sowf.yml
 name: sowf
 channels:
   - https://repo.anaconda.com/pkgs/main
