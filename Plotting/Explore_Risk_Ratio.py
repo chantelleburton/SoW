@@ -236,6 +236,10 @@ def main():
             print(f"Skipping {country} due to missing data")
             continue
 
+        # Empirical 95th percentiles from loaded hist/histnat ensembles
+        hist_p95 = np.percentile(all_data, 95)
+        histnat_p95 = np.percentile(nat_data, 95)
+
         # Calculate Risk Ratio with bootstrapped confidence intervals
         print("Calculating Risk Ratio...")
         rr_results = calculate_risk_ratio_with_ci(
@@ -244,11 +248,15 @@ def main():
 
         results[country] = {
             'threshold': threshold,
+            'hist_p95': hist_p95,
+            'histnat_p95': histnat_p95,
             'rr': rr_results,
             'all_data': all_data,
             'nat_data': nat_data,
         }
 
+        print(f"hist 95th percentile: {hist_p95:.2f}")
+        print(f"histnat 95th percentile: {histnat_p95:.2f}")
         print(f"Risk Ratio: {rr_results['median']:.2f} "
               f"[{rr_results['ci_5']:.2f} - {rr_results['ci_95']:.2f}] "
               f"(Interquartile Range: {rr_results['ci_interquartile'][0]:.2f} - {rr_results['ci_interquartile'][1]:.2f})")
@@ -296,7 +304,11 @@ def main():
     print("="*60)
     for country, res in results.items():
         rr = res['rr']
-        print(f"{country}: RR = {rr['median']:.2f} [{rr['ci_5']:.2f} - {rr['ci_95']:.2f}]")
+        print(
+            f"{country}: hist_p95 = {res['hist_p95']:.2f}, "
+            f"histnat_p95 = {res['histnat_p95']:.2f}, "
+            f"RR = {rr['median']:.2f} [{rr['ci_5']:.2f} - {rr['ci_95']:.2f}]"
+        )
 
     # Export summary CSV
     summary_rows = []
@@ -305,6 +317,8 @@ def main():
         summary_rows.append({
             'Country': country,
             'ERA5_Threshold': res['threshold'],
+            'Hist_95th': res['hist_p95'],
+            'HistNat_95th': res['histnat_p95'],
             'RR_Median': rr['median'],
             'RR_5th': rr['ci_5'],
             'RR_25th': rr['ci_interquartile'][0],
