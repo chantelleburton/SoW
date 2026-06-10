@@ -11,8 +11,15 @@ warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
 ############# Get parameters from Cylc (or defaults for local testing) #############
-Country = os.environ.get("CYLC_TASK_PARAM_country", "Iberia") #fallback value of iberia
-run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")  # 'hist' or 'histnat'
+Country = os.environ.get("CYLC_TASK_PARAM_country", None)
+if Country is None:
+    Country = "Iberia"
+    print(f"WARNING: CYLC_TASK_PARAM_country not set, falling back to '{Country}'")
+
+run_type = os.environ.get("CYLC_TASK_PARAM_runtype", None)
+if run_type is None:
+    run_type = "hist"
+    print(f"WARNING: CYLC_TASK_PARAM_runtype not set, falling back to '{run_type}'")
 output_folder = '/data/scratch/bob.potts/sowf/test_output/Uncorrected_Attribution_Ensembles/'
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 print(f'Processing Country: {Country}, run type: {run_type}')
@@ -64,7 +71,7 @@ else:
     raise ValueError(f"Unknown Country: {Country}. Expected one of: Korea, Iberia, Scotland, Chile, Canada")
 
 
-############## 1) Create .dat files and save out to save time in plotting #################
+############## 1) Create .csv files and save out to save time in plotting #################
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
 index_filestem1 = 'historicalExt'

@@ -12,7 +12,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
 ############# Get parameters from Cylc (or defaults for local testing) #############
-############# Get parameters from Cylc (or defaults for local testing) #############
 Country = os.environ.get("CYLC_TASK_PARAM_country", None)
 if Country is None:
     Country = "Iberia"
