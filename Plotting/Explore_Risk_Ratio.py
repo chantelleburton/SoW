@@ -35,7 +35,6 @@ BOOTSTRAP_SIZE = 10000
 N_BASELINES = 15
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013
-TARGET_YEAR = 2024
 DATA_YEARS = [2024] #CHANGE ME WHEN NEW HADGEM ATTR DATA AVAILABLE: [2020, 2021, 2022, 2023, 2024]
 
 REGION_CONFIGS = {
@@ -154,15 +153,16 @@ def GetERA5ThresholdFromMonthly(era5_dir, shp_file, shape_name, months, event_ye
     return float(np.array(era5_cube.data))
 
 
-def load_ensemble_data_csv(country, percentile, run_type, folder, target_year, data_years, n_baselines, baseline_start, baseline_end):
+def load_ensemble_data_csv(country, percentile, run_type, folder, data_years, n_baselines, baseline_start, baseline_end):
     """
     Load ALL or NAT ensemble data from the new CSV format for all baselines and data years.
+    Target year is paired with data year (target_year = data_year).
     Returns: flattened numpy array of all values (all data years, all baselines, all Ens/Real columns)
     """
     all_data = []
     for data_year in data_years:
         for baseline in range(1, n_baselines + 1):
-            filename = f"{country}_baseline{baseline}_{run_type}{percentile}percent_LogTransform_Target_{target_year}_DataYear_{data_year}_BaselinePeriod_{baseline_start}_{baseline_end}.csv"
+            filename = f"{country}_baseline{baseline}_{run_type}{percentile}percent_LogTransform_Target_{data_year}_DataYear_{data_year}_BaselinePeriod_{baseline_start}_{baseline_end}.csv"
             filepath = os.path.join(folder, filename)
             try:
                 df = pd.read_csv(filepath)
@@ -223,11 +223,11 @@ def main():
         # Load ensemble data from CSVs
         print("Loading ensemble data from CSVs...")
         all_data = load_ensemble_data_csv(
-            country, config['percentile'], 'hist', LOG_FOLDER, TARGET_YEAR,
+            country, config['percentile'], 'hist', LOG_FOLDER,
             DATA_YEARS, N_BASELINES, BASELINE_START_YEAR, BASELINE_END_YEAR
         )
         nat_data = load_ensemble_data_csv(
-            country, config['percentile'], 'histnat', LOG_FOLDER, TARGET_YEAR,
+            country, config['percentile'], 'histnat', LOG_FOLDER,
             DATA_YEARS, N_BASELINES, BASELINE_START_YEAR, BASELINE_END_YEAR
         )
         print(f"Loaded {len(all_data)} ALL values, {len(nat_data)} NAT values")

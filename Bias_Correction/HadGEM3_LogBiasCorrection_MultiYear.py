@@ -12,22 +12,35 @@ warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
 ############# Get parameters from Cylc (or defaults for local testing) #############
-Country = os.environ.get("CYLC_TASK_PARAM_country", "Korea") #fallback value of Iberia
-baseline_member = int(os.environ.get("CYLC_TASK_PARAM_member", 1)) #if in doubt, use just ensemble member 1.
-run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")  # 'hist' or 'histnat'
+############# Get parameters from Cylc (or defaults for local testing) #############
+Country = os.environ.get("CYLC_TASK_PARAM_country", None)
+if Country is None:
+    Country = "Iberia"
+    print(f"WARNING: CYLC_TASK_PARAM_country not set, falling back to '{Country}'")
+
+baseline_member_str = os.environ.get("CYLC_TASK_PARAM_member", None)
+if baseline_member_str is None:
+    baseline_member = 1
+    print(f"WARNING: CYLC_TASK_PARAM_member not set, falling back to {baseline_member}")
+else:
+    baseline_member = int(baseline_member_str)
+
+run_type = os.environ.get("CYLC_TASK_PARAM_runtype", None)
+if run_type is None:
+    run_type = "hist"
+    print(f"WARNING: CYLC_TASK_PARAM_runtype not set, falling back to '{run_type}'")
 
 print(f'Processing Country: {Country}, baseline member: {baseline_member}, run type: {run_type}')
 
 
 
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-folder = '/data/scratch/chantelle.burton/SoW2526/'
+attribution_folder = '/data/scratch/chantelle.burton/SoW2526/'
 output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
 baseline_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
 
 
-DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 until 2020-2024 attribtution ensemble runs are done.
-TARGET_YEAR = 2024 # this is the year we want the regression to be relative to (i.e. the year we want to bias correct to). 
+DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 until 2020-2024 attribtution ensemble runs are processed.
 BASELINE_START_YEAR = 1980 # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
 
@@ -71,14 +84,11 @@ else:
     raise ValueError(f"Unknown Country: {Country}. Expected one of: SouthKorea, Iberia, Scotland, Chile, Canada")
 
 
-############## 1) Create .dat files and save out to save time in plotting #################
+############## 1) Create .csv files and save out to save time in plotting #################
 
 index_filestem1 = 'historicalExt'
 index_filestem2 = 'historicalNatExt'
 index_name = 'canadian_fire_weather_index'
-
-## Bias correct 525 ensemble members for 2024/2025 using this baseline member
-BiasCorrDict = {}
 
 # Step 0: Load FWI data from new CSVs using pandas
 df_obs = pd.read_csv(baseline_folder+f'ERA5_FWI_{BASELINE_START_YEAR}-{BASELINE_END_YEAR}_{Country}_{percentile}%.csv')
@@ -99,27 +109,24 @@ years = all_years[baseline_mask].values
 fwi_obs = df_obs_log[baseline_mask].values
 fwi_sim = df_sim_log[baseline_mask].values
 
-# Step 1a: Fit a linear regression model to obs and sim
-t = years - TARGET_YEAR #shift years relative to the target year.
-X = sm.add_constant(t)  # add a constant term for intercept
-
-def find_regression_parameters(fwi):
+# Step 1a: Regression helper (takes t as parameter so it can be recomputed per data year)
+def find_regression_parameters(fwi, t):
+    X = sm.add_constant(t)
     model = sm.OLS(fwi, X)
     results = model.fit()
-    # Step 1b: Get the coefficients (slope and intercept)
     fwi0, delta = results.params
-    return fwi0, delta, np.std(fwi - delta * t) 
-
-fwi0_sim, delta_sim, std_sim = find_regression_parameters(fwi_sim)
-fwi0_obs, delta_obs, std_obs = find_regression_parameters(fwi_obs)
-
-
+    return fwi0, delta, np.std(fwi - delta * t)
 
 index_filestem = index_filestem1 if run_type == 'hist' else index_filestem2 #pull cylc run_type parameter in and do a hist or histnat run. 
 
-# Loop over each DATA_YEAR
+# Loop over each DATA_YEAR (target year = data year)
 for DATA_YEAR in DATA_YEARS:
-    print(f"Processing DATA_YEAR: {DATA_YEAR}")
+    print(f"Processing DATA_YEAR: {DATA_YEAR} (target year = {DATA_YEAR})")
+
+    # Fit regression centred on this data year
+    t = years - DATA_YEAR
+    fwi0_sim, delta_sim, std_sim = find_regression_parameters(fwi_sim, t)
+    fwi0_obs, delta_obs, std_obs = find_regression_parameters(fwi_obs, t)
     ensemble_members = np.arange(1, 106)  # 105 ensemble members
     realisations = np.arange(1, 6)        # 5 realisations per ensemble member
     n_years = len(years)
@@ -133,11 +140,11 @@ for DATA_YEAR in DATA_YEARS:
             col_names.append(f"Ens{ensemble_member}_Real{realisation}")
             try:
                 if ensemble_member < 10:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name) 
+                    cube = iris.load_cube(attribution_folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name) 
                 elif ensemble_member < 100:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
+                    cube = iris.load_cube(attribution_folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
                 else:
-                    cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
+                    cube = iris.load_cube(attribution_folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
                 cube = apply_shapefile_inclusive(shp_file, shape_name, cube)
                 cube = ConstrainToYear(cube, DATA_YEAR)
                 cube = CountryPercentile(cube, percentile)
@@ -165,6 +172,6 @@ for DATA_YEAR in DATA_YEARS:
     df_out = pd.DataFrame(data_matrix, columns=col_names)
     df_out.insert(0, "Year", years)
     
-    output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_MODIFIEDLogTransform_Target_{TARGET_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
+    output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{DATA_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
     df_out.to_csv(output_file, index=False)
     print(f"Wrote output to {output_file}")

@@ -34,7 +34,6 @@ ERA5_FWI_DIR = '/data/scratch/andrew.hartley/impactstoolbox/Data/era5/Fire-Weath
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013
 UNCORRECTED_DATA_YEAR = 2024
-TARGET_YEAR = 2024
 DATA_YEARS = [2024]
 N_BASELINES = 15
 N_MEMBERS = 105
@@ -125,13 +124,14 @@ def load_uncorrected_ensemble(country, percentile, run_type):
 
 
 def load_corrected_ensemble(country, percentile, run_type):
-    """Load corrected attribution ensemble from CSVs across all baseline members."""
+    """Load corrected attribution ensemble from CSVs across all baseline members.
+    Target year is paired with data year (target_year = data_year)."""
     all_data = []
     for data_year in DATA_YEARS:
         for baseline in range(1, N_BASELINES + 1):
             filename = (
                 f"{country}_baseline{baseline}_{run_type}{percentile}percent_"
-                f"LogTransform_Target_{TARGET_YEAR}_DataYear_{data_year}_"
+                f"LogTransform_Target_{data_year}_DataYear_{data_year}_"
                 f"BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
             )
             filepath = os.path.join(CORRECTED_ENSEMBLE_FOLDER, filename)
