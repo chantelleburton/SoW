@@ -23,13 +23,59 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 start_time = time.time()
 start_year = int(os.environ.get("CYLC_TASK_PARAM_start_year", 2025))
 MAX_END_YEAR = int(os.environ.get("MAX_END_YEAR", 2025))
+wind_stat = os.environ.get("CYLC_TASK_PARAM_wind_stat", "mean").strip().lower()
+rh_stat = os.environ.get("CYLC_TASK_PARAM_rh_stat", "mean").strip().lower()
 end_year = min(start_year + 10, MAX_END_YEAR)
 
 basepath = '/data/users/appldata/Data/OBS-ERA5/daily'
 out_dir = '/data/scratch/bob.potts/sowf/test_output/XClim_FWI'
+
+WIND_OPTIONS = {
+    'mean': {
+        'subdir': '10m_mean_wind_speed',
+        'pattern': 'era5_daily_mean_10m_wind_speed_{year}-*.nc',
+        'var': 'wind_speed_mean',
+        'label': 'Mean_Wind',
+    },
+    'max': {
+        'subdir': '10m_max_wind_speed',
+        'pattern': 'era5_daily_max_10m_wind_speed_{year}-*.nc',
+        'var': 'wind_speed_max',
+        'label': 'Max_Wind',
+    },
+}
+RH_OPTIONS = {
+    'mean': {
+        'subdirs': ('relative_humidity', 'mean'),
+        'pattern': 'era5_daily_mean_relative_humidity_{year}*.nc',
+        'label': 'Mean_RH',
+    },
+    'minimum': {
+        'subdirs': ('relative_humidity', 'minimum'),
+        'pattern': 'era5_daily_minimum_relative_humidity_{year}*.nc',
+        'label': 'Minimum_RH',
+    },
+}
+
+if wind_stat not in WIND_OPTIONS:
+    raise ValueError(f"Unsupported wind_stat='{wind_stat}'. Valid options: {sorted(WIND_OPTIONS)}")
+if rh_stat not in RH_OPTIONS:
+    raise ValueError(f"Unsupported rh_stat='{rh_stat}'. Valid options: {sorted(RH_OPTIONS)}")
+
+wind_cfg = WIND_OPTIONS[wind_stat]
+rh_cfg = RH_OPTIONS[rh_stat]
+RUN_LABEL = f"{rh_cfg['label']}_{wind_cfg['label']}"
+
+# Sub-indices to write. Remove any you don't need.
+OUTPUT_INDICES = ['fwi'] #'dc', 'dmc', 'ffmc', 'isi', 'bui', 
+
 SPATIAL_CHUNK = 90  # lat/lon chunk size — larger chunks = smaller task graph
-MEMORY_PER_WORKER = 30  # GB — set based on your cluster's worker memory
+MEMORY_PER_WORKER = 40  # GB — set based on your cluster's worker memory
 if __name__ == '__main__':
+    print(
+        f"Task parameters: start_year={start_year}, end_year={end_year}, "
+        f"wind_stat={wind_stat}, rh_stat={rh_stat}, run_label={RUN_LABEL}"
+    )
     # --- Dask cluster setup ---
     cluster = LocalCluster(
         n_workers=3,
@@ -75,13 +121,13 @@ if __name__ == '__main__':
     # the YYYY-MM in each filename.
     wind_files = []
     for y in years:
-        wind_files += sorted(glob.glob(os.path.join(basepath, '10m_mean_wind_speed', f'era5_daily_mean_10m_wind_speed_{y}-*.nc')))
-    assert len(wind_files) > 0, f"No wind files found in {basepath}/10m_mean_wind_speed/"
+        wind_files += sorted(glob.glob(os.path.join(basepath, wind_cfg['subdir'], wind_cfg['pattern'].format(year=y))))
+    assert len(wind_files) > 0, f"No wind files found in {basepath}/{wind_cfg['subdir']}/"
 
     ws_parts = []
     for fpath in wind_files:
         ds_wind = xr.open_dataset(fpath, decode_times=False, chunks=chunks)
-        da = ds_wind['wind_speed_mean']
+        da = ds_wind[wind_cfg['var']]
         # Extract YYYY-MM from filename
         m = re.search(r'(\d{4})-(\d{2})\.nc$', os.path.basename(fpath))
         assert m, f"Cannot parse year-month from wind filename: {fpath}"
@@ -98,8 +144,8 @@ if __name__ == '__main__':
     # Humidity
     hurs_files = []
     for y in years:
-        hurs_files += sorted(glob.glob(os.path.join(basepath, 'relative_humidity', 'mean', f'era5_daily_mean_relative_humidity_{y}*.nc')))
-    assert len(hurs_files) > 0, f"No humidity files found in {basepath}/relative_humidity/mean/"
+        hurs_files += sorted(glob.glob(os.path.join(basepath, *rh_cfg['subdirs'], rh_cfg['pattern'].format(year=y))))
+    assert len(hurs_files) > 0, f"No humidity files found in {basepath}/{'/'.join(rh_cfg['subdirs'])}/"
     hurs = xr.open_mfdataset(hurs_files, chunks=chunks)['hurs']
     if 'valid_time' in hurs.dims:
         hurs = hurs.rename({'valid_time': 'time'})
@@ -169,18 +215,26 @@ if __name__ == '__main__':
     )
     print(f"FWI dtype: {fwi.dtype}, shape: {fwi.shape}, chunks: {getattr(fwi, 'chunks', None)}")
 
-    # --- Save only FWI as a single file ---
+    # --- Save one file per selected sub-index ---
+    index_map = {
+        'dc':   (dc,   'Drought Code',          '1'),
+        'dmc':  (dmc,  'Duff Moisture Code',     '1'),
+        'ffmc': (ffmc, 'Fine Fuel Moisture Code', '1'),
+        'isi':  (isi,  'Initial Spread Index',   '1'),
+        'bui':  (bui,  'Build-Up Index',         '1'),
+        'fwi':  (fwi,  'Fire Weather Index',     'FWI'),
+    }
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f'era5_fwi_{start_year}-{end_year}.nc')
-    ds = xr.Dataset({
-        'fwi': fwi,
-    })
-    ds['fwi'].attrs.update({'long_name': 'Fire Weather Index', 'units': 'FWI'})
-    n_times = ds.sizes['time']
-    encoding = {'fwi': {'chunksizes': (min(n_times, 365), SPATIAL_CHUNK, SPATIAL_CHUNK)}}
-    print(ds)
-    ds.to_netcdf(out_path, encoding=encoding)
-    print(f"Saved FWI to {out_path}")
+    n_times = tas.sizes['time']
+    for idx_name in OUTPUT_INDICES:
+        da, long_name, units = index_map[idx_name]
+        da.attrs.update({'long_name': long_name, 'units': units})
+        out_path = os.path.join(out_dir, f'era5_{idx_name}_{RUN_LABEL}_{start_year}-{end_year}.nc')
+        enc = {idx_name: {'chunksizes': (min(n_times, 365), SPATIAL_CHUNK, SPATIAL_CHUNK)}}
+        ds = xr.Dataset({idx_name: da})
+        print(ds)
+        ds.to_netcdf(out_path, encoding=enc)
+        print(f"Saved {idx_name} to {out_path}")
     print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
     client.close()
     cluster.close()

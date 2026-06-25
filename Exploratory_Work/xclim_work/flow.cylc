@@ -3,27 +3,30 @@
 
 [task parameters]
     start_year = 1979, 1989, 1999, 2009, 2019
+    wind_stat = mean, max
+    rh_stat = mean, minimum
 
 [scheduling]
     [[graph]]
         R1 = """
-            xclim_fwi<start_year>
+            xclim_fwi<start_year, wind_stat, rh_stat>
         """
 
 [runtime]
-    [[xclim_fwi<start_year>]]
+    [[xclim_fwi<start_year, wind_stat, rh_stat>]]
         script = """
         set -eux
         conda activate sowf
         cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/xclim_work/
+        echo "Running start_year=${CYLC_TASK_PARAM_start_year} wind_stat=${CYLC_TASK_PARAM_wind_stat} rh_stat=${CYLC_TASK_PARAM_rh_stat}"
         python explore_xclim_FWI.py
         """
 
         platform = spice
 
         [[[directives]]]
-            --mem = 100G
+            --mem = 150G
             --partition = cpu-long
-            --time = 360
+            --time = 720
             --cpus-per-task = 4
             --ntasks = 1
