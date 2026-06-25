@@ -262,9 +262,9 @@ def main():
               f"(Interquartile Range: {rr_results['ci_interquartile'][0]:.2f} - {rr_results['ci_interquartile'][1]:.2f})")
 
         # Export bootstrap replicates
-        # pd.DataFrame({'rr_replicates': rr_results['replicates']}).to_csv(
-        #     f'{EXPORT_FOLDER}/{country}_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False
-        # )
+        pd.DataFrame({'rr_replicates': rr_results['replicates']}).to_csv(
+            f'{EXPORT_FOLDER}/{country}_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False
+        )
 
         # Plot
         ax = axes[plot_idxs[idx]]
@@ -314,6 +314,7 @@ def main():
     summary_rows = []
     for country, res in results.items():
         rr = res['rr']
+        likelihood = np.sum(rr['replicates'] >= 1) / len(rr['replicates']) * 100
         summary_rows.append({
             'Country': country,
             'ERA5_Threshold': res['threshold'],
@@ -325,6 +326,7 @@ def main():
             'RR_50th': rr['median'],
             'RR_75th': rr['ci_interquartile'][1],
             'RR_95th': rr['ci_95'],
+            'Likelihood': likelihood,
         })
     summary_df = pd.DataFrame(summary_rows)
     summary_path = f'{EXPORT_FOLDER}/Corrected_Risk_Ratio_Summary.csv'

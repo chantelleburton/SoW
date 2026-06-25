@@ -407,8 +407,8 @@ def create_supplement2_plot(country, config, save=True):
     
     if save:
         os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-        output_file = os.path.join(OUTPUT_FOLDER, f'Supplement2_5Panel_{country}.png')
-        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+        output_file = os.path.join(OUTPUT_FOLDER, f'Supplement2_5Panel_{country}.svg')
+        plt.savefig(output_file, dpi=300, bbox_inches='tight', format='svg')
         print(f"Saved: {output_file}")
     
     #plt.show()
