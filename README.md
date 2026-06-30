@@ -25,7 +25,7 @@ Blurb
 
 
 # Risk Ratios
-
+![State Of Wildfire - Risk Ratio](ReadMe_Inserts/SOWF-RiskRatio.png)
 # Displaying Results
 
 # Curios
