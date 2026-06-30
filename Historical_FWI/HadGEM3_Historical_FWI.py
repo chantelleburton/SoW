@@ -29,7 +29,7 @@ CSV_EXPORT = True #True for CSV, False for .dat
 member = os.environ["CYLC_TASK_PARAM_member"] #when running in cylc wrapped, use this to enable all 16 members to be run in parallel.
 Country = os.environ.get("CYLC_TASK_PARAM_country", 'Korea') #fallback to user input if not running in cylc wrapped
 
-folder = '/data/scratch/bob.potts/sowf/historicalFWI/HadGEM/'
+folder = '/data/users/bob.potts/sowf_data/historicalFWI/HadGEM'
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 #Set up the 2025 files and months automatically
 if Country == 'Korea':
