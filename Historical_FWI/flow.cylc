@@ -3,7 +3,7 @@
 
 [task parameters]
     member = 1..15
-    country = Chile, Canada #Korea, Iberia, Scotland, 
+    country = Chile, Canada, Korea, Iberia, Scotland
 
 [scheduling]
 

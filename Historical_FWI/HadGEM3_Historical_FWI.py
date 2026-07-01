@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 ############# User inputs here #############
-START_YEAR = 1997
+START_YEAR = 1980
 END_YEAR = 2013
 CSV_EXPORT = True #True for CSV, False for .dat
 # Options: 'Korea' (3), 'Iberia' (8), 'Scotland' (7)
@@ -29,7 +29,7 @@ CSV_EXPORT = True #True for CSV, False for .dat
 member = os.environ["CYLC_TASK_PARAM_member"] #when running in cylc wrapped, use this to enable all 16 members to be run in parallel.
 Country = os.environ.get("CYLC_TASK_PARAM_country", 'Korea') #fallback to user input if not running in cylc wrapped
 
-folder = '/data/users/bob.potts/sowf_data/historicalFWI/HadGEM'
+folder = '/data/users/bob.potts/sowf_data/historicalFWI/HadGEM/'
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 #Set up the 2025 files and months automatically
 if Country == 'Korea':
@@ -82,7 +82,7 @@ for m in months:
     all_files = sorted(glob.glob(hist_pattern))
     
     # Filter files by year range
-    pattern = re.compile(rf'_historical_gwl(\d{{4}}){m:02d}01')
+    pattern = re.compile(rf'_historical_gwl(\d{{4}}){m:02d}01-')
     for f in all_files:
         match = pattern.search(f)
         if match:
@@ -95,7 +95,7 @@ print(f"Found {len(hist_files)} files for years {START_YEAR}-{END_YEAR}")
 
 
 if not hist_files:
-    raise FileNotFoundError("No HadGEM3 historical files found in year range 1960-2013")
+    raise FileNotFoundError(f"No HadGEM3 historical files found in year range {START_YEAR}-{END_YEAR}")
 
 # Load + concatenate
 cubes = iris.load(hist_files, 'canadian_fire_weather_index')
@@ -115,7 +115,7 @@ try:
     icc.add_year(HadGEM3_all, 'time')
 except ValueError:
     pass
-
+iris.save(HadGEM3_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Export/HadGEM3_FWI_{START_YEAR}-{END_YEAR}_{Country}_member{member}.nc')
 # 1) Percentile over time within each year
 yr_time_p = HadGEM3_all.aggregated_by('year', iris.analysis.PERCENTILE, percent=percentile)
 
