@@ -4,9 +4,11 @@ import pandas as pd
 import statsmodels.api as sm
 import os
 import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from utils.constrain_cubes_standard import *
 from utils.cubefuncs import *
+from datetime import datetime
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
@@ -39,7 +41,7 @@ output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/
 baseline_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
 
 
-DATA_YEARS = [2024]#[2020, 2021, 2022, 2023, 2024] # List of years to process. Currently set to just 2024 until 2020-2024 attribtution ensemble runs are processed.
+DATA_YEARS = [2024]#[2021, 2022, 2023, 2024]# List of years to process. Currently set to just 2024 until 2020-2024 attribtution ensemble runs are processed.
 BASELINE_START_YEAR = 1980 # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
 
@@ -132,18 +134,22 @@ for DATA_YEAR in DATA_YEARS:
     n_cols = len(ensemble_members) * len(realisations)
     data_matrix = np.full((n_years, n_cols), np.nan)
     col_names = []
+    successful = []  # list of (ensemble_member, realisation, filepath)
+    missing = []     # list of (ensemble_member, realisation, filepath)
+    errors = []      # list of (ensemble_member, realisation, filepath, error_message)
 
     for e_idx, ensemble_member in enumerate(ensemble_members): # loop through all 105 ensemble members
         for r_idx, realisation in enumerate(realisations): #loop through physics realisations 1-5 for each of the 105 ensemble members
             col_idx = e_idx * len(realisations) + r_idx #number of columns (should be 5 * 105)
             col_names.append(f"Ens{ensemble_member}_Real{realisation}")
+
+            # Build filepath once for logging
+            member_str = f"r{ensemble_member:03d}"
+            filename = f"FWI_HadGEM3-A-N216_{member_str}i1p{realisation}_{index_filestem}_20230601-20250201_global_day.nc"
+            filepath = os.path.join(attribution_folder, 'Y2526FWI', filename)
+
             try:
-                if ensemble_member < 10:
-                    cube = iris.load_cube(attribution_folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name) 
-                elif ensemble_member < 100:
-                    cube = iris.load_cube(attribution_folder+'Y2526FWI/FWI_HadGEM3-A-N216_r0'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
-                else:
-                    cube = iris.load_cube(attribution_folder+'Y2526FWI/FWI_HadGEM3-A-N216_r'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
+                cube = iris.load_cube(filepath, index_name)
                 cube = apply_shapefile_inclusive(shp_file, shape_name, cube)
                 cube = ConstrainToYear(cube, DATA_YEAR)
                 cube = CountryPercentile(cube, percentile)
@@ -161,10 +167,14 @@ for DATA_YEAR in DATA_YEARS:
                 # Store in matrix
                 if len(data_corrected) == n_years: #check that the length of the data matches the number of years (BASELINE_START_YEAR to BASELINE_END_YEAR)
                     data_matrix[:, col_idx] = data_corrected
+                    successful.append((ensemble_member, realisation, filepath))
                 else:
-                    print(f"Warning: Data length mismatch for Ens{ensemble_member} Real{realisation}")
-            except IOError:
-                print(f"Missing data for Ens{ensemble_member} Real{realisation}")
+                    errors.append((ensemble_member, realisation, filepath, f"Data length mismatch: got {len(data_corrected)}, expected {n_years}"))
+            except (IOError, OSError):
+                missing.append((ensemble_member, realisation, filepath))
+                continue
+            except Exception as e:
+                errors.append((ensemble_member, realisation, filepath, str(e)))
                 continue
 
     # Build DataFrame and write CSV
@@ -174,3 +184,49 @@ for DATA_YEAR in DATA_YEARS:
     output_file = f"{output_dir}{Country}_baseline{baseline_member}_{run_type}{percentile}percent_LogTransform_Target_{DATA_YEAR}_DataYear_{DATA_YEAR}_BaselinePeriod_{BASELINE_START_YEAR}_{BASELINE_END_YEAR}.csv"
     df_out.to_csv(output_file, index=False)
     print(f"Wrote output to {output_file}")
+
+    # Write log file #this area is just for logging purposes.
+    total = len(ensemble_members) * len(realisations)
+    run_timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_file_dir = os.path.join(output_dir, 'logs')
+    os.makedirs(log_file_dir, exist_ok=True)
+    log_file = f"{log_file_dir}/{Country}_baseline{baseline_member}_{run_type}_Target_{DATA_YEAR}_file_status_{run_timestamp}.txt"
+    with open(log_file, 'w') as lf:
+        lf.write(f"File Status Log\n")
+        lf.write(f"===============\n")
+        lf.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        lf.write(f"Country: {Country}\n")
+        lf.write(f"Baseline member: {baseline_member}\n")
+        lf.write(f"Run type: {run_type}\n")
+        lf.write(f"Data year: {DATA_YEAR}\n")
+        lf.write(f"Baseline period: {BASELINE_START_YEAR}-{BASELINE_END_YEAR}\n")
+        lf.write(f"Percentile: {percentile}\n\n")
+        lf.write(f"Summary\n")
+        lf.write(f"-------\n")
+        lf.write(f"Successful: {len(successful)}/{total}\n")
+        lf.write(f"Missing:    {len(missing)}/{total}\n")
+        lf.write(f"Errors:     {len(errors)}/{total}\n\n")
+
+        if missing:
+            lf.write(f"Missing Files ({len(missing)})\n")
+            lf.write(f"-" * 40 + "\n")
+            for ens, real, fpath in missing:
+                lf.write(f"  Ens{ens}_Real{real}: {fpath}\n")
+            lf.write("\n")
+
+        if errors:
+            lf.write(f"Errors ({len(errors)})\n")
+            lf.write(f"-" * 40 + "\n")
+            for ens, real, fpath, msg in errors:
+                lf.write(f"  Ens{ens}_Real{real}: {fpath}\n")
+                lf.write(f"    Error: {msg}\n")
+            lf.write("\n")
+
+        if successful:
+            lf.write(f"Successful ({len(successful)})\n")
+            lf.write(f"-" * 40 + "\n")
+            for ens, real, fpath in successful:
+                lf.write(f"  Ens{ens}_Real{real}: {fpath}\n")
+
+    print(f"Wrote file status log to {log_file}")
+    print(f"Summary: {len(successful)}/{total} successful, {len(missing)}/{total} missing, {len(errors)}/{total} errors")
