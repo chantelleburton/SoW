@@ -1,0 +1,29 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    member = 1..15
+    runtype = hist,histnat
+    country =  Iberia, Chile, Canada
+[scheduling]
+    [[graph]]
+        R1 = """
+            hadgem_log_bias_correction<country, member, runtype>
+        """
+
+[runtime]
+    [[hadgem_log_bias_correction<country, member, runtype>]]
+        script = """
+        set -eux
+        conda activate ENVIROMENT
+        cd PATH/TO/FOLDER
+        python HadGEM3_LogBiasCorrection_MultiYear.py
+        """
+
+        platform = CLUSTER_NAME
+
+        [[[directives]]]
+            --mem = 60G
+            --time = 360
+            --cpus-per-task = 2
+            --ntasks = 1

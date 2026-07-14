@@ -1,0 +1,29 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    index = fine_fuel_moisture_content,duff_moisture_content, drought_code, initial_spread_index, build_up_index,canadian_fire_weather_index,
+    country = Chile, Canada, Iberia
+[scheduling]
+
+    [[graph]]
+        R1 = """
+            era5_historical_fwi<index,country>
+        """
+
+[runtime]
+    [[era5_historical_fwi<index,country>]]
+        script = """
+        set -eux
+        conda activate ENVIROMENT
+        cd /PATH/TO/FOLDER
+        python ERA5_Historical_FWI.py
+        """
+
+        platform = CLUSTER_NAME
+
+        [[[directives]]]
+            --mem = 5G
+            --time = 30
+            --cpus-per-task = 1
+            --ntasks = 1
