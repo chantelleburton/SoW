@@ -70,7 +70,7 @@ RUN_LABEL = f"{rh_cfg['label']}_{wind_cfg['label']}"
 OUTPUT_INDICES = ['fwi'] #'dc', 'dmc', 'ffmc', 'isi', 'bui', 
 
 SPATIAL_CHUNK = 90  # lat/lon chunk size — larger chunks = smaller task graph
-MEMORY_PER_WORKER = 40  # GB — set based on your cluster's worker memory
+MEMORY_PER_WORKER = 40  # GB 
 if __name__ == '__main__':
     print(
         f"Task parameters: start_year={start_year}, end_year={end_year}, "
@@ -170,7 +170,7 @@ if __name__ == '__main__':
 
 
     # --- Forward-fill NaN values in inputs ---
-    # ERA5 wind speed has sporadic NaN days (e.g. ~30 days/year for some regions).
+    # ERA5 wind speed has sporadic NaN days (~30 days/year for some regions).
     # Because FWI is sequential (each day depends on previous moisture codes),
     # a single NaN propagates forward permanently. Forward-fill is safe here:
     # a missing wind observation is best approximated by the previous day's value.
@@ -196,12 +196,11 @@ if __name__ == '__main__':
     print(f"tas dtype: {tas.dtype}, pr dtype: {pr.dtype}, ws dtype: {ws.dtype}, hurs dtype: {hurs.dtype}")
     print(f"tas shape: {tas.shape}, pr shape: {pr.shape}, ws shape: {ws.shape}, hurs shape: {hurs.shape}")
 
-    # --- Persist inputs to materialise unit conversions in worker memory ---
+
     # This prevents the -273.15 / *1000 operations from bloating the FWI task graph.
-    print("Persisting inputs to worker memory...")
+
     tas, pr, ws, hurs = client.persist([tas, pr, ws, hurs])
     wait([tas, pr, ws, hurs])
-    print("Inputs persisted.")
 
     # --- Compute FWI for the full period ---
     print(f"Computing FWI for {start_year}-{end_year}...")

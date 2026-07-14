@@ -1,0 +1,33 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+
+    run_type = 
+    member = 
+
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            
+        """
+
+[runtime]
+    [[xclim_fwi<start_year, wind_stat, rh_stat>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/xclim_work/
+        echo "Running start_year=${CYLC_TASK_PARAM_start_year} wind_stat=${CYLC_TASK_PARAM_wind_stat} rh_stat=${CYLC_TASK_PARAM_rh_stat}"
+        python explore_xclim_FWI.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 150G
+            --partition = cpu-long
+            --time = 720
+            --cpus-per-task = 4
+            --ntasks = 1
