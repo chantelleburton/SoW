@@ -115,7 +115,7 @@ try:
     icc.add_year(HadGEM3_all, 'time')
 except ValueError:
     pass
-iris.save(HadGEM3_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Export/HadGEM3_FWI_{START_YEAR}-{END_YEAR}_{Country}_member{member}.nc')
+iris.save(HadGEM3_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Export/HadGEM3-A_FWI_{START_YEAR}-{END_YEAR}_{Country}_member{member}.nc')
 # 1) Percentile over time within each year
 yr_time_p = HadGEM3_all.aggregated_by('year', iris.analysis.PERCENTILE, percent=percentile)
 
