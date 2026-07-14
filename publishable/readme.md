@@ -1,5 +1,9 @@
 This readme gives a high level overview of the inputs and outputs required to generate the Probability Ratio (PR) values for 3 wildifre events examined in the State of Wildfires 2025-2026 report.
 
+This top level diagram shows the broad segmentation and flow of work. 
+
+![State Of Wildfire - Top Level Diagram](State%20Of%20Wildfire%20-%20Top%20Level%20Diagram.png)
+
 **/Historical_FWI**
 
 This folder contains 2 primary scripts (.py) and two job scheduler scripts (cylc.flow) to distribute the running of the primaries, this structure is mirror in many other places.
