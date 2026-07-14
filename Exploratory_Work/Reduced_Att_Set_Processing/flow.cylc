@@ -1,0 +1,30 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    member = 1..15
+    runtype = hist,histnat
+    country =  Iberia, Chile, Canada, #Korea, Scotland
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            reduced_set_bias_correction<country, member, runtype>
+        """
+
+[runtime]
+    [[reduced_set_bias_correction<country, member, runtype>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/Reduced_Set_Stuff
+        python reduced_set_HG_bias_correction.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 15G
+            --time = 360
+            --cpus-per-task = 2
+            --ntasks = 1
