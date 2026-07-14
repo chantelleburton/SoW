@@ -24,6 +24,7 @@ regions = {
         'has_synthesis': True,
         'reanalysis_style': 'box',       # normal box
         'future_red_line': 5,
+        'fut_clip_upper': {'3p0': 5},
     },
     'Chile': {
         'file': f'{DATA_DIR}/Chile_Attribution_FP.ods',
@@ -69,9 +70,10 @@ def load_data(filepath):
     }
 
 
-def draw_box(ax, pos, data, color, width=0.6):
+def draw_box(ax, pos, data, color, width=0.6, clip_upper=None):
     """Draw a box-and-whisker from [p5, p25, median, p75, p95]."""
     p5, p25, med, p75, p95 = data
+    p95_top = min(p95, clip_upper) if clip_upper is not None else p95
     box = mpatches.FancyBboxPatch(
         (pos - width/2, p25), width, p75 - p25,
         boxstyle="square,pad=0", facecolor=color, alpha=0.7, linewidth=1.2
@@ -79,10 +81,10 @@ def draw_box(ax, pos, data, color, width=0.6):
     ax.add_patch(box)
     ax.plot([pos - width/2, pos + width/2], [med, med], color='black', linewidth=2, zorder=5)
     ax.plot([pos, pos], [p5, p25], color=color, linewidth=1.2, zorder=4)
-    ax.plot([pos, pos], [p75, p95], color=color, linewidth=1.2, zorder=4)
+    ax.plot([pos, pos], [p75, p95_top], color=color, linewidth=1.2, zorder=4)
     cap_w = width * 0.4
     ax.plot([pos - cap_w/2, pos + cap_w/2], [p5, p5], color=color, linewidth=1.2, zorder=4)
-    ax.plot([pos - cap_w/2, pos + cap_w/2], [p95, p95], color=color, linewidth=1.2, zorder=4)
+    ax.plot([pos - cap_w/2, pos + cap_w/2], [p95_top, p95_top], color=color, linewidth=1.2, zorder=4)
 
 
 def draw_box_arrow_up(ax, pos, data, color, width=0.6):
@@ -209,9 +211,10 @@ def plot_region(data, cfg):
     # ---- Right plot: Future Projections ----
     ax2.set_yscale('log')
 
-    draw_box(ax2, 1, data['fut_1p5'], teal)
-    draw_box(ax2, 1.7, data['fut_2p0'], teal)
-    draw_box(ax2, 2.4, data['fut_3p0'], teal)
+    clips = cfg.get('fut_clip_upper', {})
+    draw_box(ax2, 1, data['fut_1p5'], teal, clip_upper=clips.get('1p5'))
+    draw_box(ax2, 1.7, data['fut_2p0'], teal, clip_upper=clips.get('2p0'))
+    draw_box(ax2, 2.4, data['fut_3p0'], teal, clip_upper=clips.get('3p0'))
 
     red_line = cfg['future_red_line']
     ax2.axhline(y=1, color='grey', linestyle='-', linewidth=0.8, alpha=0.7)
@@ -265,7 +268,7 @@ for region_name, cfg in regions.items():
     print(f"Plotting {region_name}...")
     data = load_data(cfg['file'])
     fig = plot_region(data, cfg)
-    save_path = os.path.join(PLOT_DIR, f'{region_name}_Attribution_FP.png')
+    save_path = os.path.join(PLOT_DIR, f'{region_name}_Attribution_FP_Reduced_HG3_Values.png')
     fig.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"  Saved to {save_path}")
     #plt.show()
