@@ -26,16 +26,16 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 ############# Configuration #############
-LOG_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms'
+LOG_FOLDER = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Condensed_Log_Transforms'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-PLOT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Plots'
-EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Exports'
+PLOT_FOLDER = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Exports/Plots'
+EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Exports'
 ERA5_FWI_DIR = '/data/scratch/andrew.hartley/impactstoolbox/Data/era5/Fire-Weather/FWI'
 BOOTSTRAP_SIZE = 10000
 N_BASELINES = 15
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013
-DATA_YEARS = [2024] #CHANGE ME WHEN NEW HADGEM ATTR DATA AVAILABLE: [2020, 2021, 2022, 2023, 2024]
+DATA_YEARS = [2020,2021,2022,20232024] #CHANGE ME WHEN NEW HADGEM ATTR DATA AVAILABLE: [2020, 2021, 2022, 2023, 2024]
 
 REGION_CONFIGS = {
     'Korea': {
@@ -77,8 +77,8 @@ REGION_CONFIGS = {
 
 DISPLAY_NAMES = {
     'Northwest Iberia': 'NW Iberia',
-    'Southeast South Korea': 'SE S. Korea',
-    'Scottish Highlands': 'Scottish Highlands',
+    # 'Southeast South Korea': 'SE S. Korea',
+    # 'Scottish Highlands': 'Scottish Highlands',
     'Chilean Temperate Forests and Matorral': 'Chile Forests & Matorral',
     'Midwestern Canadian Shield forests': 'Canadian Shield Forests',
 }

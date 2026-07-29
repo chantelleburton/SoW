@@ -389,7 +389,7 @@ def plot_subplot_e(ax, all_data, nat_data, era5_2025, month_name, event_year, mo
     if era5_2025 is not None:
         ax.axvline(x=era5_2025, color='black', linewidth=2.5, label=f'ERA5 {month_name} {event_year}')
     ax.set_xlabel('Fire Weather Index')
-    ax.set_title(f'e) {month_name} {event_year} (Corrected, {mode_label})')
+    ax.set_title(f'e) {month_name} {event_year} (Corrected)')
     ax.legend(fontsize='small')
 
 
@@ -488,8 +488,8 @@ def create_supplement2_plot(country, config, paired_members, save=True):
     if save:
         os.makedirs(OUTPUT_FOLDER, exist_ok=True)
         output_file = os.path.join(
-            OUTPUT_FOLDER, f'Supplement2_5Panel_ReducedSet_{country}.svg')
-        plt.savefig(output_file, dpi=300, bbox_inches='tight', format='svg')
+            OUTPUT_FOLDER, f'Supplement2_5Panel_ReducedSet_{country}.png')
+        plt.savefig(output_file, dpi=300, bbox_inches='tight', format='png')
         print(f"Saved: {output_file}")
 
     #plt.show()

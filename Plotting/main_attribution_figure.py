@@ -14,8 +14,8 @@ plt.rcParams['xtick.minor.size'] = 3
 plt.rcParams['ytick.minor.size'] = 3
 
 # --- Region configurations ---
-DATA_DIR = '/data/scratch/bob.potts/sowf/test_output/Exports'
-PLOT_DIR = '/data/scratch/bob.potts/sowf/test_output/Plots'
+DATA_DIR = '/data/scratch/bob.potts/sowf/test_output/Plots/Main_Attribution'
+PLOT_DIR = '/data/scratch/bob.potts/sowf/test_output/Plots/Main_Attribution'
 
 regions = {
     'Canada': {
@@ -25,6 +25,7 @@ regions = {
         'reanalysis_style': 'box',       # normal box
         'future_red_line': 5,
         'fut_clip_upper': {'3p0': 5},
+        'show_tenth_tick': True,
     },
     'Chile': {
         'file': f'{DATA_DIR}/Chile_Attribution_FP.ods',
@@ -40,6 +41,7 @@ regions = {
         'has_synthesis': False,
         'reanalysis_style': 'star',       # just a star at top
         'future_red_line': 10,
+        'show_tenth_tick': True,
     },
 }
 
@@ -190,6 +192,11 @@ def plot_region(data, cfg):
             major_ticks.append(val)
             major_labels.append(str(val))
 
+    if cfg.get('show_tenth_tick') and ymin <= 0.1:
+        ax1.axhline(y=0.1, color='grey', linestyle='--', linewidth=0.6, alpha=0.7)
+        major_ticks.insert(0, 0.1)
+        major_labels.insert(0, '1/10')
+
     ax1.set_yticks(major_ticks)
     ax1.set_yticklabels(major_labels)
     # Minor ticks within visible range
@@ -268,7 +275,7 @@ for region_name, cfg in regions.items():
     print(f"Plotting {region_name}...")
     data = load_data(cfg['file'])
     fig = plot_region(data, cfg)
-    save_path = os.path.join(PLOT_DIR, f'{region_name}_Attribution_FP_Reduced_HG3_Values.png')
+    save_path = os.path.join(PLOT_DIR, f'{region_name}_Main_Attribution.png')
     fig.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"  Saved to {save_path}")
     #plt.show()

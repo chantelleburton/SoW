@@ -19,7 +19,7 @@ HISTNAT_DIR = (
     '/data/scratch/andrew.hartley/impactstoolbox/Data/attribution_ensemble/'
     'Fire-Weather/FWI/HadGEM3-A-N216/historicalNatExt'
 )
-OUTPUT_CSV = '/data/scratch/bob.potts/sowf/matching_complete_members.csv'
+OUTPUT_CSV = '/data/scratch/bob.potts/sowf/test_output/matching_complete_members.csv'
 
 N_RUNS = 105
 N_PHYSICS = 5

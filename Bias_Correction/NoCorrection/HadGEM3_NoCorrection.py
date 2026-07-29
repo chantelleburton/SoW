@@ -93,7 +93,7 @@ col_names = []
 for e_idx, ensemble_member in enumerate(ensemble_members):
     for r_idx, realisation in enumerate(realisations):
         col_idx = e_idx * len(realisations) + r_idx
-        col_names.append(f"Ens{ensemble_member}_Real{realisation}")
+        col_names.append(ensemble_member_id(ensemble_member, realisation))
         try:
             if ensemble_member < 10:
                 cube = iris.load_cube(folder+'Y2526FWI/FWI_HadGEM3-A-N216_r00'+str(ensemble_member)+'i1p'+str(realisation)+'_'+index_filestem+'_20230601-20250201_global_day.nc', index_name)
@@ -115,9 +115,9 @@ for e_idx, ensemble_member in enumerate(ensemble_members):
             if len(data) == n_years:
                 data_matrix[:, col_idx] = data
             else:
-                print(f"Warning: Data length mismatch for Ens{ensemble_member} Real{realisation}")        
+                print(f"Warning: Data length mismatch for {ensemble_member_id(ensemble_member, realisation)}")        
         except IOError:
-            print(f"Missing data for Ens{ensemble_member} Real{realisation}")
+            print(f"Missing data for {ensemble_member_id(ensemble_member, realisation)}")
             continue
 
 # Export to CSV if any data was found

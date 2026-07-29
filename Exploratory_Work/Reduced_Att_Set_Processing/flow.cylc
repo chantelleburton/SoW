@@ -4,7 +4,7 @@
 [task parameters]
     member = 1..15
     runtype = hist,histnat
-    country =  Iberia, Chile, Canada, #Korea, Scotland
+    country =  Iberia, Chile, Canada #, Korea, Scotland
 
 [scheduling]
     [[graph]]
@@ -17,7 +17,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/Reduced_Set_Stuff
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/Reduced_Att_Set_Processing/
         python reduced_set_HG_bias_correction.py
         """
 

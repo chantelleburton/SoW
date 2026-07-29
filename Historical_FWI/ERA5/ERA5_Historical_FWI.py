@@ -118,7 +118,7 @@ try:
     icc.add_year(ERA5_hist_all, 'time')
 except ValueError:
     pass  # already  exists
-iris.save(ERA5_hist_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Export/ERA5_{index_dict[INDEX]}_{START_YEAR}-{END_YEAR}_{Country}.nc')
+iris.save(ERA5_hist_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Interim/ERA5_{index_dict[INDEX]}_{START_YEAR}-{END_YEAR}_{Country}.nc')
 # 1) Percentile over time within each year
 print("Computing time percentile by year...")
 yr_time_p = ERA5_hist_all.aggregated_by('year', iris.analysis.PERCENTILE, percent=percentile)

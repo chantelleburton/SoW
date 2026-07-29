@@ -141,7 +141,7 @@ for DATA_YEAR in DATA_YEARS:
     for e_idx, ensemble_member in enumerate(ensemble_members): # loop through all 105 ensemble members
         for r_idx, realisation in enumerate(realisations): #loop through physics realisations 1-5 for each of the 105 ensemble members
             col_idx = e_idx * len(realisations) + r_idx #number of columns (should be 5 * 105)
-            col_names.append(f"Ens{ensemble_member}_Real{realisation}")
+            col_names.append(ensemble_member_id(ensemble_member, realisation))
 
             # Build filepath once for logging
             member_str = f"r{ensemble_member:03d}"
@@ -211,14 +211,14 @@ for DATA_YEAR in DATA_YEARS:
             lf.write(f"Missing Files ({len(missing)})\n")
             lf.write(f"-" * 40 + "\n")
             for ens, real, fpath in missing:
-                lf.write(f"  Ens{ens}_Real{real}: {fpath}\n")
+                lf.write(f"  {ensemble_member_id(ens, real)}: {fpath}\n")
             lf.write("\n")
 
         if errors:
             lf.write(f"Errors ({len(errors)})\n")
             lf.write(f"-" * 40 + "\n")
             for ens, real, fpath, msg in errors:
-                lf.write(f"  Ens{ens}_Real{real}: {fpath}\n")
+                lf.write(f"  {ensemble_member_id(ens, real)}: {fpath}\n")
                 lf.write(f"    Error: {msg}\n")
             lf.write("\n")
 
@@ -226,7 +226,7 @@ for DATA_YEAR in DATA_YEARS:
             lf.write(f"Successful ({len(successful)})\n")
             lf.write(f"-" * 40 + "\n")
             for ens, real, fpath in successful:
-                lf.write(f"  Ens{ens}_Real{real}: {fpath}\n")
+                lf.write(f"  {ensemble_member_id(ens, real)}: {fpath}\n")
 
     print(f"Wrote file status log to {log_file}")
     print(f"Summary: {len(successful)}/{total} successful, {len(missing)}/{total} missing, {len(errors)}/{total} errors")
