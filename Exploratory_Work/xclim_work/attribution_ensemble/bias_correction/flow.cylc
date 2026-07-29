@@ -1,0 +1,30 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    member = 1..15
+    runtype = hist,histnat
+    country =  Iberia, Chile, Canada
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            hadgem_xclim_log_bias_correction<country, member, runtype>
+        """
+
+[runtime]
+    [[hadgem_xclim_log_bias_correction<country, member, runtype>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/xclim_work/attribution_ensemble/bias_correction/
+        python HadGEM3_xclim_bias_correction_multi_year.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 40G
+            --time = 360
+            --cpus-per-task = 2
+            --ntasks = 1

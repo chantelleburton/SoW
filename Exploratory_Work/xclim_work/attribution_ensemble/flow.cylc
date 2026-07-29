@@ -1,33 +1,42 @@
+#!Jinja2
+{# Generate all 525 ensemble member IDs (r001i1p1 .. r105i1p5) so they don't #}
+{# have to be typed by hand. N_RUNS x N_PHYSICS realisations. #}
+{% set N_RUNS = 105 %}
+{% set N_PHYSICS = 5 %}
+{% set members = [] %}
+{% for r in range(1, N_RUNS + 1) %}
+{%   for p in range(1, N_PHYSICS + 1) %}
+{%     do members.append('r%03di1p%d' | format(r, p)) %}
+{%   endfor %}
+{% endfor %}
+
 [scheduler]
     allow implicit tasks = True
 
 [task parameters]
-
-    run_type = 
-    member = 
-
-
+    run_type = historicalExt, historicalNatExt
+    member = {{ members | join(', ') }}
 [scheduling]
     [[graph]]
         R1 = """
-            
+            hadgem_attribution_xclim_fwi<run_type, member>
         """
 
 [runtime]
-    [[xclim_fwi<start_year, wind_stat, rh_stat>]]
+    [[hadgem_attribution_xclim_fwi<run_type, member>]]
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/xclim_work/
-        echo "Running start_year=${CYLC_TASK_PARAM_start_year} wind_stat=${CYLC_TASK_PARAM_wind_stat} rh_stat=${CYLC_TASK_PARAM_rh_stat}"
-        python explore_xclim_FWI.py
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/xclim_work/attribution_ensemble/
+        echo "Running run_type=${CYLC_TASK_PARAM_run_type} member=${CYLC_TASK_PARAM_member}"
+        python explore_hadgem_attribution_xclim_FWI.py
         """
 
         platform = spice
 
         [[[directives]]]
-            --mem = 150G
+            --mem = 20G
             --partition = cpu-long
-            --time = 720
+            --time = 240
             --cpus-per-task = 4
             --ntasks = 1
