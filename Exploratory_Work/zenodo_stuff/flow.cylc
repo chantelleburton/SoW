@@ -1,0 +1,32 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    # One task per member: 1..525 maps to r001i1p1 .. r105i1p5.
+    # Incomplete members exit cleanly with no output rather than failing.
+    member = 1..525
+    runtype = hist, histnat
+    country = Iberia, Chile, Canada, #Korea, Scotland
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            produce_zenodo<country, runtype, member>
+        """
+
+[runtime]
+    [[produce_zenodo<country, runtype, member>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/zenodo_stuff
+        python produce_zenodo_attribution_files.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 2G
+            --time = 180
+            --cpus-per-task = 1
+            --ntasks = 1
