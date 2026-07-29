@@ -3,7 +3,13 @@ import numpy as np
 import os
 from datetime import date
 import geopandas as gpd
-from .constrain_cubes_standard import contrain_to_sow_shapefile
+from .constrain_cubes_standard import contrain_to_sow_shapefile, sub_year_months
+
+
+def ensemble_member_id(ensemble_member, realisation):
+    """Return the canonical ensemble-member key, e.g. r002i1p5."""
+    return f"r{int(ensemble_member):03d}i1p{int(realisation)}"
+
 
 def CountryMean(cube):
     coords = ('longitude', 'latitude')
@@ -49,6 +55,28 @@ def ConstrainToYear(cube, target_year):
         years_present = sorted({dt.year for dt in dts})
         raise ValueError(f"No data for year {target_year}. Years present: {years_present[:5]} ... {years_present[-5:]}")
     return out 
+
+def constrain_cube_to_months(cube, months):
+    """Filter a cube's time axis down to specific calendar month(s).
+
+    Thin wrapper around constrain_cubes_standard.sub_year_months that accepts
+    1-indexed months (1=Jan ... 12=Dec) for readability at call sites, since
+    sub_year_months itself expects 0-indexed months.
+
+    NOTE: any baseline regression CSVs used alongside this correction must be
+    generated from the same month window, or the correction becomes
+    scientifically inconsistent.
+
+    Arguments:
+        cube -- iris cube with a 'time' coordinate.
+        months -- int, or tuple/list of ints, 1-indexed (1=Jan, ..., 12=Dec).
+    Returns:
+        cube constrained to the given month(s).
+    """
+    if isinstance(months, int):
+        months = (months,)
+    months_0idx = [m - 1 for m in months]
+    return sub_year_months(cube, months_0idx)
 def RiskRatio(Alldata, Natdata, Threshold):
     """
     Calculate the Risk Ratio between ALL (anthropogenic) and NAT (natural) scenarios.
