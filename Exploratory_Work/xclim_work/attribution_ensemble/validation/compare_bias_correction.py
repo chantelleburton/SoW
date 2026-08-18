@@ -15,9 +15,10 @@ both output directories, this script:
 
 Output
 ------
-    comparison_stats.csv     -- one row per (country, member, runtype, year)
-    scatter_<country>.png    -- one figure per country
-    summary_table.png        -- RMSE / corr bar chart across countries
+    comparison_stats.csv           -- one row per (country, member, runtype, year)
+    scatter_<country>.png          -- one figure per country (hist + histnat pooled)
+    scatter_<country>_<runtype>.png -- one figure per (country, runtype), e.g. Iberia_hist
+    summary_table.png              -- RMSE / corr bar chart across countries, split by runtype
 """
 
 import os
@@ -38,6 +39,7 @@ OUT_DIR   = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/validation/
 os.makedirs(OUT_DIR, exist_ok=True)
 
 COUNTRIES  = ['Iberia', 'Chile', 'Canada']#'Korea', 'Scotland'
+RUNTYPES   = ['hist', 'histnat']
 PERCENTILE = 95
 ENSEMBLE_KEY_RE = re.compile(r'^r\d{3}i1p\d+$')
 
@@ -109,6 +111,52 @@ def paired_stats(orig_vals, xc_vals):
     }
 
 
+# ---- Plotting ----
+
+def make_scatter_plot(o_all, x_all, suptitle, out_path):
+    """Scatter + overlapping-histogram figure for a pooled pair of value arrays."""
+    mask = ~(np.isnan(o_all) | np.isnan(x_all))
+    o_all, x_all = o_all[mask], x_all[mask]
+
+    s = paired_stats(o_all, x_all)
+    if not s:
+        return None
+
+    fig, (ax_sc, ax_di) = plt.subplots(1, 2, figsize=(12, 5))
+    fig.suptitle(suptitle, fontsize=12, fontweight='bold')
+
+    # Scatter
+    ax_sc.scatter(o_all, x_all, alpha=0.04, s=3, color='steelblue', rasterized=True)
+    lim_lo = min(np.nanpercentile(o_all, 0.5), np.nanpercentile(x_all, 0.5))
+    lim_hi = max(np.nanpercentile(o_all, 99.5), np.nanpercentile(x_all, 99.5))
+    ax_sc.plot([lim_lo, lim_hi], [lim_lo, lim_hi], 'r--', lw=1, label='y = x')
+    ax_sc.set_xlim(lim_lo, lim_hi)
+    ax_sc.set_ylim(lim_lo, lim_hi)
+    ax_sc.set_xlabel('ImpactTB (log-bias-corrected FWI)')
+    ax_sc.set_ylabel('Xclim (log-bias-corrected FWI)')
+    ax_sc.set_title(
+        f'r = {s["corr"]:.4f}  |  RMSE = {s["rmse"]:.4f}  |  bias = {s["mean_bias"]:+.4f}')
+    ax_sc.legend(fontsize=8)
+    ax_sc.grid(alpha=0.3)
+
+    # Overlapping histograms
+    bins = np.linspace(lim_lo, lim_hi, 80)
+    ax_di.hist(o_all, bins=bins, alpha=0.5, color='steelblue',
+               density=True, label='ImpactTB')
+    ax_di.hist(x_all, bins=bins, alpha=0.5, color='coral',
+               density=True, label='Xclim')
+    ax_di.set_xlabel('Log-bias-corrected FWI')
+    ax_di.set_ylabel('Density')
+    ax_di.set_title('All ensemble members x baseline years pooled')
+    ax_di.legend()
+    ax_di.grid(alpha=0.3)
+
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120, bbox_inches='tight')
+    plt.close(fig)
+    return s
+
+
 # ---- Main ----
 
 def main():
@@ -135,6 +183,7 @@ def main():
         return
 
     country_vals = {c: ([], []) for c in COUNTRIES}
+    runtype_vals = {(c, rt): ([], []) for c in COUNTRIES for rt in RUNTYPES}
     rows = []
 
     for (country, member, runtype, year) in sorted(common):
@@ -159,6 +208,9 @@ def main():
 
         country_vals[country][0].append(o_flat)
         country_vals[country][1].append(x_flat)
+        if (country, runtype) in runtype_vals:
+            runtype_vals[(country, runtype)][0].append(o_flat)
+            runtype_vals[(country, runtype)][1].append(x_flat)
 
         s = paired_stats(o_flat, x_flat)
         if s:
@@ -176,7 +228,7 @@ def main():
     print(f'{"Country":<12} {"RunType":<10} {"Year":>6} {"Pairs":>5} {"RMSE":>8} {"Corr":>8} {"Bias":>8}')
     print('─' * 80)
     for country in COUNTRIES:
-        for rt in ['hist', 'histnat']:
+        for rt in RUNTYPES:
             for yr in years_present:
                 sub = df[(df['country'] == country) & (df['runtype'] == rt) & (df['year'] == yr)]
                 if len(sub) == 0:
@@ -207,72 +259,66 @@ def main():
 
         o_all = np.concatenate(o_lists)
         x_all = np.concatenate(x_lists)
-        mask  = ~(np.isnan(o_all) | np.isnan(x_all))
-        o_all, x_all = o_all[mask], x_all[mask]
-
-        s = paired_stats(o_all, x_all)
-
-        fig, (ax_sc, ax_di) = plt.subplots(1, 2, figsize=(12, 5))
         years_str = ', '.join(str(y) for y in sorted(df[df['country'] == country]['year'].unique()))
-        fig.suptitle(
-            f'{country}  |  ImpactTB vs Xclim bias-corrected FWI (years: {years_str})',
-            fontsize=12, fontweight='bold')
-
-        # Scatter
-        ax_sc.scatter(o_all, x_all, alpha=0.04, s=3, color='steelblue', rasterized=True)
-        lim_lo = min(np.nanpercentile(o_all, 0.5), np.nanpercentile(x_all, 0.5))
-        lim_hi = max(np.nanpercentile(o_all, 99.5), np.nanpercentile(x_all, 99.5))
-        ax_sc.plot([lim_lo, lim_hi], [lim_lo, lim_hi], 'r--', lw=1, label='y = x')
-        ax_sc.set_xlim(lim_lo, lim_hi)
-        ax_sc.set_ylim(lim_lo, lim_hi)
-        ax_sc.set_xlabel('ImpactTB (log-bias-corrected FWI)')
-        ax_sc.set_ylabel('Xclim (log-bias-corrected FWI)')
-        ax_sc.set_title(
-            f'r = {s["corr"]:.4f}  |  RMSE = {s["rmse"]:.4f}  |  bias = {s["mean_bias"]:+.4f}')
-        ax_sc.legend(fontsize=8)
-        ax_sc.grid(alpha=0.3)
-
-        # Overlapping histograms
-        bins = np.linspace(lim_lo, lim_hi, 80)
-        ax_di.hist(o_all, bins=bins, alpha=0.5, color='steelblue',
-                   density=True, label='ImpactTB')
-        ax_di.hist(x_all, bins=bins, alpha=0.5, color='coral',
-                   density=True, label='Xclim')
-        ax_di.set_xlabel('Log-bias-corrected FWI')
-        ax_di.set_ylabel('Density')
-        ax_di.set_title('All ensemble members x baseline years pooled')
-        ax_di.legend()
-        ax_di.grid(alpha=0.3)
-
-        fig.tight_layout()
         out_path = os.path.join(OUT_DIR, f'scatter_{country}.png')
-        fig.savefig(out_path, dpi=120, bbox_inches='tight')
-        plt.close(fig)
-        print(f'  Saved {out_path}')
+        if make_scatter_plot(
+                o_all, x_all,
+                f'{country}  |  ImpactTB vs Xclim bias-corrected FWI (years: {years_str})',
+                out_path):
+            print(f'  Saved {out_path}')
 
-    # ---- Summary bar chart ----
-    by_country = (df.groupby('country')[['rmse', 'corr']]
-                    .mean()
-                    .reindex(COUNTRIES)
-                    .dropna())
+    # ---- Per-country, per-runtype scatter + distribution ----
+    print('\nGenerating hist/histnat-specific plots...')
+
+    for country in COUNTRIES:
+        for rt in RUNTYPES:
+            o_lists, x_lists = runtype_vals[(country, rt)]
+            if not o_lists:
+                print(f'  {country} ({rt}): no data, skipping')
+                continue
+
+            o_all = np.concatenate(o_lists)
+            x_all = np.concatenate(x_lists)
+            sub = df[(df['country'] == country) & (df['runtype'] == rt)]
+            years_str = ', '.join(str(y) for y in sorted(sub['year'].unique()))
+            out_path = os.path.join(OUT_DIR, f'scatter_{country}_{rt}.png')
+            if make_scatter_plot(
+                    o_all, x_all,
+                    f'{country} ({rt})  |  ImpactTB vs Xclim bias-corrected FWI (years: {years_str})',
+                    out_path):
+                print(f'  Saved {out_path}')
+
+    # ---- Summary bar chart (grouped by runtype) ----
+    by_country_rmse = (df.groupby(['country', 'runtype'])['rmse']
+                         .mean()
+                         .unstack('runtype')
+                         .reindex(index=COUNTRIES, columns=RUNTYPES))
+    by_country_corr = (df.groupby(['country', 'runtype'])['corr']
+                         .mean()
+                         .unstack('runtype')
+                         .reindex(index=COUNTRIES, columns=RUNTYPES))
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
     years_str = ', '.join(str(y) for y in sorted(df['year'].unique()))
     fig.suptitle(
-        f'Summary: ImpactTB vs Xclim (years: {years_str}, all members + runtypes)',
+        f'Summary: ImpactTB vs Xclim (years: {years_str}, all members)',
         fontsize=12, fontweight='bold')
 
-    by_country['rmse'].plot(kind='bar', ax=ax1, color='steelblue')
+    by_country_rmse.plot(kind='bar', ax=ax1, color=['steelblue', 'coral'])
     ax1.set_title('Mean RMSE (lower = more similar)')
     ax1.set_ylabel('RMSE')
+    ax1.set_xlabel('')
     ax1.tick_params(axis='x', rotation=30)
     ax1.grid(axis='y', alpha=0.3)
+    ax1.legend(title='runtype')
 
-    by_country['corr'].plot(kind='bar', ax=ax2, color='coral')
+    by_country_corr.plot(kind='bar', ax=ax2, color=['steelblue', 'coral'])
     ax2.set_title('Mean Correlation (higher = more similar)')
     ax2.set_ylabel('Pearson r')
+    ax2.set_xlabel('')
     ax2.tick_params(axis='x', rotation=30)
     ax2.grid(axis='y', alpha=0.3)
+    ax2.legend(title='runtype')
 
     fig.tight_layout()
     summary_path = os.path.join(OUT_DIR, 'summary_table.png')

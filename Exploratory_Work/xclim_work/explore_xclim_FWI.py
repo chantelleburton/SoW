@@ -21,10 +21,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 #Due to its depth, the DC is the slowest-changing moisture code with a time lag of 52 d (Van Wagner, 1987).
 
 start_time = time.time()
-start_year = int(os.environ.get("CYLC_TASK_PARAM_start_year", 2025))
-MAX_END_YEAR = int(os.environ.get("MAX_END_YEAR", 2025))
-wind_stat = os.environ.get("CYLC_TASK_PARAM_wind_stat", "mean").strip().lower()
-rh_stat = os.environ.get("CYLC_TASK_PARAM_rh_stat", "mean").strip().lower()
+start_year = int(os.environ.get("CYLC_TASK_PARAM_start_year", 1980))
+MAX_END_YEAR = int(os.environ.get("MAX_END_YEAR", 2013))
 end_year = min(start_year + 10, MAX_END_YEAR)
 
 basepath = '/data/users/appldata/Data/OBS-ERA5/daily'
@@ -182,7 +180,7 @@ if __name__ == '__main__':
     pr = pr.ffill(dim='time')
     ws = ws.ffill(dim='time')
     hurs = hurs.ffill(dim='time')
-
+    hurs = hurs.clip(min=0, max=100)#prevents mositure code from NaNing due to super-saturation.
     # xclim treats time as a core dimension, so it must be a single chunk.
     compute_chunks = {'time': -1, 'latitude': SPATIAL_CHUNK, 'longitude': SPATIAL_CHUNK}
     tas = tas.chunk(compute_chunks)
@@ -214,7 +212,14 @@ if __name__ == '__main__':
     )
     print(f"FWI dtype: {fwi.dtype}, shape: {fwi.shape}, chunks: {getattr(fwi, 'chunks', None)}")
 
-    # --- Save one file per selected sub-index ---
+    # --- Save one file per selected sub-index, per calendar year ---
+    # The block's first year (start_year) is discarded: it exists only to let
+    # the moisture codes (esp. DC, ~52 day lag) spin up from their default
+    # initial conditions, so its values are not reliable and must not be
+    # written out. Since each block's start_year is the same as the previous
+    # block's final year (e.g. 1979-1989, 1989-1999, ...), dropping it here
+    # means every calendar year ends up written by exactly one block, with no
+    # overlap or gap between blocks.
     index_map = {
         'dc':   (dc,   'Drought Code',          '1'),
         'dmc':  (dmc,  'Duff Moisture Code',     '1'),
@@ -224,18 +229,27 @@ if __name__ == '__main__':
         'fwi':  (fwi,  'Fire Weather Index',     'FWI'),
     }
     os.makedirs(out_dir, exist_ok=True)
-    n_times = tas.sizes['time']
+    output_years = [y for y in years if y > start_year]
+    print(f"Discarding spin-up year {start_year}; writing yearly files for {output_years}")
     for idx_name in OUTPUT_INDICES:
         da, long_name, units = index_map[idx_name]
         da.attrs.update({'long_name': long_name, 'units': units})
-        out_path = os.path.join(out_dir, f'era5_{idx_name}_{RUN_LABEL}_{start_year}-{end_year}.nc')
-        enc = {idx_name: {'chunksizes': (min(n_times, 365), SPATIAL_CHUNK, SPATIAL_CHUNK)}}
-        ds = xr.Dataset({idx_name: da})
-        print(ds)
-        ds.to_netcdf(out_path, encoding=enc)
-        print(f"Saved {idx_name} to {out_path}")
+        for y in output_years:
+            da_year = da.sel(time=slice(f'{y}-01-01', f'{y}-12-31'))
+            n_times_year = da_year.sizes['time']
+            if n_times_year == 0:
+                print(f"  Skipping {idx_name} {y}: no data in range")
+                continue
+            out_path = os.path.join(out_dir, f'era5_{idx_name}_{RUN_LABEL}_{y}.nc')
+            enc = {idx_name: {'chunksizes': (n_times_year, SPATIAL_CHUNK, SPATIAL_CHUNK)}}
+            ds = xr.Dataset({idx_name: da_year})
+            ds.to_netcdf(out_path, encoding=enc)
+            print(f"Saved {idx_name} {y} ({n_times_year} days) to {out_path}")
     print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
-    client.close()
-    cluster.close()
+    try:
+        client.close(timeout=30)
+        cluster.close(timeout=30)
+    except Exception as e:
+        print(f"Warning: cluster shutdown raised {e!r} (ignoring - all output already written)")
     print('Finished')
     print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))

@@ -30,7 +30,7 @@ from utils.cubefuncs import apply_shapefile_inclusive, CountryPercentile, TimePe
 # ---- Config ----
 # Original impactstoolbox source tree: <root>/<experiment>/<member>/FWI_...nc
 IMPACTTB_ROOT = '/data/scratch/andrew.hartley/impactstoolbox/Data/attribution_ensemble/Fire-Weather/FWI/HadGEM3-A-N216'
-XCLIM_DIR    = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Xclim'
+XCLIM_DIR    = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Raw_FWI_Files'
 SHP_FILE     = '/data/users/bob.potts/StateOfFires_2025-26/code/Shapefiles/SoW2526_Focal_MASTER_20260218.shp'
 OUT_DIR      = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/validation'
 

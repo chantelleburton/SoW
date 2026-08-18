@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 #swap back to opatt which has redownloaded wind data and pray. 
 # ─── Configuration ───────────────────────────────────────────────────────────
 tld = '/data/users/opatt/HadGEM3-A-N216'
-out_dir = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim'
+out_dir = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Raw_FWI_Files'
 
 start_time = time.time()
 run_type = os.environ.get("CYLC_TASK_PARAM_run_type", "historicalExt").strip()
@@ -111,6 +111,12 @@ def load_variable(var_name, cfg, tld, experiment, member, chunks):
         da = da - 273.15
     elif var_name == 'pr':
         da = da * 86400  # kg m-2 s-1 → mm/day
+    elif var_name == 'hurs':
+        # Occasional supersaturated/rounding values slightly above 100% cause
+        # xclim's FFMC calculation (kl term: ((100-h)/100)**1.7) to hit a
+        # negative base under a fractional exponent -> NaN, which then
+        # poisons the FFMC recursion permanently for that cell. 
+        da = da.clip(min=0, max=100)
 
     da.attrs['units'] = cfg['units']
     return da
@@ -243,6 +249,9 @@ if __name__ == '__main__':
         print(f"Saved {idx_name} to {out_path}")
 
     print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
-    client.close()
-    cluster.close()
+    try:
+        client.close(timeout=30)
+        cluster.close(timeout=30)
+    except Exception as e:
+        print(f"Warning: cluster shutdown raised {e!r} (ignoring - all output already written)")
     print('Finished')

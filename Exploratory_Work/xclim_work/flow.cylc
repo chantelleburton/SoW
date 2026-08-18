@@ -3,8 +3,8 @@
 
 [task parameters]
     start_year = 1979, 1989, 1999, 2009, 2019
-    wind_stat = mean, max
-    rh_stat = mean, minimum
+    wind_stat = mean#, max
+    rh_stat = mean#, minimum
 
 [scheduling]
     [[graph]]
