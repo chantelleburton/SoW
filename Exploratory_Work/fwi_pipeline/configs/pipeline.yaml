@@ -1,0 +1,72 @@
+scratch_root: /data/scratch/bob.potts/sowf
+shapefile: /data/users/bob.potts/StateOfFires_2025-26/code/Shapefiles/SoW2526_Focal_MASTER_20260218.shp
+
+summary_defaults:
+  method: percentile
+  percentile: 95
+
+regions:
+  Korea:
+    shape_name: Southeast South Korea
+    months: [3]
+  Iberia:
+    shape_name: Northwest Iberia
+    months: [8]
+  Scotland:
+    shape_name: Scottish Highlands
+    months: [6, 7]
+  Chile:
+    shape_name: Chilean Temperate Forests and Matorral
+    months: [1, 2]
+  Canada:
+    shape_name: Midwestern Canadian Shield forests
+    months: [7, 8]
+
+datasets:
+  era5_present:
+    family: present
+    source: era5_present
+    start_year: 2024
+    end_year: 2026
+    wind_stat: mean
+    rh_stat: mean
+    basepath: /data/users/appldata/Data/OBS-ERA5/daily
+    interim_subdir: xclim_pipeline/era5_present/raw_fwi
+    output_subdir: xclim_pipeline/era5_present/summary
+    metrics: [fwi]
+
+  era5_historical:
+    family: baseline
+    source: era5_historical
+    start_year: 1980
+    end_year: 2013
+    wind_stat: mean
+    rh_stat: mean
+    basepath: /data/users/appldata/Data/OBS-ERA5/daily
+    interim_subdir: xclim_pipeline/era5_historical/raw_fwi
+    output_subdir: xclim_pipeline/baseline/summary
+    metrics: [fwi]
+
+  hadgem3_historical:
+    family: baseline
+    source: hadgem3_historical
+    tld: /data/users/opatt/HadGEM3-A-N216
+    start_year: 1980
+    end_year: 2013
+    members: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    interim_subdir: xclim_pipeline/hadgem3_historical/raw_fwi
+    output_subdir: xclim_pipeline/baseline/summary
+    metrics: [fwi]
+
+  hadgem3_attribution:
+    family: attribution
+    source: hadgem3_attribution
+    tld: /data/users/opatt/HadGEM3-A-N216
+    run_types: [historicalExt, historicalNatExt]
+    n_runs: 5
+    n_physics: 5
+    window_start: '2019-11-01'
+    window_end: '2024-12-30'
+    interim_subdir: Attribution_Ensemble_xclim/Raw_FWI_Files
+    output_subdir: Attribution_Ensemble_xclim/Condensed_Log_Transforms
+    metrics: [fwi]

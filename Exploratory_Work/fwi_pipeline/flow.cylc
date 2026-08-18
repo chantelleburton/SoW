@@ -1,0 +1,168 @@
+#!Jinja2
+{# Generate all 525 attribution-ensemble member IDs (r001i1p1 .. r105i1p5). #}
+{% set N_RUNS = 5 %}
+{% set N_PHYSICS = 5 %}
+{% set attr_members = [] %}
+{% for r in range(1, N_RUNS + 1) %}
+{%   for p in range(1, N_PHYSICS + 1) %}
+{%     do attr_members.append('r%03di1p%d' | format(r, p)) %}
+{%   endfor %}
+{% endfor %}
+
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    region = Iberia, Chile, Canada, Scotland, Korea
+    hg3_hist_member = 1..15
+    hg3_attr_run_type = historicalExt, historicalNatExt
+    hg3_attr_member = {{ attr_members | join(', ') }}
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            era5_present_stage1 => era5_present_stage2<region>
+            era5_historical_stage1 => era5_historical_stage2<region>
+            hadgem3_historical_stage1<hg3_hist_member> => hadgem3_historical_stage2<hg3_hist_member, region>
+            hadgem3_attribution_stage1<hg3_attr_run_type, hg3_attr_member> => hadgem3_attribution_stage2<hg3_attr_run_type, hg3_attr_member, region>
+        """
+
+[runtime]
+    [[era5_present_stage1]]
+        platform = spice
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/fwi_pipeline
+        export CONFIG_PATH=configs/pipeline.yaml
+        export DATASET=era5_present
+        python stage1_compute_index.py
+        """
+
+        [[[directives]]]
+            --partition = cpu
+            --cpus-per-task = 4
+            --mem = 30G
+            --time = 240
+
+    [[era5_present_stage2<region>]]
+        platform = spice
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/fwi_pipeline
+        export CONFIG_PATH=configs/pipeline.yaml
+        export DATASET=era5_present
+        python stage2_compute_summary.py
+        """
+
+        [[[directives]]]
+        --partition = cpu
+            --cpus-per-task = 1
+            --mem = 20G
+            --time = 240
+
+    [[era5_historical_stage1]]
+        platform = spice
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/fwi_pipeline
+        export CONFIG_PATH=configs/pipeline.yaml
+        export DATASET=era5_historical
+        python stage1_compute_index.py
+        """
+
+        [[[directives]]]
+            --partition = cpu-long
+            --cpus-per-task = 4
+            --mem = 80G
+            --time = 360
+
+    [[era5_historical_stage2<region>]]
+        platform = spice
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/fwi_pipeline
+        export CONFIG_PATH=configs/pipeline.yaml
+        export DATASET=era5_historical
+        python stage2_compute_summary.py
+        """
+
+        [[[directives]]]
+            --cpus-per-task = 1
+            --mem = 40G
+            --time = 240
+
+    [[hadgem3_historical_stage1<hg3_hist_member>]]
+        platform = spice
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/fwi_pipeline
+        export CONFIG_PATH=configs/pipeline.yaml
+        export DATASET=hadgem3_historical
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hg3_hist_member}
+        python stage1_compute_index.py
+        """
+
+        [[[directives]]]
+            --partition = cpu-long
+            --cpus-per-task = 4
+            --mem = 40G
+            --time = 240
+
+    [[hadgem3_historical_stage2<hg3_hist_member, region>]]
+        platform = spice
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/fwi_pipeline
+        export CONFIG_PATH=configs/pipeline.yaml
+        export DATASET=hadgem3_historical
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hg3_hist_member}
+        python stage2_compute_summary.py
+        """
+
+        [[[directives]]]
+            --cpus-per-task = 1
+            --mem = 40G
+            --time = 240
+
+    [[hadgem3_attribution_stage1<hg3_attr_run_type, hg3_attr_member>]]
+        platform = spice
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/fwi_pipeline
+        export CONFIG_PATH=configs/pipeline.yaml
+        export DATASET=hadgem3_attribution
+        export CYLC_TASK_PARAM_run_type=${CYLC_TASK_PARAM_hg3_attr_run_type}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hg3_attr_member}
+        python stage1_compute_index.py
+        """
+        [[[directives]]]
+            --partition = cpu-long
+            --cpus-per-task = 4
+            --mem = 30G
+            --time = 720
+
+    [[hadgem3_attribution_stage2<hg3_attr_run_type, hg3_attr_member, region>]]
+        platform = spice
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/fwi_pipeline
+        export CONFIG_PATH=configs/pipeline.yaml
+        export DATASET=hadgem3_attribution
+        export CYLC_TASK_PARAM_run_type=${CYLC_TASK_PARAM_hg3_attr_run_type}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hg3_attr_member}
+        python stage2_compute_summary.py
+        """
+        [[[directives]]]
+            --partition = cpu-long
+            --cpus-per-task = 4
+            --mem = 20G
+            --time = 240
+
