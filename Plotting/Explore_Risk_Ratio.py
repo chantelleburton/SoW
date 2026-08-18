@@ -35,7 +35,7 @@ BOOTSTRAP_SIZE = 10000
 N_BASELINES = 15
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013
-DATA_YEARS = [2020,2021,2022,20232024] #CHANGE ME WHEN NEW HADGEM ATTR DATA AVAILABLE: [2020, 2021, 2022, 2023, 2024]
+DATA_YEARS = [2020,2021,2022,2023,2024] #CHANGE ME WHEN NEW HADGEM ATTR DATA AVAILABLE: [2020, 2021, 2022, 2023, 2024]
 
 REGION_CONFIGS = {
     'Korea': {
@@ -236,9 +236,17 @@ def main():
             print(f"Skipping {country} due to missing data")
             continue
 
+        n_nan_all = np.isnan(all_data).sum()
+        n_nan_nat = np.isnan(nat_data).sum()
+        if n_nan_all or n_nan_nat:
+            print(f"Warning: {n_nan_all}/{len(all_data)} ALL values and "
+                  f"{n_nan_nat}/{len(nat_data)} NAT values are NaN")
+
         # Empirical 95th percentiles from loaded hist/histnat ensembles
-        hist_p95 = np.percentile(all_data, 95)
-        histnat_p95 = np.percentile(nat_data, 95)
+        # (np.nanpercentile ignores NaNs; plain np.percentile returns NaN if
+        # even a single value in the array is NaN)
+        hist_p95 = np.nanpercentile(all_data, 95)
+        histnat_p95 = np.nanpercentile(nat_data, 95)
 
         # Calculate Risk Ratio with bootstrapped confidence intervals
         print("Calculating Risk Ratio...")
@@ -263,7 +271,7 @@ def main():
 
         # Export bootstrap replicates
         pd.DataFrame({'rr_replicates': rr_results['replicates']}).to_csv(
-            f'{EXPORT_FOLDER}/{country}_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False
+            f'{EXPORT_FOLDER}/{country}_XCLIM_Corrected_Risk_Ratio_Bootstrap_Replicates.csv', index=False
         )
 
         # Plot
@@ -296,7 +304,7 @@ def main():
                     fontsize=12, wrap=True, family='monospace')
 
     plt.tight_layout()
-    plt.savefig(f'{PLOT_FOLDER}/Corrected_Risk_Ratio.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{PLOT_FOLDER}/XCLIM_Corrected_Risk_Ratio.png', dpi=300, bbox_inches='tight')
 
     # Print summary
     print("\n" + "="*60)
@@ -329,7 +337,7 @@ def main():
             'Likelihood': likelihood,
         })
     summary_df = pd.DataFrame(summary_rows)
-    summary_path = f'{EXPORT_FOLDER}/Corrected_Risk_Ratio_Summary.csv'
+    summary_path = f'{EXPORT_FOLDER}/XCLIM_Corrected_Risk_Ratio_Summary.csv'
     summary_df.to_csv(summary_path, index=False)
     print(f"\nSummary exported to: {summary_path}")
 
