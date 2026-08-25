@@ -1,0 +1,33 @@
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    member = 1..15
+    country = Chile, Canada, Iberia
+    index = ffmc, fwi, isi, bui, dmc, dc
+[scheduling]
+
+    [[graph]]
+        R1 = """
+            hadgem_historical_metric_processing<member,country,index>
+        """
+
+[runtime]
+    [[hadgem_historical_metric_processing<member,country,index>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/post-processing/Metric-HG3-A_Historical
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_member}
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        python FWI95-HG3-A_Historical.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 3G
+            --time = 30
+            --cpus-per-task = 1
+            --ntasks = 1
