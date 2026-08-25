@@ -16,6 +16,7 @@
 [task parameters]
     run_type = historicalExt, historicalNatExt
     member = {{ members | join(', ') }}
+    
 [scheduling]
     [[graph]]
         R1 = """

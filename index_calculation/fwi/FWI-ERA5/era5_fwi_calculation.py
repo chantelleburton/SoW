@@ -1,35 +1,58 @@
+"""
+This file is designed to replicate a partial function of the ImpactsToolBox, namely the processing of base ERA5 Land
+variables (Precipiation, Temperature, Wind, Relative Humidity) into the Canadian Fire Weather Index (FWI) system. 
+The FWI system is a sequential model that uses daily weather inputs to calculate a set of indices that describe fire danger.
+As certain FWI Sub-Indicies (namely the Drought Code,DC) have an iterative property the means they must be stored day to day 
+to allow the next iteration to be calculated. The DC in particular is slowly varying over ~52 days so large data volumes 
+depending on the length of time may need to be loaded at once. To prevent having to load an abscene amount of input variables
+at once, this caulcation has been split into 10 year periods, Given the necessary spin up produces errors, this calculation is 
+overlapped at the bigging and end of each period (except the first and last). the first year of each calcualtion period
+is discarded during export to remove the un-spun up values. Additionally due to issues with the locally stored ERA5-Land data,
+a tracer grid based on a provenly consistent temperature grid is used should the lat/long coords not match up. while the 
+internal broken representation of the time grid is solved using the file name to reconstruct the time dim for matching
+with the other input variables. 
+
+"""
+
+
 import xarray as xr
 import time
 import os
 import logging
-logging.getLogger("distributed").setLevel(logging.WARNING)
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
 import xclim as xc
 import glob
 import re
 import warnings
 import time
 import numpy as np
-import pandas as pd
+import pandas as pd #used just to reconstruct time dim, could be moved to xarray native later.
 from dask.distributed import Client, LocalCluster, wait
-warnings.filterwarnings("ignore", category=UserWarning, message=".*chunking.*")
-warnings.filterwarnings("ignore", category=FutureWarning)
+logging.getLogger("distributed").setLevel(logging.WARNING)
+#these are needed to prevent xclim dask layer from fighting numpy multi-threading.
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+warnings.filterwarnings("ignore", category=UserWarning, message=".*chunking.*") #prevents .err bloat
+warnings.filterwarnings("ignore", category=FutureWarning) #ditto 
 #Due to its depth, the DC is the slowest-changing moisture code with a time lag of 52 d (Van Wagner, 1987).
-
 start_time = time.time()
+
+#pull params from cylc with fallback values.
 start_year = int(os.environ.get("CYLC_TASK_PARAM_start_year", 2025))
-MAX_END_YEAR = int(os.environ.get("MAX_END_YEAR", 2025))
 wind_stat = os.environ.get("CYLC_TASK_PARAM_wind_stat", "mean").strip().lower()
 rh_stat = os.environ.get("CYLC_TASK_PARAM_rh_stat", "mean").strip().lower()
+
+#end year = start year + 10 capped by the MAX_END_YEAR vari to prevent trying to calc fwi for non-existant input.
+MAX_END_YEAR = int(os.environ.get("MAX_END_YEAR", 2025))
 end_year = min(start_year + 10, MAX_END_YEAR)
 
+#I/O: OBS_ERA5 shouldn't change, outdir is configurable. 
 basepath = '/data/users/appldata/Data/OBS-ERA5/daily'
 out_dir = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/ERA5'
 
+#lookups based on cylc passed varis for determaning inputs to fwi calc, wind and rh mean vs min/max has moderate sensativity on the fwi.
 WIND_OPTIONS = {
     'mean': {
         'subdir': '10m_mean_wind_speed',
@@ -69,6 +92,7 @@ RUN_LABEL = f"{rh_cfg['label']}_{wind_cfg['label']}"
 # Sub-indices to write. Remove any you don't need.
 OUTPUT_INDICES = ['fwi'] #'dc', 'dmc', 'ffmc', 'isi', 'bui', 
 
+#big data but single run -> 3 workers + overhead, cylc provides 150G (3*40 + 30G overhead) memory.
 SPATIAL_CHUNK = 90  # lat/lon chunk size — larger chunks = smaller task graph
 MEMORY_PER_WORKER = 40  # GB 
 if __name__ == '__main__':
@@ -85,7 +109,6 @@ if __name__ == '__main__':
     client = Client(cluster)
     print(f"Dask dashboard: {client.dashboard_link}")
 
-    start_time = time.time()
     # --- Merge all input files for each variable over the full period ---
     years = range(start_year, end_year + 1)
     chunks = {'latitude': SPATIAL_CHUNK, 'longitude': SPATIAL_CHUNK}
@@ -99,7 +122,7 @@ if __name__ == '__main__':
     for y in years:
         tas_files += sorted(glob.glob(os.path.join(basepath, '2m_temperature', 'daily_maximum', f'era5_daily_maximum_2m_temperature_{y}*.nc')))
     assert len(tas_files) > 0, f"No temperature files found in {basepath}/2m_temperature/daily_maximum/"
-    tas = xr.open_mfdataset(tas_files, chunks=chunks)['t2m'] - 273.15
+    tas = xr.open_mfdataset(tas_files, chunks=chunks)['t2m'] - 273.15 #transform from kelvin to degC
     if 'valid_time' in tas.dims:
         tas = tas.rename({'valid_time': 'time'})
     tas.attrs['units'] = 'degC'
@@ -119,6 +142,7 @@ if __name__ == '__main__':
     # Wind — time encoding in these files is broken (produced by a separate
     # pipeline), so we load with decode_times=False and reconstruct time from
     # the YYYY-MM in each filename.
+    #known issue with local wind files.
     wind_files = []
     for y in years:
         wind_files += sorted(glob.glob(os.path.join(basepath, wind_cfg['subdir'], wind_cfg['pattern'].format(year=y))))
@@ -182,8 +206,8 @@ if __name__ == '__main__':
     pr = pr.ffill(dim='time')
     ws = ws.ffill(dim='time')
     hurs = hurs.ffill(dim='time')
-    hurs = hurs.clip(min=0, max=100)#prevents mositure code from NaNing due to super-saturation.
-    # xclim treats time as a core dimension, so it must be a single chunk.
+    hurs = hurs.clip(min=0, max=100)#prevents mositure code from NaNing due to super-saturation. #science checked.
+    # xclim treats time as a core dimension, so it must be a single chunk (also needed for DC calcs).
     compute_chunks = {'time': -1, 'latitude': SPATIAL_CHUNK, 'longitude': SPATIAL_CHUNK}
     tas = tas.chunk(compute_chunks)
     pr = pr.chunk(compute_chunks)
@@ -197,8 +221,7 @@ if __name__ == '__main__':
     print(f"tas shape: {tas.shape}, pr shape: {pr.shape}, ws shape: {ws.shape}, hurs shape: {hurs.shape}")
 
 
-    # This prevents the -273.15 / *1000 operations from bloating the FWI task graph.
-
+    # persisting prevents the -273.15 / *1000 operations from bloating the FWI task graph.
     tas, pr, ws, hurs = client.persist([tas, pr, ws, hurs])
     wait([tas, pr, ws, hurs])
 
@@ -228,8 +251,13 @@ if __name__ == '__main__':
         'ffmc': (ffmc, 'Fine Fuel Moisture Code', '1'),
         'isi':  (isi,  'Initial Spread Index',   '1'),
         'bui':  (bui,  'Build-Up Index',         '1'),
-        'fwi':  (fwi,  'Fire Weather Index',     'FWI'),
+        'fwi':  (fwi,  'Fire Weather Index',     '1')
     }
+    if 'dsr' in OUTPUT_INDICES: #create Daily Severity Rating layer.
+        print("Computing DSR from FWI...")
+        dsr = 0.0272*fwi**1.77 #known calc from Van Wagner (1970,1987)
+        index_map['dsr'] = (dsr, 'Daily Severity Rating', '1')
+        
     os.makedirs(out_dir, exist_ok=True)
     output_years = [y for y in years if y > start_year]
     print(f"Discarding spin-up year {start_year}; writing yearly files for {output_years}")
@@ -249,6 +277,7 @@ if __name__ == '__main__':
             print(f"Saved {idx_name} {y} ({n_times_year} days) to {out_path}")
     print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
     try:
+            #workers and clients have a habit of hanging after writing so increased timeout to allow cylc to read success.
         client.close(timeout=30)
         cluster.close(timeout=30)
     except Exception as e:

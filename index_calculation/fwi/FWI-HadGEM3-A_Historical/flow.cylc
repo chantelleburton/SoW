@@ -16,7 +16,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/index_calculation/fwi/HadGEM3-A_Historical/
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/index_calculation/fwi/FWI-HadGEM3-A_Historical
         echo "Running member=${CYLC_TASK_PARAM_member}"
         python hadgem3-a_historical_fwi_calculation.py
         """
@@ -25,7 +25,7 @@
 
         [[[directives]]]
             --mem = 100G
-            --partition = cpu-long
-            --time = 720
+            --partition = cpu
+            --time = 150
             --cpus-per-task = 4
             --ntasks = 1
