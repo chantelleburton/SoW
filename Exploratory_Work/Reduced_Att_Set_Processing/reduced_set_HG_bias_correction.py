@@ -70,7 +70,8 @@ HISTNAT_DIR = (
 )
 
 
-DATA_YEARS = [2020, 2021, 2022, 2023, 2024]  # Full 5-year period the reduced set is complete for.
+DATA_YEARS = [2020, 2021, 2022, 2023, 2024]
+  # Full 5-year period the reduced set is complete for.
 BASELINE_START_YEAR = 1980  # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013  # end of the regression baseline period (inclusive)
 
@@ -102,6 +103,7 @@ elif Country == 'Chile':
     month = 'January-February'
     percentile = 95
     shape_name = 'Chilean Temperate Forests and Matorral'
+    DATA_YEARS = [2021, 2022, 2023, 2024]  # Full 5-year period the reduced set is complete for.
 
 elif Country == 'Canada':
     print('Running Canada')
