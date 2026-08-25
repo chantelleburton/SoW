@@ -26,9 +26,20 @@ END_YEAR = 2013
 CSV_EXPORT = True #True for CSV, False for .dat
 # Options: 'Korea' (3), 'Iberia' (8), 'Scotland' (7)
 ############# User inputs end here #############
-member = os.environ["CYLC_TASK_PARAM_member"] #when running in cylc wrapped, use this to enable all 16 members to be run in parallel.
-Country = os.environ.get("CYLC_TASK_PARAM_country", 'Korea') #fallback to user input if not running in cylc wrapped
-
+member = int(os.environ.get("CYLC_TASK_PARAM_member", '1')) #when running in cylc wrapped, use this to enable all 16 members to be run in parallel.
+Country = os.environ.get("CYLC_TASK_PARAM_country", 'Iberia') #fallback to user input if not running in cylc wrapped
+INDEX_NAMES = {
+    'ffmc': 'Fine Fuel Moisture Content',
+    'fwi':  'Canadian Fire Weather Index',
+    'isi':  'Initial Spread Index',
+    'bui':  'Build Up Index',
+    'dmc':  'Duff Moisture Content',
+    'dc':   'Drought Code',
+}
+index_code = os.environ.get("CYLC_TASK_PARAM_index", 'fwi')
+print(index_code)
+index = INDEX_NAMES[index_code]
+print(index)
 folder = '/data/users/bob.potts/sowf_data/historicalFWI/HadGEM/'
 shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 #Set up the 2025 files and months automatically
@@ -98,7 +109,7 @@ if not hist_files:
     raise FileNotFoundError(f"No HadGEM3 historical files found in year range {START_YEAR}-{END_YEAR}")
 
 # Load + concatenate
-cubes = iris.load(hist_files, 'canadian_fire_weather_index')
+cubes = iris.load(hist_files, index)
 
 for cube in cubes:
     for coord_name in ("year", "season_year"):
@@ -115,7 +126,7 @@ try:
     icc.add_year(HadGEM3_all, 'time')
 except ValueError:
     pass
-iris.save(HadGEM3_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Interim/HadGEM3-A_FWI_{START_YEAR}-{END_YEAR}_{Country}_member{member}.nc')
+#iris.save(HadGEM3_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Interim/HadGEM3-A_FWI_{START_YEAR}-{END_YEAR}_{Country}_member{member}.nc')
 # 1) Percentile over time within each year
 yr_time_p = HadGEM3_all.aggregated_by('year', iris.analysis.PERCENTILE, percent=percentile)
 
@@ -126,7 +137,7 @@ yr_country_p = yr_time_p.collapsed(['latitude', 'longitude'], iris.analysis.PERC
 HadGEM3_Arr = np.ravel(yr_country_p.data)
 
 # Save HadGEM3 text out to a file
-output_file = f'/data/scratch/bob.potts/sowf/test_output/Baseline/HadGEM3_FWI_{START_YEAR}-{END_YEAR}_{Country}_{member}_{percentile}%'
+output_file = f'/data/scratch/bob.potts/sowf/test_output/Baseline/HadGEM3_{index_code.upper()}_{START_YEAR}-{END_YEAR}_{Country}_{member}_{percentile}%'
 
 if CSV_EXPORT:
     # Get the years from the cube
@@ -140,7 +151,7 @@ if CSV_EXPORT:
 
     # Save HadGEM3 out to a text file with YEAR-MONTH,VALUE format
     with open(f'{output_file}.csv', 'w') as f:
-        f.write('Date,FWI\n')
+        f.write('Date,{}\n'.format(index))
         for ym, value in zip(year_month, HadGEM3_Arr):
             f.write(f'{ym},{value:.6f}\n')
     print(f"Saved to: {output_file}.csv")
@@ -152,4 +163,3 @@ else:
 print('Finished')
 print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
 print(f"Data shape: {HadGEM3_Arr.shape}")
-#single member takes approx 8 minutes.

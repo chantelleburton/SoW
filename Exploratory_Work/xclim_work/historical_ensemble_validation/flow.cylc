@@ -1,0 +1,60 @@
+#!Jinja2
+{# Generate all 15 HadGEM3-A_Historical ensemble member IDs (r1i1p1 .. r1i1p15).#}
+{# Each task computes daily, per-grid-cell raw FWI diffs (Xclim - ImpactTB)   #}
+{# for one member across the 3 primary focal regions; the script skips       #}
+{# (exit 0) when that member is absent from either dataset.                  #}
+{% set N_MEMBERS = 15 %}
+{% set members = [] %}
+{% for m in range(1, N_MEMBERS + 1) %}
+{%   do members.append('r1i1p%d' | format(m)) %}
+{% endfor %}
+
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    run_type = historical
+    member = {{ members | join(', ') }}
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            compute_raw_fwi_diffs<run_type, member> => aggregate_raw_fwi_diffs
+        """
+
+[runtime]
+    [[compute_raw_fwi_diffs<run_type, member>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/xclim_work/historical_ensemble_validation/
+        echo "Computing raw FWI diffs run_type=${CYLC_TASK_PARAM_run_type} member=${CYLC_TASK_PARAM_member}"
+        python compute_raw_fwi_diffs.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 20G
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 2
+            --ntasks = 1
+
+    [[aggregate_raw_fwi_diffs]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code/Exploratory_Work/xclim_work/historical_ensemble_validation/
+        echo "Aggregating per-member raw FWI diff outputs"
+        python aggregate_raw_fwi_diffs.py
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 8G
+            --partition = cpu
+            --time = 60
+            --cpus-per-task = 1
+            --ntasks = 1
