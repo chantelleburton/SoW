@@ -1,0 +1,55 @@
+# Flow for the bias-correction stage
+# (attribution_pipeline/bias_correction/run_bias_correction.py).
+#
+# One task per (country, baseline_member 1-15, run_type hist/histnat,
+# index, metric). Each task reads:
+#   * the ERA5 + HadGEM3-historical baseline metric CSVs (from the metrics stage)
+#   * this member's FWI-creation output cube
+# and writes one bias-corrected CSV per target year (region.bias_correction_years).
+#
+# Requires the metrics stage to have produced era5_* and hg3_historical_* metric
+# CSVs for the same (country, index, metric) first. Keep the index/metric rows
+# here aligned with those in metrics/flow.cylc.
+#
+# The 525 attribution members are NOT a parameter here: run_bias_correction.py
+# auto-derives the paired members (present for both hist and histnat) from the
+# FWI-creation output, so each task loops them internally.
+
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    country = Korea, Iberia, Scotland, Chile, Canada
+    baseline_member = 1..15
+    runtype = hist, histnat
+    index = fwi, dsr
+    metric = p95, 7x, cum
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            bias_correction<country, baseline_member, runtype, index, metric>
+        """
+
+[runtime]
+    [[bias_correction<country, baseline_member, runtype, index, metric>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_baseline_member}
+        export CYLC_TASK_PARAM_runtype=${CYLC_TASK_PARAM_runtype}
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
+        python -m attribution_pipeline.bias_correction.run_bias_correction
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 20G
+            --partition = cpu
+            --time = 180
+            --cpus-per-task = 2
+            --ntasks = 1

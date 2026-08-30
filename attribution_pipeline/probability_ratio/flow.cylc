@@ -1,0 +1,56 @@
+# Flow for the probability-ratio stage
+# (attribution_pipeline/probability_ratio/run_probability_ratio.py).
+#
+# One task per (statistic, index, metric). Each task loops over all configured
+# regions internally, reading:
+#   * the ERA5 threshold metric CSV (from the metrics stage)
+#   * the bias-corrected ensemble CSVs (from the bias-correction stage)
+# and writes a summary CSV + plot per metric.
+#
+# Requires both the metrics and bias-correction stages to have completed for the
+# same (index, metric) first. Keep the index/metric rows aligned across all
+# three downstream flows.
+#
+# statistic:
+#   risk_ratio   -> probability ratio + bootstrap CI + density-histogram grid
+#   amplification -> per-member intensity amplification box-whisker
+
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    statistic = risk_ratio, amplification
+    index = fwi, dsr
+    metric = p95, 7x, cum
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            probability_ratio<statistic, index, metric>
+        """
+
+[runtime]
+    [[probability_ratio<statistic, index, metric>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        # Pass index + metric name; run_probability_ratio.py builds the metric
+        # stem (e.g. FWI_P95, DSR_CUM360_MEAN) via the METRICS registry so it
+        # always matches the bias-correction output filenames.
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric_name=${CYLC_TASK_PARAM_metric}
+        unset CYLC_TASK_PARAM_metric
+        export CYLC_TASK_PARAM_statistic=${CYLC_TASK_PARAM_statistic}
+        export CYLC_TASK_PARAM_ensemble_folder=/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics
+        python -m attribution_pipeline.probability_ratio.run_probability_ratio
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 15G
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 2
+            --ntasks = 1
