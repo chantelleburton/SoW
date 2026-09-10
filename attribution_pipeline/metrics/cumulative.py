@@ -16,10 +16,12 @@ accumulated value reached during the event), then reduce over region cells via
 `spatial_reduction`.
 """
 
-from datetime import date, timedelta
+from datetime import timedelta
 
+import cftime
 import iris
 import iris.analysis
+import numpy as np
 
 from attribution_pipeline.metrics.base import BaseMetric, spatial_reduce
 
@@ -34,6 +36,7 @@ class CumulativeMetric(BaseMetric):
 
     def compute(self, cube, months):
         time_coord = cube.coord("time")
+        calendar = time_coord.units.calendar
         dates = time_coord.units.num2date(time_coord.points)
         years_present = sorted({d.year for d in dates})
 
@@ -41,25 +44,55 @@ class CumulativeMetric(BaseMetric):
         years, values = [], []
 
         for y in years_present:
-            event_start = date(y, start_month, 1)
-            event_end = date(y + 1, 1, 1) if end_month == 12 else date(y, end_month + 1, 1)
+            # Build window bounds using the cube's own calendar (e.g. 360_day
+            # for HadGEM3, standard/proleptic_gregorian for ERA5) rather than
+            # plain datetime.date, which is not comparable to cftime objects
+            # and raises TypeError when the cube uses a non-standard calendar.
+            event_start = cftime.datetime(y, start_month, 1, calendar=calendar)
+            event_end = (
+                cftime.datetime(y + 1, 1, 1, calendar=calendar)
+                if end_month == 12
+                else cftime.datetime(y, end_month + 1, 1, calendar=calendar)
+            )
             window_start = event_start - timedelta(days=self.window)
 
             context_constraint = iris.Constraint(
                 time=lambda cell, ws=window_start, ee=event_end: ws <= cell.point < ee
             )
             sub = cube.extract(context_constraint)
-            if sub is None or sub.coord("time").shape[0] <= self.window:
-                continue  # not enough antecedent context available (e.g. first year in record)
-
-            rolled = sub.rolling_window("time", iris.analysis.SUM, self.window)
-
-            event_constraint = iris.Constraint(
-                time=lambda cell, es=event_start, ee=event_end: es <= cell.point < ee
-            )
-            rolled_event = rolled.extract(event_constraint)
-            if rolled_event is None:
+            n_context = 0 if sub is None else sub.coord("time").shape[0]
+            if n_context < 1:
                 continue
+
+            # Use the full accumulation window when enough antecedent context
+            # is available (e.g. self.window=360 days); otherwise fall back
+            # to a partial window spanning whatever days actually exist (e.g.
+            # 240 instead of 360 for the first year of a record) rather than
+            # dropping the year entirely.
+            use_window = min(self.window, n_context)
+            if use_window < self.window:
+                print(f"[cumulative] {y}: partial window -- only {n_context} antecedent "
+                    f"timesteps available (need {self.window}), using window={use_window}")
+
+            rolled = sub.rolling_window("time", iris.analysis.SUM, use_window)
+
+            # `rolling_window` sets each output timestep's point to the
+            # *midpoint* of its window, not the window's end/as-of date, so
+            # matching against the event month must be done positionally
+            # against the pre-roll time points rather than `rolled`'s own
+            # (midpoint) time coordinate: the i-th rolled entry sums
+            # sub.points[i : i + use_window], so its true end/as-of date is
+            # sub.points[i + use_window - 1].
+            sub_time_points = sub.coord("time").points
+            end_dates = time_coord.units.num2date(sub_time_points[use_window - 1:])
+            mask = np.array([event_start <= d < event_end for d in end_dates])
+            if not mask.any():
+                continue
+
+            time_dim = rolled.coord_dims("time")[0]
+            index = [slice(None)] * rolled.ndim
+            index[time_dim] = mask
+            rolled_event = rolled[tuple(index)]
 
             peak = rolled_event.collapsed("time", iris.analysis.MAX)
             reduced = spatial_reduce(peak, self.spatial_reduction)

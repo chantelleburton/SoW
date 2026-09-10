@@ -14,9 +14,11 @@
 # per-year, event-month metric CSVs consumed by bias correction and the ERA5
 # threshold lookup.
 #
-# Three dataset families, each a separate task because their parameter spaces
-# differ (ERA5 has no members but has run_label; hg3_historical has 15 baseline
-# members; hg3_attribution has 525 members x 2 run types). Comment out any line
+# Four dataset families, each a separate task because their parameter spaces
+# differ (ERA5 has no members but has run_label; hg3_historical_xclim has 15
+# baseline members and fwi/dsr; hg3_historical_impacttb also has 15 baseline
+# members but FWI only (no DSR -- impact-toolbox data doesn't have it);
+# hg3_attribution has 525 members x 2 run types). Comment out any line
 # in [scheduling][[graph]] to run a subset.
 #
 # To add a metric (e.g. dsr p95, fwi 7x, dsr cumulative) add rows to the
@@ -26,14 +28,17 @@
 [scheduler]
     allow implicit tasks = True
 
+#TODO clean up the hardcoded file paths in various bits of metrics and elsewhere. Change to dynamically creating the folder structure from a single top level directory configurable variable.
+#currently pulls the country config from /metrics - one for the readme rather than config
+
 [task parameters]
-    country = Korea, Iberia, Scotland, Chile, Canada
+    country = Canada,Iberia, Chile, # Korea, Scotland, 
 
     # index x metric combinations to compute. Keep these aligned across the
     # three datasets so bias correction always finds a matching baseline +
     # ensemble metric CSV.
-    index = fwi, dsr
-    metric = p95, 7x, cum
+    index = fwi#, dsr
+    metric = p95#, 7x, cum
 
     era5_run_label = Mean_RH_Mean_Wind
 
@@ -46,9 +51,13 @@
     [[graph]]
         R1 = """
             era5_metrics<country, index, metric, era5_run_label>
-            hist_metrics<country, index, metric, hist_member>
-            attr_metrics<country, index, metric, attr_run_type, attr_member>
-        """
+            histxclim_metrics<country, index, metric, hist_member>
+            histimpacttb_metrics<country, metric, hist_member>
+            #attr_metrics<country, index, metric, attr_run_type, attr_member>
+        """ #attr metrics only exists for diagnostic purposes if a deeper dive into the 
+        #attribution ensemble is needed should downstream results be off.
+        # histimpacttb_metrics has no 'index' parameter -- impact-toolbox historical
+        # data is FWI only (no DSR), unlike histxclim_metrics/era5_metrics/attr_metrics.
 
 [runtime]
     [[era5_metrics<country, index, metric, era5_run_label>]]
@@ -73,14 +82,36 @@
             --cpus-per-task = 2
             --ntasks = 1
 
-    [[hist_metrics<country, index, metric, hist_member>]]
+    [[histxclim_metrics<country, index, metric, hist_member>]]
         script = """
         set -eux
         conda activate sowf
         cd /data/users/bob.potts/StateOfFires_2025-26/code
-        export CYLC_TASK_PARAM_dataset=hg3_historical
+        export CYLC_TASK_PARAM_dataset=hg3_historical_xclim
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
+        python -m attribution_pipeline.metrics.run_metrics
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 20G
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 2
+            --ntasks = 1
+
+    [[histimpacttb_metrics<country, metric, hist_member>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_dataset=hg3_historical_impacttb
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_index=fwi
         export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
         python -m attribution_pipeline.metrics.run_metrics

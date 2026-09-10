@@ -33,7 +33,15 @@ DEFAULT_DATA_YEARS = (2020, 2021, 2022, 2023, 2024)
 
 
 def run_bias_correction(country: str, baseline_member: int, run_type: str, index: str,
-                         metric_name: str, percentile: float = 95, **metric_kwargs):
+                         metric_name: str, percentile: float = 95, historical_source: str = "xclim",
+                         **metric_kwargs):
+    if historical_source not in ("xclim", "impacttb"):
+        raise ValueError(f"Unknown historical_source={historical_source!r}. Expected 'xclim' or 'impacttb'.")
+    if historical_source == "impacttb" and index != "fwi":
+        print(f"[bias_correction] historical_source=impacttb only supports index=fwi (no DSR); "
+              f"got index={index!r}. Skipping.")
+        return []
+
     region = get_region(country)
     shape_name = region["shape_name"]
     months = region["months"]
@@ -43,13 +51,14 @@ def run_bias_correction(country: str, baseline_member: int, run_type: str, index
 
     metric_stem = METRICS[metric_name](index, percentile=percentile, **metric_kwargs).output_stem()
     print(f"[bias_correction] country={country} baseline_member={baseline_member} run_type={run_type} "
-          f"metric={metric_stem}")
+          f"metric={metric_stem} historical_source={historical_source}")
 
+    hg3_dataset = "hg3_historical_impacttb" if historical_source == "impacttb" else "hg3_historical_xclim"
     era5_years, era5_vals = load_baseline_series(
         "era5", country, metric_stem, start=baseline_start_year, end=baseline_end_year
     )
     hg3_years, hg3_vals = load_baseline_series(
-        "hg3_historical", country, metric_stem, member=baseline_member,
+        hg3_dataset, country, metric_stem, member=baseline_member,
         start=baseline_start_year, end=baseline_end_year,
     )
     if not np.array_equal(era5_years, hg3_years):
@@ -75,7 +84,8 @@ def run_bias_correction(country: str, baseline_member: int, run_type: str, index
     print(f"[bias_correction] Loaded {len(member_cubes)}/{len(members)} member cubes "
           f"({len(load_missing)} missing on disk)")
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    out_dir = os.path.join(OUTPUT_DIR, historical_source)
+    os.makedirs(out_dir, exist_ok=True)
     written = []
     for data_year in data_years:
         t = baseline_years - data_year
@@ -107,7 +117,7 @@ def run_bias_correction(country: str, baseline_member: int, run_type: str, index
         df_out.insert(0, "Year", baseline_years)
 
         out_path = os.path.join(
-            OUTPUT_DIR,
+            out_dir,
             f"{country}_{metric_stem}_baseline{baseline_member}_{run_type}{percentile:g}percent_"
             f"LogTransform_Target_{data_year}_DataYear_{data_year}_BaselinePeriod_"
             f"{baseline_start_year}_{baseline_end_year}.csv",

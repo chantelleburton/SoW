@@ -8,7 +8,12 @@ Usage:
     CYLC_TASK_PARAM_runtype=hist \
     CYLC_TASK_PARAM_index=fwi \
     CYLC_TASK_PARAM_metric=p95 \
+    CYLC_TASK_PARAM_historical_source=xclim \
     python -m attribution_pipeline.bias_correction.run_bias_correction
+
+historical_source: 'xclim' (default, uses hg3_historical_xclim baseline CSVs)
+or 'impacttb' (uses hg3_historical_impacttb baseline CSVs -- fwi only, no
+dsr). Output CSVs are written under bias_corrected_metrics/{historical_source}/.
 """
 
 import os
@@ -22,6 +27,7 @@ if __name__ == "__main__":
     index = os.environ.get("CYLC_TASK_PARAM_index", "fwi")
     metric_name = os.environ.get("CYLC_TASK_PARAM_metric", "p95")
     percentile = float(os.environ.get("CYLC_TASK_PARAM_percentile", "95"))
+    historical_source = os.environ.get("CYLC_TASK_PARAM_historical_source", "xclim")
 
     metric_kwargs = {}
     if os.environ.get("CYLC_TASK_PARAM_window"):
@@ -30,4 +36,4 @@ if __name__ == "__main__":
         metric_kwargs["spatial_reduction"] = os.environ["CYLC_TASK_PARAM_spatial_reduction"]
 
     run_bias_correction(country, baseline_member, run_type, index, metric_name,
-                         percentile=percentile, **metric_kwargs)
+                         percentile=percentile, historical_source=historical_source, **metric_kwargs)

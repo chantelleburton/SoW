@@ -9,7 +9,7 @@ given metric (matching the metric produced by attribution_pipeline/metrics/).
 Usage (mirrors the CYLC_TASK_PARAM_* convention used elsewhere in the repo):
     CYLC_TASK_PARAM_metric=FWI_P95 \
     CYLC_TASK_PARAM_statistic=risk_ratio \
-    CYLC_TASK_PARAM_ensemble_folder=/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics \
+    CYLC_TASK_PARAM_ensemble_folder=/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics/xclim \
     python -m attribution_pipeline.probability_ratio.run_probability_ratio
 """
 
@@ -21,7 +21,7 @@ from attribution_pipeline.metrics.pipeline_config import REGION_CONFIGS
 from attribution_pipeline.probability_ratio.core import compute_region_amplification, compute_region_risk_ratio
 from attribution_pipeline.probability_ratio.plotting import plot_amplification, plot_risk_ratio_grid
 
-DEFAULT_ENSEMBLE_FOLDER = "/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics"
+DEFAULT_ENSEMBLE_FOLDER = "/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics/xclim"
 DEFAULT_OUTPUT_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/exports"
 DEFAULT_PLOT_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/exports/plots"
 
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     countries_env = os.environ.get("CYLC_TASK_PARAM_countries")
     countries = countries_env.split(",") if countries_env else list(REGION_CONFIGS)
-
+    print(countries)
     if statistic == "risk_ratio":
         run_risk_ratio(metric_stem, ensemble_folder, countries, bootstrap_size, paired_only)
     elif statistic == "amplification":

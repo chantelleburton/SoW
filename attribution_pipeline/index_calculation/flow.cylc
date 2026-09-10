@@ -26,7 +26,7 @@
     allow implicit tasks = True
 
 [task parameters]
-    era5_start_year = 1979, 1989, 1999, 2009, 2019
+    era5_start_year = 1979#, 1989, 1999, 2009, 2019
     era5_wind_stat = mean#, max
     era5_rh_stat = mean#, minimum
 
@@ -34,13 +34,14 @@
     attr_member = {{ attr_members | join(', ') }}
 
     hist_member = 1..15
+    hist_block_start_year = 1970, 1980, 1990, 2000, 2010
 
 [scheduling]
     [[graph]]
         R1 = """
-            era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>
-            hadgem_attribution_fwi_calculation<attr_run_type, attr_member>
-            hadgem_historical_fwi_calculation<hist_member>
+            #era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>
+            #hadgem_attribution_fwi_calculation<attr_run_type, attr_member>
+            hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>
         """
 
 [runtime]
@@ -85,21 +86,22 @@
             --cpus-per-task = 4
             --ntasks = 1
 
-    [[hadgem_historical_fwi_calculation<hist_member>]]
+    [[hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>]]
         script = """
         set -eux
         conda activate sowf
         cd /data/users/bob.potts/StateOfFires_2025-26/code
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
-        echo "Running hg3_historical member=${CYLC_TASK_PARAM_member}"
+        export CYLC_TASK_PARAM_block_start_year=${CYLC_TASK_PARAM_hist_block_start_year}
+        echo "Running hg3_historical member=${CYLC_TASK_PARAM_member} block_start_year=${CYLC_TASK_PARAM_block_start_year}"
         python -m attribution_pipeline.index_calculation.run_fwi hg3_historical
         """
 
         platform = spice
 
         [[[directives]]]
-            --mem = 150G
+            --mem = 40G
             --partition = cpu-long
-            --time = 480
+            --time = 360
             --cpus-per-task = 4
             --ntasks = 1

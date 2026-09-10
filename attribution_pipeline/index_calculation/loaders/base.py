@@ -28,7 +28,7 @@ class BaseLoader(ABC):
     spatial_chunk: int = 30
 
     #: sub-indices to compute/write: any of dc, dmc, ffmc, isi, bui, fwi, dsr
-    output_indices = ["fwi"]
+    output_indices = ["fwi", "dsr"]
 
     #: kwargs forwarded to xclim.indices.cffwis_indices (tas/pr/sfcWind/hurs/lat excluded)
     cffwis_kwargs = {"initial_start_up": True}

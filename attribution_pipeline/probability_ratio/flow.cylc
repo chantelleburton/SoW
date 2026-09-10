@@ -19,9 +19,9 @@
     allow implicit tasks = True
 
 [task parameters]
-    statistic = risk_ratio, amplification
-    index = fwi, dsr
-    metric = p95, 7x, cum
+    statistic = risk_ratio#, amplification
+    index = fwi#, dsr
+    metric = p95#, 7x, cum
 
 [scheduling]
     [[graph]]
@@ -42,7 +42,7 @@
         export CYLC_TASK_PARAM_metric_name=${CYLC_TASK_PARAM_metric}
         unset CYLC_TASK_PARAM_metric
         export CYLC_TASK_PARAM_statistic=${CYLC_TASK_PARAM_statistic}
-        export CYLC_TASK_PARAM_ensemble_folder=/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics
+        export CYLC_TASK_PARAM_ensemble_folder=/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics/xclim
         python -m attribution_pipeline.probability_ratio.run_probability_ratio
         """
 

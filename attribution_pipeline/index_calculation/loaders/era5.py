@@ -17,6 +17,9 @@ import xarray as xr
 from attribution_pipeline.index_calculation.config import ClusterConfig, DatasetConfig
 from attribution_pipeline.index_calculation.loaders.base import BaseLoader
 
+# Fixed time units reference for all yearly output files -- see write() below.
+TIME_UNITS = "days since 1900-01-01"
+
 WIND_OPTIONS = {
     "mean": {
         "subdir": "10m_mean_wind_speed",
@@ -53,7 +56,7 @@ class ERA5Loader(BaseLoader):
         self.start_year = start_year or int(os.environ.get("CYLC_TASK_PARAM_start_year", 2025))
         self.wind_stat = (wind_stat or os.environ.get("CYLC_TASK_PARAM_wind_stat", "mean")).strip().lower()
         self.rh_stat = (rh_stat or os.environ.get("CYLC_TASK_PARAM_rh_stat", "mean")).strip().lower()
-        max_end_year = max_end_year or int(os.environ.get("MAX_END_YEAR", 2025))
+        max_end_year = max_end_year or int(os.environ.get("MAX_END_YEAR", 2026))
         self.end_year = min(self.start_year + 10, max_end_year)
 
         if self.wind_stat not in WIND_OPTIONS:
@@ -70,7 +73,6 @@ class ERA5Loader(BaseLoader):
             out_dir=out_dir or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/era5",
             spatial_chunk=90,
             cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=40),
-            output_indices=["fwi"],
             cffwis_kwargs={"initial_start_up": True},
         )
         self.out_dir = cfg.out_dir
@@ -99,6 +101,12 @@ class ERA5Loader(BaseLoader):
         tas = xr.open_mfdataset(tas_files, chunks=chunks)["t2m"] - 273.15
         if "valid_time" in tas.dims:
             tas = tas.rename({"valid_time": "time"})
+        # ERA5's GRIB source data carries a leftover 'valid_time' coordinate
+        # alongside the real 'time' dim -- CF standard_name='time' on both makes
+        # Iris's cube.coord('time') ambiguous ("found 2 coordinates") once written
+        # out and reloaded. Drop it here so it never propagates downstream.
+        if "valid_time" in tas.coords:
+            tas = tas.drop_vars("valid_time")
         tas.attrs["units"] = "degC"
 
         pr_files = []
@@ -109,6 +117,8 @@ class ERA5Loader(BaseLoader):
         pr = xr.open_mfdataset(pr_files, chunks=chunks)["tp"] * 1000  # m to mm
         if "valid_time" in pr.dims:
             pr = pr.rename({"valid_time": "time"})
+        if "valid_time" in pr.coords:
+            pr = pr.drop_vars("valid_time")
         pr.attrs["units"] = "mm/day"
 
         # Wind — time encoding in these files is broken (produced by a separate
@@ -129,6 +139,8 @@ class ERA5Loader(BaseLoader):
             n_days = da.sizes["time"]
             new_time = pd.date_range(f"{yyyy}-{mm:02d}-01", periods=n_days, freq="D")
             da = da.assign_coords(time=new_time)
+            if "valid_time" in da.coords:
+                da = da.drop_vars("valid_time")
             ws_parts.append(da)
         ws = xr.concat(ws_parts, dim="time")
         ws = ws.chunk(chunks)
@@ -142,6 +154,8 @@ class ERA5Loader(BaseLoader):
         hurs = xr.open_mfdataset(hurs_files, chunks=chunks)["hurs"]
         if "valid_time" in hurs.dims:
             hurs = hurs.rename({"valid_time": "time"})
+        if "valid_time" in hurs.coords:
+            hurs = hurs.drop_vars("valid_time")
 
         # normalise time-of-day so alignment works across sources
         tas = tas.assign_coords(time=tas.indexes["time"].normalize())
@@ -161,7 +175,27 @@ class ERA5Loader(BaseLoader):
 
     def write(self, index_map):
         for idx_name, (da, long_name, units) in index_map.items():
-            da.attrs.update({"long_name": long_name, "units": units})
+            # Reset (not just update) attrs: xclim's cffwis_indices computation
+            # leaks the original 'tas' input's raw GRIB attrs (GRIB_paramId,
+            # GRIB_cfVarName='t2m', coordinates='day_of_month number surface',
+            # etc.) through via xarray's keep_attrs propagation. Patching just
+            # long_name/units with .update() leaves that stale metadata in
+            # place, which later confuses Iris's CF coordinate parsing on load
+            # (e.g. a leftover 'bounds' reference to a nonexistent variable).
+            da = da.copy()
+            da.attrs = {"long_name": long_name, "units": units}
+            # Also strip any leaked non-dimension coordinates (e.g. 'number',
+            # 'surface', 'day_of_month') that came along for the ride from the
+            # raw GRIB-derived inputs and aren't meaningful for the computed index.
+            extra_coords = [c for c in da.coords if c not in ("time", "latitude", "longitude")]
+            if extra_coords:
+                da = da.drop_vars(extra_coords)
+            # xclim's cffwis_indices output dim order follows its inputs, which
+            # (unlike the HadGEM3 loaders) isn't guaranteed to be time-first --
+            # force it here so downstream shapefile masking (which broadcasts a
+            # 2-D (lat, lon) mask against the cube's trailing dims) lines up
+            # correctly instead of a shape mismatch against a stray leading dim.
+            da = da.transpose("time", "latitude", "longitude")
             for y in self._output_years:
                 da_year = da.sel(time=slice(f"{y}-01-01", f"{y}-12-31"))
                 n_times_year = da_year.sizes["time"]
@@ -169,7 +203,15 @@ class ERA5Loader(BaseLoader):
                     print(f"[{self.name}]  Skipping {idx_name} {y}: no data in range")
                     continue
                 out_path = os.path.join(self.out_dir, f"era5_{idx_name}_{self.run_label}_{y}.nc")
-                enc = {idx_name: {"chunksizes": (n_times_year, self.spatial_chunk, self.spatial_chunk)}}
+                # Fixed time units reference (rather than xarray's per-file default,
+                # which would pick each year's own start date) so Iris can
+                # concatenate cubes loaded from different yearly files -- otherwise
+                # concatenate_cube() sees differing time-coordinate metadata and errors.
+                enc = {
+                    idx_name: {"chunksizes": (n_times_year, self.spatial_chunk, self.spatial_chunk)},
+                    "time": {"units": TIME_UNITS},
+                }
                 ds = xr.Dataset({idx_name: da_year})
+                ds["time"].attrs = {}
                 ds.to_netcdf(out_path, encoding=enc)
                 print(f"[{self.name}] Saved {idx_name} {y} ({n_times_year} days) to {out_path}")

@@ -28,6 +28,12 @@ VAR_CONFIG = {
     "hurs": {"dir": "hurs/day", "nc_var": "hurs", "units": "%"},
 }
 
+# Fixed time units reference (rather than xarray's per-file default, which
+# would pick each file's own start date) -- matches the reference used by the
+# era5/hg3_historical loaders so time units are consistent across all three
+# datasets rather than varying per attribution member/run_type.
+TIME_UNITS = "days since 1900-01-01"
+
 
 
 def _token_overlaps_window(month_token):
@@ -57,7 +63,6 @@ class HadGEM3AttributionLoader(BaseLoader):
             out_dir=out_dir or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution",
             spatial_chunk=30,
             cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=5),
-            output_indices=["fwi"],
             cffwis_kwargs={"initial_start_up": True},
         )
         self.out_dir = cfg.out_dir
@@ -127,7 +132,13 @@ class HadGEM3AttributionLoader(BaseLoader):
 
             out_path = os.path.join(self.out_dir, f"hadgem3a_{idx_name}_{self.run_type}_{self.member}.nc")
             chunksizes = tuple(min(chunk_by_dim.get(dim, da.sizes[dim]), da.sizes[dim]) for dim in da.dims)
-            enc = {idx_name: {"chunksizes": chunksizes}}
+            enc = {idx_name: {"chunksizes": chunksizes}, "time": {"units": TIME_UNITS}}
             ds = xr.Dataset({idx_name: da})
+            # Source files carry a 'bounds' attr on time (time_bnds) referencing a
+            # bounds variable that is never written out here -- leaving it in
+            # place produces the same "missing CF-netCDF boundary variable"
+            # warning/ambiguity as the ERA5 valid_time issue. Clear it.
+            if "time" in ds.coords:
+                ds["time"].attrs.pop("bounds", None)
             ds.to_netcdf(out_path, encoding=enc)
             print(f"[{self.name}] Saved {idx_name} to {out_path}")

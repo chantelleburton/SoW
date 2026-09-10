@@ -10,7 +10,7 @@ Adding a new dataset's file layout: add a resolver function and register it in
 DATASET_RESOLVERS below.
 
 Usage (mirrors the CYLC_TASK_PARAM_* convention used elsewhere in the repo):
-    CYLC_TASK_PARAM_dataset=hg3_historical \
+    CYLC_TASK_PARAM_dataset=hg3_historical_xclim \
     CYLC_TASK_PARAM_country=Iberia \
     CYLC_TASK_PARAM_index=fwi \
     CYLC_TASK_PARAM_metric=p95 \
@@ -22,6 +22,7 @@ import glob
 import os
 
 import iris
+import numpy as np
 
 from attribution_pipeline.metrics.base import BaseMetric
 from attribution_pipeline.metrics.cumulative import CumulativeMetric
@@ -41,22 +42,186 @@ METRICS = {
 }
 
 
+# --- Cube invariant checks ---------------------------------------------------
+# Catches structural corruption (duplicate/ambiguous coordinates, wrong dims,
+# non-monotonic/duplicate time points, leaked auxiliary coordinates) at the
+# resolver/masking boundary with a clear message, instead of a cryptic
+# exception several frames deep inside iris/dask (as happened for the
+# duplicate 'valid_time' coordinate and the longitude-axis concatenation bugs).
+_ALLOWED_COORDS = {"time", "latitude", "longitude", "year", "season_year"}
+
+
+def _validate_cube(cube: iris.cube.Cube, dataset: str, stage: str) -> None:
+    context = f"{dataset} ({stage})"
+    print(context + f": cube shape={cube.shape}, coords={sorted(c.name() for c in cube.coords())}")
+    time_coords = cube.coords("time")
+    if len(time_coords) != 1:
+        raise RuntimeError(
+            f"[{context}] Expected exactly 1 'time' coordinate, found {len(time_coords)}."
+        )
+
+    dim_coord_names = {c.name() for c in cube.coords(dim_coords=True)}
+    if cube.ndim != 3 or dim_coord_names != {"time", "latitude", "longitude"}:
+        raise RuntimeError(
+            f"[{context}] Expected a 3-D (time, latitude, longitude) cube, got "
+            f"ndim={cube.ndim}, dim coords={sorted(dim_coord_names)}, shape={cube.shape}."
+        )
+
+    time_coord = cube.coord("time")
+    points = time_coord.points
+    if len(points) > 1 and not (points[1:] > points[:-1]).all():
+        raise RuntimeError(
+            f"[{context}] 'time' coordinate is not strictly monotonically increasing "
+            f"(duplicate timestamps or wrong concatenation axis)."
+        )
+
+    leaked = {c.name() for c in cube.coords()} - _ALLOWED_COORDS
+    if leaked:
+        raise RuntimeError(
+            f"[{context}] Unexpected leftover coordinate(s) {sorted(leaked)} -- likely "
+            f"leaked metadata from the raw input files (see era5.py attrs-contamination fix)."
+        )
+
+    # Soft check: warn (don't fail) on an implausible day count for the
+    # cube's own calendar/date range -- legitimate small data gaps shouldn't
+    # hard-fail the whole run.
+    if len(points) > 1:
+        calendar = time_coord.units.calendar
+        first_date = time_coord.units.num2date(points[0])
+        last_date = time_coord.units.num2date(points[-1])
+        expected_days = (last_date - first_date).days + 1
+        actual_days = len(points)
+        if actual_days > expected_days or actual_days < 0.5 * expected_days:
+            print(f"[{context}] WARNING: implausible day count -- {actual_days} timesteps "
+                  f"spanning {first_date} to {last_date} ({calendar} calendar, "
+                  f"~{expected_days} days expected).")
+
+
 # --- Dataset file resolvers --------------------------------------------------
 # Each resolver returns a single concatenated iris cube spanning the full
 # available period for (index, member/run_type). Extend this dict to plug in
 # new datasets; the metric/CSV-writing code below is dataset-agnostic.
 
-def _resolve_hg3_historical(index: str, member: str, **kw) -> iris.cube.Cube:
+def _concatenate_yearly_cubes(cubes: iris.cube.CubeList) -> iris.cube.Cube:
+    """Concatenate per-year cubes loaded from separate NetCDF files.
+
+    Each file gets its own auto-derived global attrs (e.g. a unique 'history'
+    timestamp) and Iris re-derives its own time-coordinate metadata per load,
+    so even with a shared numeric time `units` on disk, residual per-cube
+    metadata (attributes dict, var_name, differing units objects) can still
+    fail Iris's concatenate_cube() equality check. Normalise both before
+    concatenating -- same pattern as utils/cubefuncs.py's historical-percentile
+    helper and the validation scripts' _strip_aux_time_coords().
+    """
+    if len(cubes) == 1:
+        return cubes[0]
+
+    reference_units = None
+    for cube in cubes:
+        time_coord = cube.coord("time")
+        if reference_units is None:
+            reference_units = time_coord.units
+        else:
+            time_coord.convert_units(reference_units)
+        time_coord.attributes = {}
+        time_coord.var_name = None
+        time_coord.long_name = None
+        time_coord.standard_name = "time"
+
+    iris.util.equalise_attributes(cubes)
+    return cubes.concatenate_cube()
+
+
+def _resolve_hg3_historical_xclim(index: str, member: str, **kw) -> iris.cube.Cube:
+    """HadGEM3HistoricalLoader.write() (attribution_pipeline/index_calculation/loaders/hadgem3_historical.py)
+    writes one file per calendar year (segmented ~10-year blocks, run
+    independently with overwintering disabled -- see that module's docstring):
+    hadgem3a_{index}_historical_{member}_{year}.nc.
+    """
     folder = "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_historical/"
-    pattern = os.path.join(folder, f"hadgem3a_{index}_historical_r1i1p{member}_*_modified.nc")
+    pattern = os.path.join(folder, f"hadgem3a_{index}_historical_r1i1p{member}_*.nc")
     files = sorted(glob.glob(pattern))
     if not files:
-        raise FileNotFoundError(f"No HadGEM3 historical {index} file found: {pattern}")
-    assert len(files) == 1, f"Expected exactly one file for member {member}, found {len(files)}: {files}"
-    cube = iris.load_cube(files[0], iris.NameConstraint(var_name=index))
+        raise FileNotFoundError(f"No HadGEM3 historical {index} files found: {pattern}")
+
+    cubes = iris.cube.CubeList(iris.load_cube(f, iris.NameConstraint(var_name=index)) for f in files)
     for coord_name in ("year", "season_year"):
-        if cube.coords(coord_name):
-            cube.remove_coord(coord_name)
+        for cube in cubes:
+            if cube.coords(coord_name):
+                cube.remove_coord(coord_name)
+    return _concatenate_yearly_cubes(cubes)
+
+
+# NetCDF variable-name search set for impact-toolbox FWI files -- the file's
+# actual variable is named 'canadian_fire_weather_index' (with a
+# variable_id="fwi" attribute), unlike xclim's output where var_name=='fwi'
+# directly, so iris.NameConstraint(var_name=index) won't match it.
+_IMPACTTB_FWI_NAMES = {
+    "fwi", "Fire Weather Index", "fire_weather_index",
+    "Canadian Fire Weather Index", "canadian_fire_weather_index",
+}
+
+
+def _load_impacttb_fwi_cube(fpath: str) -> iris.cube.Cube:
+    """Load the FWI cube from an impact-toolbox file that may contain several
+    FWI sub-indices, matching by var_name/name()/long_name/standard_name."""
+    cubes = iris.load(fpath)
+    for c in cubes:
+        names = {c.var_name, c.name(), getattr(c, "long_name", None), c.standard_name}
+        if names & _IMPACTTB_FWI_NAMES:
+            return c
+    raise ValueError(f"No FWI cube found in {fpath}. Available: {[c.name() for c in cubes]}")
+
+
+def _resolve_hg3_historical_impacttb(index: str, member: str, **kw) -> iris.cube.Cube:
+    """Impact-toolbox HadGEM3-A historical FWI: monthly 'gwl' files (FWI only,
+    no DSR), member r1i1p1..15, 1980-2013, 360_day calendar (confirmed via
+    ncdump), time units 'days since 1960-01-01' (differs from xclim's
+    reference date, handled internally below via unit-alignment before
+    concatenation). Ported from the reference implementation in
+    Exploratory_Work/xclim_work/historical_ensemble_validation/compute_raw_fwi_diffs.py
+    (load_impacttb/_strip_aux_time_coords/_load_fwi_cube) to keep
+    attribution_pipeline self-contained.
+    """
+    if index != "fwi":
+        raise ValueError(
+            f"hg3_historical_impacttb only has FWI data (no DSR); got index={index!r}."
+        )
+    folder = "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM"
+    pattern = os.path.join(
+        folder,
+        f"FWI_HadGEM3-A-N216_r1i1p{member}_historical_gwl*_global_day_"
+        f"initialise-from=previous-and-save-input-data=True.nc",
+    )
+    files = sorted(glob.glob(pattern))
+    if not files:
+        raise FileNotFoundError(f"No impact-toolbox HadGEM3 historical FWI files found: {pattern}")
+
+    cubes = iris.cube.CubeList()
+    reference_units = None
+    for f in files:
+        cube = _load_impacttb_fwi_cube(f)
+        for coord_name in ("month", "month_number", "season", "season_year", "year", "height"):
+            if cube.coords(coord_name):
+                cube.remove_coord(coord_name)
+        time_coord = cube.coord("time")
+        if reference_units is None:
+            reference_units = time_coord.units
+        else:
+            time_coord.convert_units(reference_units)
+        time_coord.attributes = {}
+        time_coord.var_name = None
+        time_coord.long_name = None
+        time_coord.standard_name = "time"
+        cubes.append(cube)
+
+    iris.util.equalise_attributes(cubes)
+    cube = cubes.concatenate_cube()
+
+    # Drop any duplicate boundary timesteps shared between contiguous monthly files.
+    _, idx = np.unique(cube.coord("time").points, return_index=True)
+    if len(idx) != cube.coord("time").shape[0]:
+        cube = cube[np.sort(idx)]
     return cube
 
 
@@ -80,8 +245,7 @@ def _resolve_era5(index: str, member: str = None, run_label: str = None, **kw) -
         for cube in cubes:
             if cube.coords(coord_name):
                 cube.remove_coord(coord_name)
-    cube = cubes.concatenate_cube() if len(cubes) > 1 else cubes[0]
-    return cube
+    return _concatenate_yearly_cubes(cubes)
 
 
 def _resolve_hg3_attribution(index: str, member: str, run_type: str = "historicalExt", **kw) -> iris.cube.Cube:
@@ -105,7 +269,8 @@ def _resolve_hg3_attribution(index: str, member: str, run_type: str = "historica
 
 
 DATASET_RESOLVERS = {
-    "hg3_historical": _resolve_hg3_historical,
+    "hg3_historical_xclim": _resolve_hg3_historical_xclim,
+    "hg3_historical_impacttb": _resolve_hg3_historical_impacttb,
     "era5": _resolve_era5,
     "hg3_attribution": _resolve_hg3_attribution,
 }
@@ -126,7 +291,11 @@ def run(dataset: str, country: str, index: str, metric_name: str, member: str = 
     print(f"[metrics] dataset={dataset} country={country} index={index} metric={metric.output_stem()} member={member}")
 
     cube = DATASET_RESOLVERS[dataset](index, member=member, **metric_kwargs)
+    print(cube)
+    _validate_cube(cube, dataset, "post-resolve")
+    print(cube)
     cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
+    _validate_cube(cube, dataset, "post-mask")
 
     years, values = metric.compute(cube, months)
     if not years:
@@ -134,7 +303,13 @@ def run(dataset: str, country: str, index: str, metric_name: str, member: str = 
 
     out_dir = "/data/scratch/bob.potts/sowf/attribution_pipeline/metrics"
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"{dataset}_{metric.output_stem()}_{country}_{member}.csv")
+    # hg3_attribution has two run_types (historicalExt/historicalNatExt) per
+    # member -- fold it into the filename so they don't overwrite each other.
+    run_type = metric_kwargs.get("run_type")
+    stem = f"{dataset}_{metric.output_stem()}_{country}_{member}"
+    if run_type:
+        stem += f"_{run_type}"
+    out_path = os.path.join(out_dir, f"{stem}.csv")
     with open(out_path, "w") as f:
         f.write(f"Year,{metric.output_stem()}\n")
         for y, v in zip(years, values):
@@ -144,7 +319,7 @@ def run(dataset: str, country: str, index: str, metric_name: str, member: str = 
 
 
 if __name__ == "__main__":
-    dataset = os.environ.get("CYLC_TASK_PARAM_dataset", "hg3_historical")
+    dataset = os.environ.get("CYLC_TASK_PARAM_dataset", "hg3_historical_xclim")
     country = os.environ.get("CYLC_TASK_PARAM_country", "Iberia")
     index = os.environ.get("CYLC_TASK_PARAM_index", "fwi")
     metric_name = os.environ.get("CYLC_TASK_PARAM_metric", "p95")
