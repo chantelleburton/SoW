@@ -233,6 +233,13 @@ def apply_shapefile_inclusive(shp_file, shape_name, cube):
     minx, miny, maxx, maxy = region_geom.bounds
     cube = contrain_coords(cube, (minx, maxx, miny, maxy))
     
+    # contrain_coords() wraps 0-360 -> -180/180 via cube.intersection(), which
+    # reassembles the (possibly dask-backed) data along the longitude axis and
+    # can leave the array's lazy .chunks metadata out of sync with its real
+    # shape. That desync doesn't surface here -- it silently propagates and
+    # later breaks mask_cube's dask broadcast/rechunk below ("Chunks do not
+    # add up to shape").
+    cube.data
     # Step 2: Apply inclusive mask via iris
     masked_cube = iris.util.mask_cube_from_shape(cube, region_geom)
     
