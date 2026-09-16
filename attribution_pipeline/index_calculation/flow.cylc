@@ -26,7 +26,7 @@
     allow implicit tasks = True
 
 [task parameters]
-    era5_start_year = 1979#, 1989, 1999, 2009, 2019
+    era5_start_year = 1979, 1989, 1999, 2009, 2019
     era5_wind_stat = mean#, max
     era5_rh_stat = mean#, minimum
 
@@ -39,9 +39,9 @@
 [scheduling]
     [[graph]]
         R1 = """
-            #era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>
+            era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>
             #hadgem_attribution_fwi_calculation<attr_run_type, attr_member>
-            hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>
+            #hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>
         """
 
 [runtime]

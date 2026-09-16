@@ -44,10 +44,7 @@ METRICS = {
 
 # --- Cube invariant checks ---------------------------------------------------
 # Catches structural corruption (duplicate/ambiguous coordinates, wrong dims,
-# non-monotonic/duplicate time points, leaked auxiliary coordinates) at the
-# resolver/masking boundary with a clear message, instead of a cryptic
-# exception several frames deep inside iris/dask (as happened for the
-# duplicate 'valid_time' coordinate and the longitude-axis concatenation bugs).
+# non-monotonic/duplicate time points, leaked auxiliary coordinates)
 _ALLOWED_COORDS = {"time", "latitude", "longitude", "year", "season_year"}
 
 

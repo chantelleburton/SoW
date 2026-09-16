@@ -1,9 +1,7 @@
 """
 Shared configuration objects for the unified FWI creation framework.
 
-Each loader owns its own dataset-specific paths/env-var parsing (kept there so the
-"currently wrong but close" HadGEM3-A Historical loader can keep being tuned in
-isolation). This module only holds the small pieces of config that are genuinely
+Each loader owns its own dataset-specific paths/env-var parsing. This module only holds the small pieces of config that are genuinely
 shared across all three datasets: dask cluster sizing and the sub-indices to write.
 """
 

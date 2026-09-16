@@ -11,6 +11,7 @@ import glob
 import os
 import re
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -21,10 +22,19 @@ from attribution_pipeline.index_calculation.loaders.base import BaseLoader
 TIME_UNITS = "days since 1900-01-01"
 
 WIND_OPTIONS = {
+    # Derived from daily-mean u/v components (hypot(u, v)) rather than a
+    # precomputed daily-mean wind-speed file. NOTE: hypot(mean(u), mean(v)) is
+    # not exactly the same as mean(hypot(u, v)) -- vector-averaging u/v first
+    # underestimates true scalar wind speed when direction varies within the
+    # day -- but this uses the only daily-resolution u/v data available
+    # on-disk (no hourly u/v archive here).
     "mean": {
-        "subdir": "10m_mean_wind_speed",
-        "pattern": "era5_daily_mean_10m_wind_speed_{year}-*.nc",
-        "var": "wind_speed_mean",
+        "u_subdir": ("10m_u_component_of_wind", "daily_mean"),
+        "v_subdir": ("10m_v_component_of_wind", "daily_mean"),
+        "u_pattern": "era5_daily_mean_10m_u_component_of_wind_{year}*.nc",
+        "v_pattern": "era5_daily_mean_10m_v_component_of_wind_{year}*.nc",
+        "u_var": "u10",
+        "v_var": "v10",
         "label": "Mean_Wind",
     },
     "max": {
@@ -121,30 +131,59 @@ class ERA5Loader(BaseLoader):
             pr = pr.drop_vars("valid_time")
         pr.attrs["units"] = "mm/day"
 
-        # Wind — time encoding in these files is broken (produced by a separate
-        # pipeline), so we load with decode_times=False and reconstruct time from
-        # the YYYY-MM in each filename.
-        wind_files = []
-        for y in years:
-            wind_files += sorted(glob.glob(os.path.join(
-                self.basepath, self.wind_cfg["subdir"], self.wind_cfg["pattern"].format(year=y))))
-        assert len(wind_files) > 0, f"No wind files found in {self.basepath}/{self.wind_cfg['subdir']}/"
-        ws_parts = []
-        for fpath in wind_files:
-            ds_wind = xr.open_dataset(fpath, decode_times=False, chunks=chunks)
-            da = ds_wind[self.wind_cfg["var"]]
-            m = re.search(r"(\d{4})-(\d{2})\.nc$", os.path.basename(fpath))
-            assert m, f"Cannot parse year-month from wind filename: {fpath}"
-            yyyy, mm = int(m.group(1)), int(m.group(2))
-            n_days = da.sizes["time"]
-            new_time = pd.date_range(f"{yyyy}-{mm:02d}-01", periods=n_days, freq="D")
-            da = da.assign_coords(time=new_time)
-            if "valid_time" in da.coords:
-                da = da.drop_vars("valid_time")
-            ws_parts.append(da)
-        ws = xr.concat(ws_parts, dim="time")
-        ws = ws.chunk(chunks)
-        ws.attrs["units"] = "m s-1"
+        if self.wind_stat == "mean":
+            # Wind (mean) -- derived from daily-mean u/v component files
+            # (hypot(u, v)); these have well-formed CF time encoding like
+            # tas/pr/hurs, so no decode_times=False workaround needed here.
+            u_files = []
+            v_files = []
+            for y in years:
+                u_files += sorted(glob.glob(os.path.join(
+                    self.basepath, *self.wind_cfg["u_subdir"], self.wind_cfg["u_pattern"].format(year=y))))
+                v_files += sorted(glob.glob(os.path.join(
+                    self.basepath, *self.wind_cfg["v_subdir"], self.wind_cfg["v_pattern"].format(year=y))))
+            assert len(u_files) > 0, f"No u-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['u_subdir'])}/"
+            assert len(v_files) > 0, f"No v-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['v_subdir'])}/"
+
+            u = xr.open_mfdataset(u_files, chunks=chunks)[self.wind_cfg["u_var"]]
+            v = xr.open_mfdataset(v_files, chunks=chunks)[self.wind_cfg["v_var"]]
+            if "valid_time" in u.dims:
+                u = u.rename({"valid_time": "time"})
+            if "valid_time" in u.coords:
+                u = u.drop_vars("valid_time")
+            if "valid_time" in v.dims:
+                v = v.rename({"valid_time": "time"})
+            if "valid_time" in v.coords:
+                v = v.drop_vars("valid_time")
+
+            ws = np.hypot(u, v)
+            ws = ws.chunk(chunks)
+            ws.attrs["units"] = "m s-1"
+        else:
+            # Wind (max) -- time encoding in these files is broken (produced by
+            # a separate pipeline), so we load with decode_times=False and
+            # reconstruct time from the YYYY-MM in each filename.
+            wind_files = []
+            for y in years:
+                wind_files += sorted(glob.glob(os.path.join(
+                    self.basepath, self.wind_cfg["subdir"], self.wind_cfg["pattern"].format(year=y))))
+            assert len(wind_files) > 0, f"No wind files found in {self.basepath}/{self.wind_cfg['subdir']}/"
+            ws_parts = []
+            for fpath in wind_files:
+                ds_wind = xr.open_dataset(fpath, decode_times=False, chunks=chunks)
+                da = ds_wind[self.wind_cfg["var"]]
+                m = re.search(r"(\d{4})-(\d{2})\.nc$", os.path.basename(fpath))
+                assert m, f"Cannot parse year-month from wind filename: {fpath}"
+                yyyy, mm = int(m.group(1)), int(m.group(2))
+                n_days = da.sizes["time"]
+                new_time = pd.date_range(f"{yyyy}-{mm:02d}-01", periods=n_days, freq="D")
+                da = da.assign_coords(time=new_time)
+                if "valid_time" in da.coords:
+                    da = da.drop_vars("valid_time")
+                ws_parts.append(da)
+            ws = xr.concat(ws_parts, dim="time")
+            ws = ws.chunk(chunks)
+            ws.attrs["units"] = "m s-1"
 
         hurs_files = []
         for y in years:
