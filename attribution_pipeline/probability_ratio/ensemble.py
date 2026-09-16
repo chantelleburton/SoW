@@ -33,6 +33,7 @@ class EnsembleLoader:
         baseline_end: int,
         metric_stem: str = None,
         percentile: float = 95,
+        mode: str = "corrected",
     ):
         self.folder = folder
         # attribution_pipeline/bias_correction writes filenames as
@@ -42,14 +43,26 @@ class EnsembleLoader:
         self.percentile = percentile
         self.baseline_start = baseline_start
         self.baseline_end = baseline_end
+        # 'corrected' (default): bias_correction/core.py's per-baseline-year
+        # LogTransform CSVs. 'uncorrected': bias_correction/uncorrected.py's
+        # single-row-per-data_year CSVs (no baseline/LogTransform concept).
+        if mode not in ("corrected", "uncorrected"):
+            raise ValueError(f"Unknown mode={mode!r}. Expected 'corrected' or 'uncorrected'.")
+        self.mode = mode
 
     def _glob(self, country: str, run_type: str):
         metric_token = self.metric_stem if self.metric_stem else "*"
-        pattern = os.path.join(
-            self.folder,
-            f"{country}_{metric_token}_baseline*_{run_type}{self.percentile:g}percent_LogTransform_"
-            f"Target_*_DataYear_*_BaselinePeriod_{self.baseline_start}_{self.baseline_end}.csv",
-        )
+        if self.mode == "uncorrected":
+            pattern = os.path.join(
+                self.folder,
+                f"{country}_{metric_token}_{run_type}{self.percentile:g}percent_Uncorrected_DataYear_*.csv",
+            )
+        else:
+            pattern = os.path.join(
+                self.folder,
+                f"{country}_{metric_token}_baseline*_{run_type}{self.percentile:g}percent_LogTransform_"
+                f"Target_*_DataYear_*_BaselinePeriod_{self.baseline_start}_{self.baseline_end}.csv",
+            )
         return sorted(glob.glob(pattern))
 
     def _read_all(self, country: str, run_type: str):
