@@ -20,10 +20,10 @@ from attribution_pipeline.bias_correction.member_loader import (
     paired_members,
 )
 from attribution_pipeline.bias_correction.metric_extract import extract_scalar
-from attribution_pipeline.metrics.pipeline_config import get_region
 from attribution_pipeline.metrics.run_metrics import METRICS
+from attribution_pipeline.pipeline_config import UNCORRECTED_METRICS, get_region
 
-OUTPUT_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/uncorrected_metrics"
+OUTPUT_DIR = UNCORRECTED_METRICS
 
 
 def run_uncorrected_extraction(country: str, run_type: str, index: str, metric_name: str,

@@ -14,10 +14,10 @@ import os
 import iris
 import numpy as np
 
-from attribution_pipeline.metrics.pipeline_config import SHAPEFILE
+from attribution_pipeline.pipeline_config import RAW_FWI_HG3_ATTRIBUTION, SHAPEFILE
 from utils.cubefuncs import ConstrainToYear, apply_shapefile_inclusive, constrain_cube_to_months
 
-RAW_FWI_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution"
+RAW_FWI_DIR = RAW_FWI_HG3_ATTRIBUTION
 
 # bias_correction's CYLC_TASK_PARAM_runtype convention ('hist'/'histnat') ->
 # hadgem3_attribution.py's CYLC_TASK_PARAM_run_type convention.

@@ -25,10 +25,10 @@ from attribution_pipeline.bias_correction.regression import (
     inverse_soft_log,
     soft_log,
 )
-from attribution_pipeline.metrics.pipeline_config import get_region
 from attribution_pipeline.metrics.run_metrics import METRICS
+from attribution_pipeline.pipeline_config import BIAS_CORRECTED_METRICS, get_region
 
-OUTPUT_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics"
+OUTPUT_DIR = BIAS_CORRECTED_METRICS
 DEFAULT_DATA_YEARS = (2020, 2021, 2022, 2023, 2024)
 
 

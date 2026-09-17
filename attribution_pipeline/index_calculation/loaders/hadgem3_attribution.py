@@ -14,7 +14,8 @@ import xarray as xr
 from attribution_pipeline.index_calculation.config import ClusterConfig, DatasetConfig
 from attribution_pipeline.index_calculation.loaders.base import BaseLoader
 from attribution_pipeline.index_calculation.loaders._grid_utils import regrid_to_tracer, fix_anonymous_time_dim
-from attribution_pipeline.metrics.pipeline_config import (
+from attribution_pipeline.pipeline_config import (
+    RAW_FWI_HG3_ATTRIBUTION,
     WINDOW_START_MONTH,
     WINDOW_END_MONTH,
     WINDOW_START,

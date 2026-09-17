@@ -1,17 +1,41 @@
 """
-Central pipeline configuration -- the single source of truth for per-region
-event/fire-season definitions, the shared observed/simulated baseline period,
-and the HadGEM3-A Attribution ensemble's raw-data read window.
-
-Mirrors (and replaces the duplicated) REGION_CONFIGS blocks previously
-scattered across Plotting/Explore_Risk_Ratio.py, Plotting/Uncorrected_Risk_Ratio.py,
-Exploratory_Work/Reduced_Att_Set_Processing/reduced_set_risk_ratio.py,
-Plotting/Supplements/*.py, and post-processing/Metric-HG3-A_Historical/FWI95-HG3-A_Historical.py.
-
-Used by attribution_pipeline/metrics/ (interim metric CSVs),
+Used by attribution_pipeline/index_calculation/ (raw FWI/DSR generation),
+attribution_pipeline/metrics/ (interim metric CSVs),
 attribution_pipeline/bias_correction/ (baseline regression + read window), and
-attribution_pipeline/probability_ratio/ (risk ratio / amplification).
+attribution_pipeline/probability_ratio/ (risk ratio / amplification / supplement figure).
+
 """
+
+import os
+
+# --- Pipeline output root ---------------------------------------------------
+# Every attribution_pipeline-generated file (raw FWI/DSR, interim metric CSVs,
+# bias-corrected/uncorrected ensemble CSVs, risk-ratio/amplification/supplement
+# exports) lives under this single root. Override via env var to relocate
+PIPELINE_ROOT = os.environ.get(
+    "ATTRIBUTION_PIPELINE_ROOT", "/data/scratch/bob.potts/sowf/attribution_pipeline"
+)
+
+# index_calculation/ raw FWI/DSR output (one subfolder per data source).
+RAW_FWI_ERA5 = os.path.join(PIPELINE_ROOT, "raw_fwi/era5")
+RAW_FWI_HG3_HISTORICAL = os.path.join(PIPELINE_ROOT, "raw_fwi/hg3_historical")
+RAW_FWI_HG3_ATTRIBUTION = os.path.join(PIPELINE_ROOT, "raw_fwi/hg3_attribution")
+
+# metrics/ interim per-year metric CSVs (read by bias_correction/ and
+# probability_ratio/ alike 
+METRICS_OUT_DIR = os.path.join(PIPELINE_ROOT, "metrics")
+
+# bias_correction/ ensemble CSV output.
+BIAS_CORRECTED_METRICS = os.path.join(PIPELINE_ROOT, "bias_corrected_metrics")
+UNCORRECTED_METRICS = os.path.join(PIPELINE_ROOT, "uncorrected_metrics")
+
+# probability_ratio/ final exports (summary CSVs + plots), nested by
+# {historical_source} 
+EXPORTS = os.path.join(PIPELINE_ROOT, "exports")
+
+# --- External, read-only data sources ---------------------------------------
+ERA5_OBS_BASEPATH = "/data/users/appldata/Data/OBS-ERA5/daily"
+IMPACTTB_HISTORICAL_FWI_DIR = "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM"
 
 # HadGEM3-A Attribution raw-data read window: a dataset-availability constraint
 # on the whole ensemble (hurs single-month files only start at 201911, and all

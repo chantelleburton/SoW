@@ -25,12 +25,12 @@ import os
 import numpy as np
 import pandas as pd
 
-from attribution_pipeline.metrics.pipeline_config import REGION_CONFIGS
+from attribution_pipeline.pipeline_config import BIAS_CORRECTED_METRICS, EXPORTS, REGION_CONFIGS
 from attribution_pipeline.probability_ratio.core import compute_region_amplification, compute_region_risk_ratio
 from attribution_pipeline.probability_ratio.plotting import plot_amplification, plot_risk_ratio_grid
 
-BIAS_CORRECTED_BASE = "/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics"
-DEFAULT_OUTPUT_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/exports"
+BIAS_CORRECTED_BASE = BIAS_CORRECTED_METRICS
+DEFAULT_OUTPUT_DIR = EXPORTS
 
 
 def run_risk_ratio(metric_stem: str, ensemble_folder: str, countries, bootstrap_size: int, paired_only: bool,

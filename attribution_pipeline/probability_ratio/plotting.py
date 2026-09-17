@@ -23,8 +23,13 @@ from attribution_pipeline.bias_correction.regression import (
     inverse_soft_log,
     soft_log,
 )
-from attribution_pipeline.metrics.pipeline_config import REGION_CONFIGS, get_region
 from attribution_pipeline.metrics.run_metrics import METRICS
+from attribution_pipeline.pipeline_config import (
+    BIAS_CORRECTED_METRICS,
+    REGION_CONFIGS,
+    UNCORRECTED_METRICS,
+    get_region,
+)
 from attribution_pipeline.probability_ratio.ensemble import EnsembleLoader
 from attribution_pipeline.probability_ratio.threshold import get_era5_threshold
 
@@ -32,8 +37,8 @@ from attribution_pipeline.probability_ratio.threshold import get_era5_threshold
 # panels (b)/(c) 
 SUPPLEMENT_TARGET_YEAR = 2024
 
-BIAS_CORRECTED_FOLDER = "/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics"
-UNCORRECTED_FOLDER = "/data/scratch/bob.potts/sowf/attribution_pipeline/uncorrected_metrics"
+BIAS_CORRECTED_FOLDER = BIAS_CORRECTED_METRICS
+UNCORRECTED_FOLDER = UNCORRECTED_METRICS
 
 
 def plot_risk_ratio_grid(results: dict, metric_stem: str, out_path: str):

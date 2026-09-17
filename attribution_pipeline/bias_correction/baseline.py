@@ -14,8 +14,7 @@ import numpy as np
 import pandas as pd
 
 from attribution_pipeline.bias_correction.regression import soft_log
-
-METRICS_OUT_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/metrics"
+from attribution_pipeline.pipeline_config import METRICS_OUT_DIR
 
 # Legacy NaN placeholder used before the soft-log transform (log(0) is -inf).
 _NAN_FILL = 1e-12

@@ -19,9 +19,10 @@ Usage (mirrors the CYLC_TASK_PARAM_* convention used elsewhere in the repo):
 
 import os
 
+from attribution_pipeline.pipeline_config import EXPORTS
 from attribution_pipeline.probability_ratio.plotting import generate_all_supplements
 
-DEFAULT_OUTPUT_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/exports"
+DEFAULT_OUTPUT_DIR = EXPORTS
 
 
 if __name__ == "__main__":

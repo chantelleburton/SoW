@@ -12,7 +12,7 @@ import os
 
 import pandas as pd
 
-METRICS_OUT_DIR = "/data/scratch/bob.potts/sowf/attribution_pipeline/metrics"
+from attribution_pipeline.pipeline_config import METRICS_OUT_DIR
 
 
 def get_era5_threshold(country: str, event_year: int, metric_stem: str, member: str = "1") -> float:

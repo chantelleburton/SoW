@@ -17,6 +17,7 @@ import xarray as xr
 
 from attribution_pipeline.index_calculation.config import ClusterConfig, DatasetConfig
 from attribution_pipeline.index_calculation.loaders.base import BaseLoader
+from attribution_pipeline.pipeline_config import ERA5_OBS_BASEPATH, RAW_FWI_ERA5
 
 # Fixed time units reference for all yearly output files -- see write() below.
 TIME_UNITS = "days since 1900-01-01"
@@ -60,7 +61,7 @@ RH_OPTIONS = {
 
 class ERA5Loader(BaseLoader):
     name = "era5"
-    basepath = "/data/users/appldata/Data/OBS-ERA5/daily"
+    basepath = ERA5_OBS_BASEPATH
 
     def __init__(self, start_year=None, wind_stat=None, rh_stat=None, max_end_year=None, out_dir=None):
         self.start_year = start_year or int(os.environ.get("CYLC_TASK_PARAM_start_year", 2025))
@@ -80,7 +81,7 @@ class ERA5Loader(BaseLoader):
 
         cfg = DatasetConfig(
             name=self.name,
-            out_dir=out_dir or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/era5",
+            out_dir=out_dir or RAW_FWI_ERA5,
             spatial_chunk=90,
             cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=40),
             cffwis_kwargs={"initial_start_up": True},

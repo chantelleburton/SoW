@@ -28,7 +28,15 @@ from attribution_pipeline.metrics.base import BaseMetric
 from attribution_pipeline.metrics.cumulative import CumulativeMetric
 from attribution_pipeline.metrics.extreme_window import ExtremeWindowMetric
 from attribution_pipeline.metrics.percentile import PercentileMetric
-from attribution_pipeline.metrics.pipeline_config import SHAPEFILE, get_region
+from attribution_pipeline.pipeline_config import (
+    METRICS_OUT_DIR,
+    RAW_FWI_ERA5,
+    RAW_FWI_HG3_ATTRIBUTION,
+    RAW_FWI_HG3_HISTORICAL,
+    IMPACTTB_HISTORICAL_FWI_DIR,
+    SHAPEFILE,
+    get_region,
+)
 from utils.cubefuncs import apply_shapefile_inclusive
 
 # --- Metric registry -------------------------------------------------------
@@ -135,8 +143,7 @@ def _resolve_hg3_historical_xclim(index: str, member: str, **kw) -> iris.cube.Cu
     independently with overwintering disabled -- see that module's docstring):
     hadgem3a_{index}_historical_{member}_{year}.nc.
     """
-    folder = "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_historical/"
-    pattern = os.path.join(folder, f"hadgem3a_{index}_historical_r1i1p{member}_*.nc")
+    pattern = os.path.join(RAW_FWI_HG3_HISTORICAL, f"hadgem3a_{index}_historical_r1i1p{member}_*.nc")
     files = sorted(glob.glob(pattern))
     if not files:
         raise FileNotFoundError(f"No HadGEM3 historical {index} files found: {pattern}")
@@ -184,9 +191,8 @@ def _resolve_hg3_historical_impacttb(index: str, member: str, **kw) -> iris.cube
         raise ValueError(
             f"hg3_historical_impacttb only has FWI data (no DSR); got index={index!r}."
         )
-    folder = "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM"
     pattern = os.path.join(
-        folder,
+        IMPACTTB_HISTORICAL_FWI_DIR,
         f"FWI_HadGEM3-A-N216_r1i1p{member}_historical_gwl*_global_day_"
         f"initialise-from=previous-and-save-input-data=True.nc",
     )
@@ -230,9 +236,8 @@ def _resolve_era5(index: str, member: str = None, run_label: str = None, **kw) -
     CYLC_TASK_PARAM_run_label) to select a specific wind/RH combo when more
     than one has been generated; otherwise all matching files are used.
     """
-    folder = "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/era5/"
     label_glob = run_label if run_label else "*"
-    pattern = os.path.join(folder, f"era5_{index}_{label_glob}_*.nc")
+    pattern = os.path.join(RAW_FWI_ERA5, f"era5_{index}_{label_glob}_*.nc")
     files = sorted(glob.glob(pattern))
     if not files:
         raise FileNotFoundError(f"No ERA5 {index} files found: {pattern}")
@@ -252,8 +257,7 @@ def _resolve_hg3_attribution(index: str, member: str, run_type: str = "historica
     (factual) or 'historicalNatExt' (counterfactual); pass via
     CYLC_TASK_PARAM_run_type.
     """
-    folder = "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution/"
-    pattern = os.path.join(folder, f"hadgem3a_{index}_{run_type}_{member}.nc")
+    pattern = os.path.join(RAW_FWI_HG3_ATTRIBUTION, f"hadgem3a_{index}_{run_type}_{member}.nc")
     files = sorted(glob.glob(pattern))
     if not files:
         raise FileNotFoundError(f"No HadGEM3 attribution {index} file found: {pattern}")
@@ -298,7 +302,7 @@ def run(dataset: str, country: str, index: str, metric_name: str, member: str = 
     if not years:
         raise RuntimeError(f"No results computed for {dataset}/{country}/{metric.output_stem()}")
 
-    out_dir = "/data/scratch/bob.potts/sowf/attribution_pipeline/metrics"
+    out_dir = METRICS_OUT_DIR
     os.makedirs(out_dir, exist_ok=True)
     # hg3_attribution has two run_types (historicalExt/historicalNatExt) per
     # member -- fold it into the filename so they don't overwrite each other.

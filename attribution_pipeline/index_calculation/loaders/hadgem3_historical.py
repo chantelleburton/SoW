@@ -24,6 +24,7 @@ import xarray as xr
 from attribution_pipeline.index_calculation.config import ClusterConfig, DatasetConfig
 from attribution_pipeline.index_calculation.loaders.base import BaseLoader
 from attribution_pipeline.index_calculation.loaders._grid_utils import regrid_to_tracer, fix_anonymous_time_dim
+from attribution_pipeline.pipeline_config import RAW_FWI_HG3_HISTORICAL
 
 VAR_CONFIG = {
     "tasmax": {"dir": "tasmax/day", "nc_var": "tasmax", "units": "degC"},
@@ -75,7 +76,7 @@ class HadGEM3HistoricalLoader(BaseLoader):
 
         cfg = DatasetConfig(
             name=self.name,
-            out_dir=out_dir or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_historical",
+            out_dir=out_dir or RAW_FWI_HG3_HISTORICAL,
             spatial_chunk=30,
             cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=30),
             # overwintering disabled: blocks are independent, so there is no

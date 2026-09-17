@@ -6,7 +6,7 @@ statistic to produce one result dict per country.
 
 import numpy as np
 
-from attribution_pipeline.metrics.pipeline_config import get_region
+from attribution_pipeline.pipeline_config import get_region
 from attribution_pipeline.probability_ratio.ensemble import EnsembleLoader
 from attribution_pipeline.probability_ratio.statistics import AmplificationStatistic, RiskRatioStatistic
 from attribution_pipeline.probability_ratio.threshold import get_era5_threshold
