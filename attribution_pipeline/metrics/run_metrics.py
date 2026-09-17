@@ -1,6 +1,6 @@
 """
 Entrypoint for the interim metrics framework: turns daily FWI/DSR NetCDF files
-(as produced by attribution_pipeline/run_fwi.py) into per-year, event-month CSVs
+(as produced by attribution_pipeline/index_calculation/run_fwi.py) into per-year, event-month CSVs
 consumed by bias correction.
 
 Adding a new metric: subclass attribution_pipeline.metrics.base.BaseMetric and
@@ -229,7 +229,7 @@ def _resolve_hg3_historical_impacttb(index: str, member: str, **kw) -> iris.cube
 
 
 def _resolve_era5(index: str, member: str = None, run_label: str = None, **kw) -> iris.cube.Cube:
-    """ERA5Loader.write() (attribution_pipeline/loaders/era5.py) writes one file
+    """ERA5Loader.write() (attribution_pipeline/index_calculation/loaders/era5.py) writes one file
     per calendar year: era5_{index}_{run_label}_{year}.nc, where run_label
     encodes the wind/RH statistic combo (e.g. 'Mean_RH_Mean_Wind'). ERA5 has no
     'member' concept -- pass an optional `run_label` kwarg (via
@@ -251,7 +251,7 @@ def _resolve_era5(index: str, member: str = None, run_label: str = None, **kw) -
 
 
 def _resolve_hg3_attribution(index: str, member: str, run_type: str = "historicalExt", **kw) -> iris.cube.Cube:
-    """HadGEM3AttributionLoader.write() (attribution_pipeline/loaders/hadgem3_attribution.py)
+    """HadGEM3AttributionLoader.write() (attribution_pipeline/index_calculation/loaders/hadgem3_attribution.py)
     writes one file per (run_type, member) spanning the full 2019-2024 window:
     hadgem3a_{index}_{run_type}_{member}.nc. `run_type` is 'historicalExt'
     (factual) or 'historicalNatExt' (counterfactual); pass via

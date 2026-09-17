@@ -1,6 +1,6 @@
 """
 Loads attribution-ensemble member FWI/DSR data directly from our own
-FWI-creation output (attribution_pipeline/loaders/hadgem3_attribution.py),
+FWI-creation output (attribution_pipeline/index_calculation/loaders/hadgem3_attribution.py),
 instead of scanning raw monthly netCDFs. Replaces
 Exploratory_Work/Reduced_Att_Set_Processing/find_matching_members.py's 63-file
 completeness scan with a simple "does the file exist for both hist and

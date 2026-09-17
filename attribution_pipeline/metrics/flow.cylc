@@ -28,8 +28,9 @@
 [scheduler]
     allow implicit tasks = True
 
-#TODO clean up the hardcoded file paths in various bits of metrics and elsewhere. Change to dynamically creating the folder structure from a single top level directory configurable variable.
-#currently pulls the country config from /metrics - one for the readme rather than config
+# Country/region config (REGION_CONFIGS) now lives in
+# attribution_pipeline/pipeline_config.py (shared across all four
+# subpackages), not this metrics/ stage specifically.
 
 [task parameters]
     country = Canada,Iberia, Chile, # Korea, Scotland, 
