@@ -29,8 +29,7 @@ from attribution_pipeline.probability_ratio.ensemble import EnsembleLoader
 from attribution_pipeline.probability_ratio.threshold import get_era5_threshold
 
 # Reference target year for the illustrative single-year regression shown in
-# panels (b)/(c) -- fixed across all regions (matches the legacy script's
-# hardcoded UNCORRECTED_DATA_YEAR).
+# panels (b)/(c) 
 SUPPLEMENT_TARGET_YEAR = 2024
 
 BIAS_CORRECTED_FOLDER = "/data/scratch/bob.potts/sowf/attribution_pipeline/bias_corrected_metrics"
@@ -322,10 +321,13 @@ def plot_supplement(country: str, index: str, metric_name: str, out_path: str, p
 def generate_all_supplements(index: str, metric_name: str, out_dir: str, percentile: float = 95,
                               historical_source: str = "xclim", paired_only: bool = True):
     """Runs plot_supplement() for every region in REGION_CONFIGS (dynamic region
-    count -- no hardcoded country list)."""
+    count -- no hardcoded country list). Outputs are nested under
+    out_dir/{historical_source}/, mirroring bias_correction's
+    bias_corrected_metrics/{historical_source}/ layout."""
+    source_dir = os.path.join(out_dir, historical_source)
     written = []
     for country in REGION_CONFIGS:
-        out_path = os.path.join(out_dir, f"Supplement_{country}.png")
+        out_path = os.path.join(source_dir, f"Supplement_{country}.png")
         try:
             written.append(
                 plot_supplement(country, index, metric_name, out_path, percentile=percentile,

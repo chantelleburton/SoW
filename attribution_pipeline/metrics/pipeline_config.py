@@ -24,17 +24,17 @@ WINDOW_START = "2019-11-01"
 WINDOW_END = "2024-12-30"
 
 REGION_CONFIGS = {
-    "Korea": {
-        "months": (3,),
-        "month_name": "March",
-        "shape_name": "Southeast South Korea",
-        "display_name": "SE S. Korea",
-        "event_year": 2025,
-        "percentile": 95,
-        "baseline_start": 1980,
-        "baseline_end": 2013,
-        "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
-    },
+    # "Korea": {
+    #     "months": (3,),
+    #     "month_name": "March",
+    #     "shape_name": "Southeast South Korea",
+    #     "display_name": "SE S. Korea",
+    #     "event_year": 2025,
+    #     "percentile": 95,
+    #     "baseline_start": 1980,
+    #     "baseline_end": 2013,
+    #     "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
+    # },
     "Iberia": {
         "months": (8,),
         "month_name": "Aug",
@@ -46,17 +46,17 @@ REGION_CONFIGS = {
         "baseline_end": 2013,
         "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
     },
-    "Scotland": {
-        "months": (6, 7),
-        "month_name": "June-July",
-        "shape_name": "Scottish Highlands",
-        "display_name": "Scottish Highlands",
-        "event_year": 2025,
-        "percentile": 95,
-        "baseline_start": 1980,
-        "baseline_end": 2013,
-        "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
-    },
+    # "Scotland": {
+    #     "months": (6, 7),
+    #     "month_name": "June-July",
+    #     "shape_name": "Scottish Highlands",
+    #     "display_name": "Scottish Highlands",
+    #     "event_year": 2025,
+    #     "percentile": 95,
+    #     "baseline_start": 1980,
+    #     "baseline_end": 2013,
+    #     "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
+    # },
     "Chile": {
         "months": (1, 2),
         "month_name": "January-February",
