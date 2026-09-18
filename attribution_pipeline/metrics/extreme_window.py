@@ -8,9 +8,9 @@ region (i.e. the single hottest cell/window in the event period that year).
 """
 
 import iris.analysis
+from utils.cubefuncs import CountryMax, constrain_cube_to_months
 
 from attribution_pipeline.metrics.base import BaseMetric, _ensure_year_coord
-from utils.cubefuncs import CountryMax, constrain_cube_to_months
 
 
 class ExtremeWindowMetric(BaseMetric):

@@ -22,12 +22,23 @@ Usage (mirrors the CYLC_TASK_PARAM_* convention used elsewhere in the repo):
 """
 
 import os
+
 import numpy as np
 import pandas as pd
 
-from attribution_pipeline.pipeline_config import BIAS_CORRECTED_METRICS, EXPORTS, REGION_CONFIGS
-from attribution_pipeline.probability_ratio.core import compute_region_amplification, compute_region_risk_ratio
-from attribution_pipeline.probability_ratio.plotting import plot_amplification, plot_risk_ratio_grid
+from attribution_pipeline.pipeline_config import (
+    BIAS_CORRECTED_METRICS,
+    EXPORTS,
+    REGION_CONFIGS,
+)
+from attribution_pipeline.probability_ratio.core import (
+    compute_region_amplification,
+    compute_region_risk_ratio,
+)
+from attribution_pipeline.probability_ratio.plotting import (
+    plot_amplification,
+    plot_risk_ratio_grid,
+)
 
 BIAS_CORRECTED_BASE = BIAS_CORRECTED_METRICS
 DEFAULT_OUTPUT_DIR = EXPORTS

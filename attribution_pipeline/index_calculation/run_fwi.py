@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Entrypoint for the unified FWI creation framework.
 
@@ -13,13 +12,17 @@ Usage:
     python run_fwi.py hg3_historical
 """
 
-import sys
 import os
+import sys
 
 from attribution_pipeline.index_calculation.fwi_core import FWICalculator
 from attribution_pipeline.index_calculation.loaders.era5 import ERA5Loader
-from attribution_pipeline.index_calculation.loaders.hadgem3_attribution import HadGEM3AttributionLoader
-from attribution_pipeline.index_calculation.loaders.hadgem3_historical import HadGEM3HistoricalLoader
+from attribution_pipeline.index_calculation.loaders.hadgem3_attribution import (
+    HadGEM3AttributionLoader,
+)
+from attribution_pipeline.index_calculation.loaders.hadgem3_historical import (
+    HadGEM3HistoricalLoader,
+)
 
 LOADERS = {
     "era5": ERA5Loader,

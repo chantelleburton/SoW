@@ -13,9 +13,13 @@ import os
 
 import iris
 import numpy as np
+from utils.cubefuncs import (
+    ConstrainToYear,
+    apply_shapefile_inclusive,
+    constrain_cube_to_months,
+)
 
 from attribution_pipeline.pipeline_config import RAW_FWI_HG3_ATTRIBUTION, SHAPEFILE
-from utils.cubefuncs import ConstrainToYear, apply_shapefile_inclusive, constrain_cube_to_months
 
 RAW_FWI_DIR = RAW_FWI_HG3_ATTRIBUTION
 

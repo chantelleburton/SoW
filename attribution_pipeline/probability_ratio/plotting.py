@@ -21,7 +21,6 @@ from attribution_pipeline.bias_correction.regression import (
     bias_correct,
     find_regression_parameters,
     inverse_soft_log,
-    soft_log,
 )
 from attribution_pipeline.metrics.run_metrics import METRICS
 from attribution_pipeline.pipeline_config import (
@@ -173,7 +172,7 @@ def _bias_correct_baseline_members(years, era5_log, hg3_logs, target_year=SUPPLE
     """Fits obs/sim regressions per HadGEM3-historical member against `target_year`
     and returns (era5_raw, hg3_raw_per_member, detrended_raw_per_member)."""
     t = years - target_year
-    fwi0_obs, delta_obs, _ = find_regression_parameters(era5_log, t)
+    fwi0_obs, _delta_obs, _ = find_regression_parameters(era5_log, t)
 
     hg3_raw = []
     detrended_raw = []

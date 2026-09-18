@@ -89,8 +89,8 @@ def run_bias_correction(country: str, baseline_member: int, run_type: str, index
     written = []
     for data_year in data_years:
         t = baseline_years - data_year
-        fwi0_obs, delta_obs, std_obs = find_regression_parameters(era5_vals, t)
-        fwi0_sim, delta_sim, std_sim = find_regression_parameters(hg3_vals, t)
+        fwi0_obs, _delta_obs, _std_obs = find_regression_parameters(era5_vals, t)
+        fwi0_sim, delta_sim, _std_sim = find_regression_parameters(hg3_vals, t)
 
         col_names = list(member_cubes.keys())
         data_matrix = np.full((len(baseline_years), len(col_names)), np.nan)

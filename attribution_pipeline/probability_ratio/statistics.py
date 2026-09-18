@@ -10,7 +10,6 @@ added the same way:
 """
 
 import numpy as np
-
 from utils.cubefuncs import RiskRatio, draw_bs_replicates
 
 

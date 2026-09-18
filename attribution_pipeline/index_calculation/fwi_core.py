@@ -7,10 +7,10 @@ Usage:
     calc.run()
 """
 
+import logging
 import os
 import time
 import warnings
-import logging
 
 import numpy as np
 import xarray as xr

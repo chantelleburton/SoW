@@ -77,7 +77,7 @@ class EnsembleLoader:
 
     def complete_members(self, country: str, run_type: str) -> set:
         """Members present in every loaded file with no NaN values, for this run_type."""
-        dfs, files = self._read_all(country, run_type)
+        dfs, _files = self._read_all(country, run_type)
         if not dfs:
             return set()
         all_members = self._all_member_columns(dfs)
@@ -100,7 +100,7 @@ class EnsembleLoader:
 
     def load(self, country: str, run_type: str, member_filter: set = None):
         """Return (flattened non-NaN values, members used) for a country/run_type."""
-        dfs, files = self._read_all(country, run_type)
+        dfs, _files = self._read_all(country, run_type)
         if not dfs:
             return np.array([]), set()
         all_members = self._all_member_columns(dfs)
@@ -119,7 +119,7 @@ class EnsembleLoader:
 
     def load_member_means(self, country: str, run_type: str, member_filter: set = None) -> dict:
         """Return {member: mean value across all baselines/years it appears in}."""
-        dfs, files = self._read_all(country, run_type)
+        dfs, _files = self._read_all(country, run_type)
         if not dfs:
             return {}
         all_members = self._all_member_columns(dfs)

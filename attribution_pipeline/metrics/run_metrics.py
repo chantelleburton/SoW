@@ -23,21 +23,21 @@ import os
 
 import iris
 import numpy as np
+from utils.cubefuncs import apply_shapefile_inclusive
 
 from attribution_pipeline.metrics.base import BaseMetric
 from attribution_pipeline.metrics.cumulative import CumulativeMetric
 from attribution_pipeline.metrics.extreme_window import ExtremeWindowMetric
 from attribution_pipeline.metrics.percentile import PercentileMetric
 from attribution_pipeline.pipeline_config import (
+    IMPACTTB_HISTORICAL_FWI_DIR,
     METRICS_OUT_DIR,
     RAW_FWI_ERA5,
     RAW_FWI_HG3_ATTRIBUTION,
     RAW_FWI_HG3_HISTORICAL,
-    IMPACTTB_HISTORICAL_FWI_DIR,
     SHAPEFILE,
     get_region,
 )
-from utils.cubefuncs import apply_shapefile_inclusive
 
 # --- Metric registry -------------------------------------------------------
 # metric name (as passed via CYLC_TASK_PARAM_metric) -> factory(index, **kwargs)
@@ -313,8 +313,7 @@ def run(dataset: str, country: str, index: str, metric_name: str, member: str = 
     out_path = os.path.join(out_dir, f"{stem}.csv")
     with open(out_path, "w") as f:
         f.write(f"Year,{metric.output_stem()}\n")
-        for y, v in zip(years, values):
-            f.write(f"{int(y)},{v:.6f}\n")
+        f.writelines(f"{int(y)},{v:.6f}\n" for y, v in zip(years, values))
     print(f"[metrics] Saved: {out_path}")
     return out_path
 

@@ -5,9 +5,9 @@ percentile-over-space, matching the existing FWI95 pipeline
 """
 
 import iris.analysis
+from utils.cubefuncs import CountryPercentile, constrain_cube_to_months
 
 from attribution_pipeline.metrics.base import BaseMetric, _ensure_year_coord
-from utils.cubefuncs import CountryPercentile, constrain_cube_to_months
 
 
 class PercentileMetric(BaseMetric):
