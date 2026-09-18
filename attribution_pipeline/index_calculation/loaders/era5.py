@@ -15,9 +15,15 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from attribution_pipeline.index_calculation.config import ClusterConfig, DatasetConfig
+from attribution_pipeline.index_calculation.config import (
+    ClusterConfig,
+    DatasetConfig,
+)
 from attribution_pipeline.index_calculation.loaders.base import BaseLoader
-from attribution_pipeline.pipeline_config import ERA5_OBS_BASEPATH, RAW_FWI_ERA5
+from attribution_pipeline.pipeline_config import (
+    ERA5_OBS_BASEPATH,
+    RAW_FWI_ERA5,
+)
 
 # Fixed time units reference for all yearly output files -- see write() below.
 TIME_UNITS = "days since 1900-01-01"
@@ -63,17 +69,40 @@ class ERA5Loader(BaseLoader):
     name = "era5"
     basepath = ERA5_OBS_BASEPATH
 
-    def __init__(self, start_year=None, wind_stat=None, rh_stat=None, max_end_year=None, out_dir=None):
-        self.start_year = start_year or int(os.environ.get("CYLC_TASK_PARAM_start_year", 2025))
-        self.wind_stat = (wind_stat or os.environ.get("CYLC_TASK_PARAM_wind_stat", "mean")).strip().lower()
-        self.rh_stat = (rh_stat or os.environ.get("CYLC_TASK_PARAM_rh_stat", "mean")).strip().lower()
-        max_end_year = max_end_year or int(os.environ.get("MAX_END_YEAR", 2026))
+    def __init__(
+        self,
+        start_year=None,
+        wind_stat=None,
+        rh_stat=None,
+        max_end_year=None,
+        out_dir=None,
+    ):
+        self.start_year = start_year or int(
+            os.environ.get("CYLC_TASK_PARAM_start_year", 2025)
+        )
+        self.wind_stat = (
+            (wind_stat or os.environ.get("CYLC_TASK_PARAM_wind_stat", "mean"))
+            .strip()
+            .lower()
+        )
+        self.rh_stat = (
+            (rh_stat or os.environ.get("CYLC_TASK_PARAM_rh_stat", "mean"))
+            .strip()
+            .lower()
+        )
+        max_end_year = max_end_year or int(
+            os.environ.get("MAX_END_YEAR", 2026)
+        )
         self.end_year = min(self.start_year + 10, max_end_year)
 
         if self.wind_stat not in WIND_OPTIONS:
-            raise ValueError(f"Unsupported wind_stat='{self.wind_stat}'. Valid options: {sorted(WIND_OPTIONS)}")
+            raise ValueError(
+                f"Unsupported wind_stat='{self.wind_stat}'. Valid options: {sorted(WIND_OPTIONS)}"
+            )
         if self.rh_stat not in RH_OPTIONS:
-            raise ValueError(f"Unsupported rh_stat='{self.rh_stat}'. Valid options: {sorted(RH_OPTIONS)}")
+            raise ValueError(
+                f"Unsupported rh_stat='{self.rh_stat}'. Valid options: {sorted(RH_OPTIONS)}"
+            )
 
         self.wind_cfg = WIND_OPTIONS[self.wind_stat]
         self.rh_cfg = RH_OPTIONS[self.rh_stat]
@@ -106,9 +135,19 @@ class ERA5Loader(BaseLoader):
 
         tas_files = []
         for y in years:
-            tas_files += sorted(glob.glob(os.path.join(
-                self.basepath, "2m_temperature", "daily_maximum", f"era5_daily_maximum_2m_temperature_{y}*.nc")))
-        assert len(tas_files) > 0, f"No temperature files found in {self.basepath}/2m_temperature/daily_maximum/"
+            tas_files += sorted(
+                glob.glob(
+                    os.path.join(
+                        self.basepath,
+                        "2m_temperature",
+                        "daily_maximum",
+                        f"era5_daily_maximum_2m_temperature_{y}*.nc",
+                    )
+                )
+            )
+        assert len(tas_files) > 0, (
+            f"No temperature files found in {self.basepath}/2m_temperature/daily_maximum/"
+        )
         tas = xr.open_mfdataset(tas_files, chunks=chunks)["t2m"] - 273.15
         if "valid_time" in tas.dims:
             tas = tas.rename({"valid_time": "time"})
@@ -122,9 +161,19 @@ class ERA5Loader(BaseLoader):
 
         pr_files = []
         for y in years:
-            pr_files += sorted(glob.glob(os.path.join(
-                self.basepath, "total_precipitation", "daily_sum", f"era5_daily_sum_total_precipitation_{y}*.nc")))
-        assert len(pr_files) > 0, f"No precipitation files found in {self.basepath}/total_precipitation/daily_sum/"
+            pr_files += sorted(
+                glob.glob(
+                    os.path.join(
+                        self.basepath,
+                        "total_precipitation",
+                        "daily_sum",
+                        f"era5_daily_sum_total_precipitation_{y}*.nc",
+                    )
+                )
+            )
+        assert len(pr_files) > 0, (
+            f"No precipitation files found in {self.basepath}/total_precipitation/daily_sum/"
+        )
         pr = xr.open_mfdataset(pr_files, chunks=chunks)["tp"] * 1000  # m to mm
         if "valid_time" in pr.dims:
             pr = pr.rename({"valid_time": "time"})
@@ -139,15 +188,37 @@ class ERA5Loader(BaseLoader):
             u_files = []
             v_files = []
             for y in years:
-                u_files += sorted(glob.glob(os.path.join(
-                    self.basepath, *self.wind_cfg["u_subdir"], self.wind_cfg["u_pattern"].format(year=y))))
-                v_files += sorted(glob.glob(os.path.join(
-                    self.basepath, *self.wind_cfg["v_subdir"], self.wind_cfg["v_pattern"].format(year=y))))
-            assert len(u_files) > 0, f"No u-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['u_subdir'])}/"
-            assert len(v_files) > 0, f"No v-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['v_subdir'])}/"
+                u_files += sorted(
+                    glob.glob(
+                        os.path.join(
+                            self.basepath,
+                            *self.wind_cfg["u_subdir"],
+                            self.wind_cfg["u_pattern"].format(year=y),
+                        )
+                    )
+                )
+                v_files += sorted(
+                    glob.glob(
+                        os.path.join(
+                            self.basepath,
+                            *self.wind_cfg["v_subdir"],
+                            self.wind_cfg["v_pattern"].format(year=y),
+                        )
+                    )
+                )
+            assert len(u_files) > 0, (
+                f"No u-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['u_subdir'])}/"
+            )
+            assert len(v_files) > 0, (
+                f"No v-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['v_subdir'])}/"
+            )
 
-            u = xr.open_mfdataset(u_files, chunks=chunks)[self.wind_cfg["u_var"]]
-            v = xr.open_mfdataset(v_files, chunks=chunks)[self.wind_cfg["v_var"]]
+            u = xr.open_mfdataset(u_files, chunks=chunks)[
+                self.wind_cfg["u_var"]
+            ]
+            v = xr.open_mfdataset(v_files, chunks=chunks)[
+                self.wind_cfg["v_var"]
+            ]
             if "valid_time" in u.dims:
                 u = u.rename({"valid_time": "time"})
             if "valid_time" in u.coords:
@@ -166,18 +237,33 @@ class ERA5Loader(BaseLoader):
             # reconstruct time from the YYYY-MM in each filename.
             wind_files = []
             for y in years:
-                wind_files += sorted(glob.glob(os.path.join(
-                    self.basepath, self.wind_cfg["subdir"], self.wind_cfg["pattern"].format(year=y))))
-            assert len(wind_files) > 0, f"No wind files found in {self.basepath}/{self.wind_cfg['subdir']}/"
+                wind_files += sorted(
+                    glob.glob(
+                        os.path.join(
+                            self.basepath,
+                            self.wind_cfg["subdir"],
+                            self.wind_cfg["pattern"].format(year=y),
+                        )
+                    )
+                )
+            assert len(wind_files) > 0, (
+                f"No wind files found in {self.basepath}/{self.wind_cfg['subdir']}/"
+            )
             ws_parts = []
             for fpath in wind_files:
-                ds_wind = xr.open_dataset(fpath, decode_times=False, chunks=chunks)
+                ds_wind = xr.open_dataset(
+                    fpath, decode_times=False, chunks=chunks
+                )
                 da = ds_wind[self.wind_cfg["var"]]
                 m = re.search(r"(\d{4})-(\d{2})\.nc$", os.path.basename(fpath))
-                assert m, f"Cannot parse year-month from wind filename: {fpath}"
+                assert m, (
+                    f"Cannot parse year-month from wind filename: {fpath}"
+                )
                 yyyy, mm = int(m.group(1)), int(m.group(2))
                 n_days = da.sizes["time"]
-                new_time = pd.date_range(f"{yyyy}-{mm:02d}-01", periods=n_days, freq="D")
+                new_time = pd.date_range(
+                    f"{yyyy}-{mm:02d}-01", periods=n_days, freq="D"
+                )
                 da = da.assign_coords(time=new_time)
                 if "valid_time" in da.coords:
                     da = da.drop_vars("valid_time")
@@ -188,9 +274,18 @@ class ERA5Loader(BaseLoader):
 
         hurs_files = []
         for y in years:
-            hurs_files += sorted(glob.glob(os.path.join(
-                self.basepath, *self.rh_cfg["subdirs"], self.rh_cfg["pattern"].format(year=y))))
-        assert len(hurs_files) > 0, f"No humidity files found in {self.basepath}/{'/'.join(self.rh_cfg['subdirs'])}/"
+            hurs_files += sorted(
+                glob.glob(
+                    os.path.join(
+                        self.basepath,
+                        *self.rh_cfg["subdirs"],
+                        self.rh_cfg["pattern"].format(year=y),
+                    )
+                )
+            )
+        assert len(hurs_files) > 0, (
+            f"No humidity files found in {self.basepath}/{'/'.join(self.rh_cfg['subdirs'])}/"
+        )
         hurs = xr.open_mfdataset(hurs_files, chunks=chunks)["hurs"]
         if "valid_time" in hurs.dims:
             hurs = hurs.rename({"valid_time": "time"})
@@ -209,7 +304,9 @@ class ERA5Loader(BaseLoader):
         # The block's first year (start_year) exists only to spin up the moisture
         # codes (esp. DC, ~52 day lag) and must be discarded before writing.
         output_years = [y for y in self.years if y > self.start_year]
-        print(f"[{self.name}] Discarding spin-up year {self.start_year}; writing yearly files for {output_years}")
+        print(
+            f"[{self.name}] Discarding spin-up year {self.start_year}; writing yearly files for {output_years}"
+        )
         self._output_years = output_years
         return index_map
 
@@ -227,7 +324,11 @@ class ERA5Loader(BaseLoader):
             # Also strip any leaked non-dimension coordinates (e.g. 'number',
             # 'surface', 'day_of_month') that came along for the ride from the
             # raw GRIB-derived inputs and aren't meaningful for the computed index.
-            extra_coords = [c for c in da.coords if c not in ("time", "latitude", "longitude")]
+            extra_coords = [
+                c
+                for c in da.coords
+                if c not in ("time", "latitude", "longitude")
+            ]
             if extra_coords:
                 da = da.drop_vars(extra_coords)
             # xclim's cffwis_indices output dim order follows its inputs, which
@@ -240,18 +341,30 @@ class ERA5Loader(BaseLoader):
                 da_year = da.sel(time=slice(f"{y}-01-01", f"{y}-12-31"))
                 n_times_year = da_year.sizes["time"]
                 if n_times_year == 0:
-                    print(f"[{self.name}]  Skipping {idx_name} {y}: no data in range")
+                    print(
+                        f"[{self.name}]  Skipping {idx_name} {y}: no data in range"
+                    )
                     continue
-                out_path = os.path.join(self.out_dir, f"era5_{idx_name}_{self.run_label}_{y}.nc")
+                out_path = os.path.join(
+                    self.out_dir, f"era5_{idx_name}_{self.run_label}_{y}.nc"
+                )
                 # Fixed time units reference (rather than xarray's per-file default,
                 # which would pick each year's own start date) so Iris can
                 # concatenate cubes loaded from different yearly files -- otherwise
                 # concatenate_cube() sees differing time-coordinate metadata and errors.
                 enc = {
-                    idx_name: {"chunksizes": (n_times_year, self.spatial_chunk, self.spatial_chunk)},
+                    idx_name: {
+                        "chunksizes": (
+                            n_times_year,
+                            self.spatial_chunk,
+                            self.spatial_chunk,
+                        )
+                    },
                     "time": {"units": TIME_UNITS},
                 }
                 ds = xr.Dataset({idx_name: da_year})
                 ds["time"].attrs = {}
                 ds.to_netcdf(out_path, encoding=enc)
-                print(f"[{self.name}] Saved {idx_name} {y} ({n_times_year} days) to {out_path}")
+                print(
+                    f"[{self.name}] Saved {idx_name} {y} ({n_times_year} days) to {out_path}"
+                )

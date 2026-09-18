@@ -18,7 +18,9 @@ class RiskRatioStatistic:
         self.bootstrap_size = bootstrap_size
 
     def compute(self, hist_data, nat_data, threshold: float) -> dict:
-        replicates = draw_bs_replicates(hist_data, nat_data, threshold, RiskRatio, self.bootstrap_size)
+        replicates = draw_bs_replicates(
+            hist_data, nat_data, threshold, RiskRatio, self.bootstrap_size
+        )
         return {
             "median": np.median(replicates),
             "ci_5": np.percentile(replicates, 5),

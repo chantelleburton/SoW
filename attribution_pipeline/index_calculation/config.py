@@ -8,11 +8,11 @@ shared across all three datasets: dask cluster sizing and the sub-indices to wri
 from dataclasses import dataclass, field
 
 #: All indices producible by xclim.indices.cffwis_indices, plus the derived
-#: dsr. Used only to validate DATASET_INDICES entries below (catches typos). 
-#validation step, keep entire list with specification below in DATASET_INDICES.
+#: dsr. Used only to validate DATASET_INDICES entries below (catches typos).
+# validation step, keep entire list with specification below in DATASET_INDICES.
 ALL_INDICES = ["fwi", "dsr", "dc", "dmc", "ffmc", "isi", "bui"]
 
-#this is only used for what files to export.
+# this is only used for what files to export.
 DATASET_INDICES = {
     "era5": [
         "fwi",
@@ -56,11 +56,17 @@ class DatasetConfig:
     cluster: ClusterConfig = field(default_factory=ClusterConfig)
     output_indices: list = field(default_factory=list)
     # kwargs forwarded to xclim.indices.cffwis_indices, minus tas/pr/sfcWind/hurs/lat
-    cffwis_kwargs: dict = field(default_factory=lambda: {"initial_start_up": True})
+    cffwis_kwargs: dict = field(
+        default_factory=lambda: {"initial_start_up": True}
+    )
 
     def __post_init__(self):
         if not self.output_indices:
-            self.output_indices = list(DATASET_INDICES.get(self.name, ["fwi", "dsr"]))
+            self.output_indices = list(
+                DATASET_INDICES.get(self.name, ["fwi", "dsr"])
+            )
         unknown = sorted(set(self.output_indices) - set(ALL_INDICES))
         if unknown:
-            raise ValueError(f"Unknown output_indices {unknown}; valid options: {ALL_INDICES}")
+            raise ValueError(
+                f"Unknown output_indices {unknown}; valid options: {ALL_INDICES}"
+            )

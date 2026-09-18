@@ -47,7 +47,9 @@ class EnsembleLoader:
         # LogTransform CSVs. 'uncorrected': bias_correction/uncorrected.py's
         # single-row-per-data_year CSVs (no baseline/LogTransform concept).
         if mode not in ("corrected", "uncorrected"):
-            raise ValueError(f"Unknown mode={mode!r}. Expected 'corrected' or 'uncorrected'.")
+            raise ValueError(
+                f"Unknown mode={mode!r}. Expected 'corrected' or 'uncorrected'."
+            )
         self.mode = mode
 
     def _glob(self, country: str, run_type: str):
@@ -104,7 +106,11 @@ class EnsembleLoader:
         if not dfs:
             return np.array([]), set()
         all_members = self._all_member_columns(dfs)
-        cols = [m for m in all_members if member_filter is None or m in member_filter]
+        cols = [
+            m
+            for m in all_members
+            if member_filter is None or m in member_filter
+        ]
 
         parts = []
         for df in dfs:
@@ -117,13 +123,19 @@ class EnsembleLoader:
         values = values[~np.isnan(values)]
         return values, set(cols)
 
-    def load_member_means(self, country: str, run_type: str, member_filter: set = None) -> dict:
+    def load_member_means(
+        self, country: str, run_type: str, member_filter: set = None
+    ) -> dict:
         """Return {member: mean value across all baselines/years it appears in}."""
         dfs, _files = self._read_all(country, run_type)
         if not dfs:
             return {}
         all_members = self._all_member_columns(dfs)
-        cols = [m for m in all_members if member_filter is None or m in member_filter]
+        cols = [
+            m
+            for m in all_members
+            if member_filter is None or m in member_filter
+        ]
 
         sums = {m: 0.0 for m in cols}
         counts = {m: 0 for m in cols}

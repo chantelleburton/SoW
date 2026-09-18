@@ -26,15 +26,20 @@ def compute_region_risk_ratio(
     threshold = get_era5_threshold(country, region["event_year"], metric_stem)
 
     loader = EnsembleLoader(
-        ensemble_folder, metric_stem=metric_stem, percentile=region["percentile"],
-        baseline_start=region["baseline_start"], baseline_end=region["baseline_end"],
+        ensemble_folder,
+        metric_stem=metric_stem,
+        percentile=region["percentile"],
+        baseline_start=region["baseline_start"],
+        baseline_end=region["baseline_end"],
     )
     paired = loader.derive_paired_members(country) if paired_only else None
 
     hist_data, hist_members = loader.load(country, "hist", paired)
     nat_data, nat_members = loader.load(country, "histnat", paired)
     if len(hist_data) == 0 or len(nat_data) == 0:
-        raise RuntimeError(f"No ensemble data found for {country} in {ensemble_folder}")
+        raise RuntimeError(
+            f"No ensemble data found for {country} in {ensemble_folder}"
+        )
 
     stat = RiskRatioStatistic(bootstrap_size)
     result = stat.compute(hist_data, nat_data, threshold)
@@ -62,8 +67,11 @@ def compute_region_amplification(
 ) -> dict:
     region = get_region(country)
     loader = EnsembleLoader(
-        ensemble_folder, metric_stem=metric_stem, percentile=region["percentile"],
-        baseline_start=region["baseline_start"], baseline_end=region["baseline_end"],
+        ensemble_folder,
+        metric_stem=metric_stem,
+        percentile=region["percentile"],
+        baseline_start=region["baseline_start"],
+        baseline_end=region["baseline_end"],
     )
     paired = loader.derive_paired_members(country) if paired_only else None
 

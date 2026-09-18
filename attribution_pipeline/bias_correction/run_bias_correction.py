@@ -27,13 +27,25 @@ if __name__ == "__main__":
     index = os.environ.get("CYLC_TASK_PARAM_index", "fwi")
     metric_name = os.environ.get("CYLC_TASK_PARAM_metric", "p95")
     percentile = float(os.environ.get("CYLC_TASK_PARAM_percentile", "95"))
-    historical_source = os.environ.get("CYLC_TASK_PARAM_historical_source", "xclim")
+    historical_source = os.environ.get(
+        "CYLC_TASK_PARAM_historical_source", "xclim"
+    )
 
     metric_kwargs = {}
     if os.environ.get("CYLC_TASK_PARAM_window"):
         metric_kwargs["window"] = os.environ["CYLC_TASK_PARAM_window"]
     if os.environ.get("CYLC_TASK_PARAM_spatial_reduction"):
-        metric_kwargs["spatial_reduction"] = os.environ["CYLC_TASK_PARAM_spatial_reduction"]
+        metric_kwargs["spatial_reduction"] = os.environ[
+            "CYLC_TASK_PARAM_spatial_reduction"
+        ]
 
-    run_bias_correction(country, baseline_member, run_type, index, metric_name,
-                         percentile=percentile, historical_source=historical_source, **metric_kwargs)
+    run_bias_correction(
+        country,
+        baseline_member,
+        run_type,
+        index,
+        metric_name,
+        percentile=percentile,
+        historical_source=historical_source,
+        **metric_kwargs,
+    )

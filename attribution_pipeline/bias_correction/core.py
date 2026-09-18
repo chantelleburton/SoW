@@ -26,20 +26,34 @@ from attribution_pipeline.bias_correction.regression import (
     soft_log,
 )
 from attribution_pipeline.metrics.run_metrics import METRICS
-from attribution_pipeline.pipeline_config import BIAS_CORRECTED_METRICS, get_region
+from attribution_pipeline.pipeline_config import (
+    BIAS_CORRECTED_METRICS,
+    get_region,
+)
 
 OUTPUT_DIR = BIAS_CORRECTED_METRICS
 DEFAULT_DATA_YEARS = (2020, 2021, 2022, 2023, 2024)
 
 
-def run_bias_correction(country: str, baseline_member: int, run_type: str, index: str,
-                         metric_name: str, percentile: float = 95, historical_source: str = "xclim",
-                         **metric_kwargs):
+def run_bias_correction(
+    country: str,
+    baseline_member: int,
+    run_type: str,
+    index: str,
+    metric_name: str,
+    percentile: float = 95,
+    historical_source: str = "xclim",
+    **metric_kwargs,
+):
     if historical_source not in ("xclim", "impacttb"):
-        raise ValueError(f"Unknown historical_source={historical_source!r}. Expected 'xclim' or 'impacttb'.")
+        raise ValueError(
+            f"Unknown historical_source={historical_source!r}. Expected 'xclim' or 'impacttb'."
+        )
     if historical_source == "impacttb" and index != "fwi":
-        print(f"[bias_correction] historical_source=impacttb only supports index=fwi (no DSR); "
-              f"got index={index!r}. Skipping.")
+        print(
+            f"[bias_correction] historical_source=impacttb only supports index=fwi (no DSR); "
+            f"got index={index!r}. Skipping."
+        )
         return []
 
     region = get_region(country)
@@ -49,47 +63,73 @@ def run_bias_correction(country: str, baseline_member: int, run_type: str, index
     baseline_start_year = region["baseline_start"]
     baseline_end_year = region["baseline_end"]
 
-    metric_stem = METRICS[metric_name](index, percentile=percentile, **metric_kwargs).output_stem()
-    print(f"[bias_correction] country={country} baseline_member={baseline_member} run_type={run_type} "
-          f"metric={metric_stem} historical_source={historical_source}")
+    metric_stem = METRICS[metric_name](
+        index, percentile=percentile, **metric_kwargs
+    ).output_stem()
+    print(
+        f"[bias_correction] country={country} baseline_member={baseline_member} run_type={run_type} "
+        f"metric={metric_stem} historical_source={historical_source}"
+    )
 
-    hg3_dataset = "hg3_historical_impacttb" if historical_source == "impacttb" else "hg3_historical_xclim"
+    hg3_dataset = (
+        "hg3_historical_impacttb"
+        if historical_source == "impacttb"
+        else "hg3_historical_xclim"
+    )
     era5_years, era5_vals = load_baseline_series(
-        "era5", country, metric_stem, start=baseline_start_year, end=baseline_end_year
+        "era5",
+        country,
+        metric_stem,
+        start=baseline_start_year,
+        end=baseline_end_year,
     )
     hg3_years, hg3_vals = load_baseline_series(
-        hg3_dataset, country, metric_stem, member=baseline_member,
-        start=baseline_start_year, end=baseline_end_year,
+        hg3_dataset,
+        country,
+        metric_stem,
+        member=baseline_member,
+        start=baseline_start_year,
+        end=baseline_end_year,
     )
     if not np.array_equal(era5_years, hg3_years):
         common = sorted(set(era5_years) & set(hg3_years))
         era5_vals = era5_vals[np.isin(era5_years, common)]
         hg3_vals = hg3_vals[np.isin(hg3_years, common)]
         era5_years = np.array(common)
-        print(f"[bias_correction] WARNING: ERA5/HadGEM3-historical baseline years differ; "
-              f"using intersection of {len(common)} years")
+        print(
+            f"[bias_correction] WARNING: ERA5/HadGEM3-historical baseline years differ; "
+            f"using intersection of {len(common)} years"
+        )
 
     baseline_years = era5_years
 
     members = sorted(paired_members(index))
-    print(f"[bias_correction] {len(members)} paired members available for index={index}")
+    print(
+        f"[bias_correction] {len(members)} paired members available for index={index}"
+    )
 
     member_cubes = {}
     load_missing = []
     for member in members:
         try:
-            member_cubes[member] = load_member_cube(index, run_type, member, shape_name)
+            member_cubes[member] = load_member_cube(
+                index, run_type, member, shape_name
+            )
         except MissingMemberError as e:
             load_missing.append((member, str(e)))
-    print(f"[bias_correction] Loaded {len(member_cubes)}/{len(members)} member cubes "
-          f"({len(load_missing)} missing on disk)")
+    print(
+        f"[bias_correction] Loaded {len(member_cubes)}/{len(members)} member cubes "
+        f"({len(load_missing)} missing on disk)"
+    )
 
     out_dir = os.path.join(OUTPUT_DIR, historical_source)
     os.makedirs(out_dir, exist_ok=True)
     written = []
     for data_year in data_years:
         t = baseline_years - data_year
-        fwi0_obs, _delta_obs, _std_obs = find_regression_parameters(era5_vals, t)
+        fwi0_obs, _delta_obs, _std_obs = find_regression_parameters(
+            era5_vals, t
+        )
         fwi0_sim, delta_sim, _std_sim = find_regression_parameters(hg3_vals, t)
 
         col_names = list(member_cubes.keys())
@@ -101,10 +141,19 @@ def run_bias_correction(country: str, baseline_member: int, run_type: str, index
         for col_idx, member in enumerate(col_names):
             cube = member_cubes[member]
             try:
-                scalar = extract_scalar(cube, months, data_year, metric_name, index,
-                                         percentile=percentile, **metric_kwargs)
+                scalar = extract_scalar(
+                    cube,
+                    months,
+                    data_year,
+                    metric_name,
+                    index,
+                    percentile=percentile,
+                    **metric_kwargs,
+                )
                 scalar_log = soft_log(scalar)
-                corrected_log = bias_correct(scalar_log, t, fwi0_obs, delta_sim, fwi0_sim)
+                corrected_log = bias_correct(
+                    scalar_log, t, fwi0_obs, delta_sim, fwi0_sim
+                )
                 corrected = inverse_soft_log(corrected_log)
                 data_matrix[:, col_idx] = corrected
                 successful.append(member)
@@ -126,7 +175,9 @@ def run_bias_correction(country: str, baseline_member: int, run_type: str, index
         written.append(out_path)
 
         total = len(members)
-        print(f"[bias_correction] DATA_YEAR={data_year}: {len(successful)}/{total} successful, "
-              f"{len(missing)}/{total} missing, {len(errors)}/{total} errors -> {out_path}")
+        print(
+            f"[bias_correction] DATA_YEAR={data_year}: {len(successful)}/{total} successful, "
+            f"{len(missing)}/{total} missing, {len(errors)}/{total} errors -> {out_path}"
+        )
 
     return written

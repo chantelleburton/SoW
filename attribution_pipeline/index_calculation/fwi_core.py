@@ -47,7 +47,9 @@ class FWICalculator:
 
     def run(self):
         loader = self.loader
-        print(f"[{loader.name}] Starting FWI calculation. out_dir={loader.out_dir}")
+        print(
+            f"[{loader.name}] Starting FWI calculation. out_dir={loader.out_dir}"
+        )
 
         cluster = LocalCluster(
             n_workers=loader.cluster.n_workers,
@@ -65,19 +67,33 @@ class FWICalculator:
 
             print(f"[{loader.name}] Loading variables...")
             data = loader.load(chunks)
-            tas, pr, ws, hurs = data["tas"], data["pr"], data["sfcWind"], data["hurs"]
+            tas, pr, ws, hurs = (
+                data["tas"],
+                data["pr"],
+                data["sfcWind"],
+                data["hurs"],
+            )
 
             # --- Align all variables on their common time axis ---
             tas, pr, ws, hurs = xr.align(tas, pr, ws, hurs, join="inner")
-            print(f"[{loader.name}] Aligned time dimension: {tas.time.size} steps")
+            print(
+                f"[{loader.name}] Aligned time dimension: {tas.time.size} steps"
+            )
             if tas.time.size == 0:
                 raise ValueError("No overlapping dates after alignment.")
 
             # --- Forward-fill NaNs, clip humidity to a physical range ---
-            for varname, da in [("tas", tas), ("pr", pr), ("ws", ws), ("hurs", hurs)]:
+            for varname, da in [
+                ("tas", tas),
+                ("pr", pr),
+                ("ws", ws),
+                ("hurs", hurs),
+            ]:
                 n_nan = da.isnull().sum().values
                 if n_nan > 0:
-                    print(f"[{loader.name}]  {varname}: {int(n_nan)} NaN values detected, applying forward-fill")
+                    print(
+                        f"[{loader.name}]  {varname}: {int(n_nan)} NaN values detected, applying forward-fill"
+                    )
             tas = tas.ffill(dim="time")
             pr = pr.ffill(dim="time")
             ws = ws.ffill(dim="time")
@@ -95,12 +111,16 @@ class FWICalculator:
             pr = pr.chunk(compute_chunks)
             ws = ws.chunk(compute_chunks)
             hurs = hurs.chunk(compute_chunks)
-            print(f"[{loader.name}] shapes: tas={tas.shape}, pr={pr.shape}, ws={ws.shape}, hurs={hurs.shape}")
+            print(
+                f"[{loader.name}] shapes: tas={tas.shape}, pr={pr.shape}, ws={ws.shape}, hurs={hurs.shape}"
+            )
 
             tas, pr, ws, hurs = client.persist([tas, pr, ws, hurs])
             wait([tas, pr, ws, hurs])
 
-            print(f"[{loader.name}] Computing FWI (cffwis_kwargs={loader.cffwis_kwargs})...")
+            print(
+                f"[{loader.name}] Computing FWI (cffwis_kwargs={loader.cffwis_kwargs})..."
+            )
             dc, dmc, ffmc, isi, bui, fwi = xc.indices.cffwis_indices(
                 tas=tas,
                 pr=pr,
@@ -124,7 +144,11 @@ class FWICalculator:
                 index_map["dsr"] = (dsr, "Daily Severity Rating", "1")
 
             # keep only the requested sub-indices
-            index_map = {k: v for k, v in index_map.items() if k in loader.output_indices}
+            index_map = {
+                k: v
+                for k, v in index_map.items()
+                if k in loader.output_indices
+            }
 
             index_map = loader.trim_output(index_map)
 
@@ -137,5 +161,7 @@ class FWICalculator:
                 client.close(timeout=30)
                 cluster.close(timeout=30)
             except Exception as e:
-                print(f"[{loader.name}] Warning: cluster shutdown raised {e!r} (ignoring)")
+                print(
+                    f"[{loader.name}] Warning: cluster shutdown raised {e!r} (ignoring)"
+                )
         print(f"[{loader.name}] Finished")

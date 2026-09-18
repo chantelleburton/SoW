@@ -23,7 +23,9 @@ class PercentileMetric(BaseMetric):
         cube = _ensure_year_coord(cube)
 
         # 1) percentile over time within each year
-        yr_time_p = cube.aggregated_by("year", iris.analysis.PERCENTILE, percent=self.percentile)
+        yr_time_p = cube.aggregated_by(
+            "year", iris.analysis.PERCENTILE, percent=self.percentile
+        )
         # 2) percentile over space (lat/lon) for each year
         yr_country_p = CountryPercentile(yr_time_p, self.percentile)
 

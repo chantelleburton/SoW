@@ -20,8 +20,14 @@ from attribution_pipeline.pipeline_config import METRICS_OUT_DIR
 _NAN_FILL = 1e-12
 
 
-def load_baseline_series(dataset: str, country: str, metric_stem: str, member=None,
-                          start: int = 1980, end: int = 2013):
+def load_baseline_series(
+    dataset: str,
+    country: str,
+    metric_stem: str,
+    member=None,
+    start: int = 1980,
+    end: int = 2013,
+):
     """Returns (years: np.ndarray[int], soft_log(values): np.ndarray[float]),
     filtered to [start, end] inclusive.
 
@@ -29,7 +35,9 @@ def load_baseline_series(dataset: str, country: str, metric_stem: str, member=No
     member: baseline realisation (1-15) for 'hg3_historical'; ignored for 'era5'.
     """
     member_str = str(member) if member is not None else "1"
-    path = os.path.join(METRICS_OUT_DIR, f"{dataset}_{metric_stem}_{country}_{member_str}.csv")
+    path = os.path.join(
+        METRICS_OUT_DIR, f"{dataset}_{metric_stem}_{country}_{member_str}.csv"
+    )
     if not os.path.exists(path):
         raise FileNotFoundError(
             f"No baseline metric CSV for {dataset}/{country}/{metric_stem}: {path}. "

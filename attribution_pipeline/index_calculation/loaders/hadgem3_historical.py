@@ -21,7 +21,10 @@ import re
 
 import xarray as xr
 
-from attribution_pipeline.index_calculation.config import ClusterConfig, DatasetConfig
+from attribution_pipeline.index_calculation.config import (
+    ClusterConfig,
+    DatasetConfig,
+)
 from attribution_pipeline.index_calculation.loaders._grid_utils import (
     fix_anonymous_time_dim,
     regrid_to_tracer,
@@ -65,7 +68,11 @@ class HadGEM3HistoricalLoader(BaseLoader):
     tld = "/data/users/opatt/HadGEM3-A-N216/historical"
 
     def __init__(self, member=None, block_start_year=None, out_dir=None):
-        member_num = int(member if member is not None else os.environ.get("CYLC_TASK_PARAM_member", "1"))
+        member_num = int(
+            member
+            if member is not None
+            else os.environ.get("CYLC_TASK_PARAM_member", "1")
+        )
         self.member = f"r1i1p{member_num}"
 
         self.block_start_year = int(
@@ -73,7 +80,9 @@ class HadGEM3HistoricalLoader(BaseLoader):
             if block_start_year is not None
             else os.environ.get("CYLC_TASK_PARAM_block_start_year", "1970")
         )
-        self.block_end_year = min(self.block_start_year + BLOCK_LENGTH - 1, END_YEAR)
+        self.block_end_year = min(
+            self.block_start_year + BLOCK_LENGTH - 1, END_YEAR
+        )
         # lead-in years loaded for spin-up but discarded before writing
         self.data_start_year = self.block_start_year - SPIN_UP_YEARS
 
@@ -103,18 +112,33 @@ class HadGEM3HistoricalLoader(BaseLoader):
 
     def _load_variable(self, var_name, cfg, chunks):
         var_dir = os.path.join(self.tld, cfg["dir"])
-        pattern = os.path.join(var_dir, f"{var_name}_day_HadGEM3-A-N216_historical_{self.member}_*.nc")
+        pattern = os.path.join(
+            var_dir,
+            f"{var_name}_day_HadGEM3-A-N216_historical_{self.member}_*.nc",
+        )
         files = sorted(glob.glob(pattern))
         assert len(files) > 0, f"No files found for {var_name}: {pattern}"
 
-        files = [f for f in files if _decade_file_overlaps_range(f, self.data_start_year, self.block_end_year)]
+        files = [
+            f
+            for f in files
+            if _decade_file_overlaps_range(
+                f, self.data_start_year, self.block_end_year
+            )
+        ]
         assert len(files) > 0, (
             f"No files for {var_name} in range {self.data_start_year}..{self.block_end_year}: {pattern}"
         )
-        print(f"[{self.name}]  {var_name}: {len(files)} files from {os.path.basename(files[0])} to {os.path.basename(files[-1])}")
+        print(
+            f"[{self.name}]  {var_name}: {len(files)} files from {os.path.basename(files[0])} to {os.path.basename(files[-1])}"
+        )
 
         da = xr.open_mfdataset(
-            files, chunks=chunks, combine="nested", concat_dim="time", preprocess=fix_anonymous_time_dim
+            files,
+            chunks=chunks,
+            combine="nested",
+            concat_dim="time",
+            preprocess=fix_anonymous_time_dim,
         )[cfg["nc_var"]]
         da = da.sortby("time").drop_duplicates("time")
 
@@ -136,18 +160,32 @@ class HadGEM3HistoricalLoader(BaseLoader):
 
     def load(self, chunks):
         # source files use lat/lon; translate the requested chunk spec for open_mfdataset
-        native_chunks = {"lat": chunks["latitude"], "lon": chunks["longitude"], "time": -1}
+        native_chunks = {
+            "lat": chunks["latitude"],
+            "lon": chunks["longitude"],
+            "time": -1,
+        }
 
         print(f"[{self.name}] Loading variables...")
-        tas = self._load_variable("tasmax", VAR_CONFIG["tasmax"], native_chunks)
+        tas = self._load_variable(
+            "tasmax", VAR_CONFIG["tasmax"], native_chunks
+        )
         pr = self._load_variable("pr", VAR_CONFIG["pr"], native_chunks)
-        ws = self._load_variable("sfcWind", VAR_CONFIG["sfcWind"], native_chunks)
+        ws = self._load_variable(
+            "sfcWind", VAR_CONFIG["sfcWind"], native_chunks
+        )
         hurs = self._load_variable("hurs", VAR_CONFIG["hurs"], native_chunks)
         hurs = hurs.clip(min=0, max=100)
 
         print(f"[{self.name}] Regridding sfcWind onto tracer grid...")
         ws = regrid_to_tracer(ws, tas)
-        ws = ws.chunk({"latitude": self.spatial_chunk, "longitude": self.spatial_chunk, "time": -1})
+        ws = ws.chunk(
+            {
+                "latitude": self.spatial_chunk,
+                "longitude": self.spatial_chunk,
+                "time": -1,
+            }
+        )
         ws.attrs["units"] = VAR_CONFIG["sfcWind"]["units"]
 
         return {"tas": tas, "pr": pr, "sfcWind": ws, "hurs": hurs}
@@ -155,10 +193,16 @@ class HadGEM3HistoricalLoader(BaseLoader):
     def trim_output(self, index_map):
         output_start = f"{self.block_start_year}-01-01"
         output_end = f"{self.block_end_year}-12-30"
-        print(f"[{self.name}] Discarding spin-up ({self.data_start_year}-{self.block_start_year - 1}); "
-              f"trimming output to {output_start} .. {output_end}...")
+        print(
+            f"[{self.name}] Discarding spin-up ({self.data_start_year}-{self.block_start_year - 1}); "
+            f"trimming output to {output_start} .. {output_end}..."
+        )
         return {
-            idx_name: (da.sel(time=slice(output_start, output_end)), long_name, units)
+            idx_name: (
+                da.sel(time=slice(output_start, output_end)),
+                long_name,
+                units,
+            )
             for idx_name, (da, long_name, units) in index_map.items()
         }
 
@@ -174,13 +218,23 @@ class HadGEM3HistoricalLoader(BaseLoader):
                 da_year = da.sel(time=slice(f"{y}-01-01", f"{y}-12-30"))
                 n_times_year = da_year.sizes["time"]
                 if n_times_year == 0:
-                    print(f"[{self.name}]  Skipping {idx_name} {y}: no data in range")
+                    print(
+                        f"[{self.name}]  Skipping {idx_name} {y}: no data in range"
+                    )
                     continue
                 out_path = os.path.join(
-                    self.out_dir, f"hadgem3a_{idx_name}_historical_{self.member}_{y}.nc"
+                    self.out_dir,
+                    f"hadgem3a_{idx_name}_historical_{self.member}_{y}.nc",
                 )
-                chunksizes = (n_times_year, self.spatial_chunk, self.spatial_chunk)
-                enc = {idx_name: {"chunksizes": chunksizes}, "time": {"units": TIME_UNITS}}
+                chunksizes = (
+                    n_times_year,
+                    self.spatial_chunk,
+                    self.spatial_chunk,
+                )
+                enc = {
+                    idx_name: {"chunksizes": chunksizes},
+                    "time": {"units": TIME_UNITS},
+                }
                 ds = xr.Dataset({idx_name: da_year})
                 # Source files carry 'bounds' attrs on time/lat/lon (time_bnds,
                 # lat_bnds, lon_bnds) referencing bounds variables that are never
@@ -191,4 +245,6 @@ class HadGEM3HistoricalLoader(BaseLoader):
                     if coord_name in ds.coords:
                         ds[coord_name].attrs.pop("bounds", None)
                 ds.to_netcdf(out_path, encoding=enc)
-                print(f"[{self.name}] Saved {idx_name} {y} ({n_times_year} days) to {out_path}")
+                print(
+                    f"[{self.name}] Saved {idx_name} {y} ({n_times_year} days) to {out_path}"
+                )

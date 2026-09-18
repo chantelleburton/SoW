@@ -4,17 +4,27 @@ dataset-agnostic)."""
 import xarray as xr
 
 
-def regrid_to_tracer(da: xr.DataArray, target: xr.DataArray, lat_name="latitude", lon_name="longitude"):
+def regrid_to_tracer(
+    da: xr.DataArray,
+    target: xr.DataArray,
+    lat_name="latitude",
+    lon_name="longitude",
+):
     """Regrid a variable on the staggered wind grid onto the tracer grid via linear
     interpolation. Longitude is padded periodically so the wrap-around column is not NaN."""
     lat, lon = da[lat_name], da[lon_name]
     if lat.equals(target[lat_name]) and lon.equals(target[lon_name]):
         return da
-    left = da.isel({lon_name: [-1]}).assign_coords({lon_name: [lon.values[-1] - 360.0]})
-    right = da.isel({lon_name: [0]}).assign_coords({lon_name: [lon.values[0] + 360.0]})
+    left = da.isel({lon_name: [-1]}).assign_coords(
+        {lon_name: [lon.values[-1] - 360.0]}
+    )
+    right = da.isel({lon_name: [0]}).assign_coords(
+        {lon_name: [lon.values[0] + 360.0]}
+    )
     da_ext = xr.concat([left, da, right], dim=lon_name)
     return da_ext.interp(
-        **{lat_name: target[lat_name], lon_name: target[lon_name]}, method="linear"
+        **{lat_name: target[lat_name], lon_name: target[lon_name]},
+        method="linear",
     )
 
 

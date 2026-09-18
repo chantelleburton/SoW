@@ -32,9 +32,15 @@ LOADERS = {
 
 
 def main():
-    dataset = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("CYLC_TASK_PARAM_dataset")
+    dataset = (
+        sys.argv[1]
+        if len(sys.argv) > 1
+        else os.environ.get("CYLC_TASK_PARAM_dataset")
+    )
     if dataset not in LOADERS:
-        raise SystemExit(f"Unknown/missing dataset {dataset!r}. Valid options: {sorted(LOADERS)}")
+        raise SystemExit(
+            f"Unknown/missing dataset {dataset!r}. Valid options: {sorted(LOADERS)}"
+        )
 
     loader = LOADERS[dataset]()
     FWICalculator(loader).run()

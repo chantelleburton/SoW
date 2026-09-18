@@ -19,7 +19,10 @@ from utils.cubefuncs import (
     constrain_cube_to_months,
 )
 
-from attribution_pipeline.pipeline_config import RAW_FWI_HG3_ATTRIBUTION, SHAPEFILE
+from attribution_pipeline.pipeline_config import (
+    RAW_FWI_HG3_ATTRIBUTION,
+    SHAPEFILE,
+)
 
 RAW_FWI_DIR = RAW_FWI_HG3_ATTRIBUTION
 
@@ -52,7 +55,7 @@ def list_available_members(index: str, run_type: str) -> set:
     members = set()
     for f in glob.glob(pattern):
         stem = os.path.basename(f)[: -len(".nc")]
-        members.add(stem[len(prefix):])
+        members.add(stem[len(prefix) :])
     return members
 
 
@@ -60,7 +63,9 @@ def paired_members(index: str) -> set:
     """Members with an output file for BOTH hist and histnat -- the strictly
     paired ensemble (mirrors reduced_set_risk_ratio.py's get_paired_members,
     but checked against our own FWI-creation output rather than raw dirs)."""
-    return list_available_members(index, "hist") & list_available_members(index, "histnat")
+    return list_available_members(index, "hist") & list_available_members(
+        index, "histnat"
+    )
 
 
 def load_member_cube(index: str, run_type: str, member: str, shape_name: str):
@@ -70,7 +75,9 @@ def load_member_cube(index: str, run_type: str, member: str, shape_name: str):
     validate_member_window() for a year/month-constrained + validated view."""
     path = _member_file(index, run_type, member)
     if not os.path.exists(path):
-        raise MissingMemberError(f"No FWI-creation output for member {member}: {path}")
+        raise MissingMemberError(
+            f"No FWI-creation output for member {member}: {path}"
+        )
 
     cube = iris.load_cube(path, iris.NameConstraint(var_name=index))
     for coord_name in ("year", "season_year"):
@@ -84,6 +91,7 @@ def _expected_days_in_month(year: int, month: int, calendar: str) -> int:
     if calendar == "360_day":
         return 30
     import calendar as cal
+
     return cal.monthrange(year, month)[1]
 
 
@@ -99,13 +107,17 @@ def validate_member_window(cube, data_year: int, months):
     yr_cube = constrain_cube_to_months(yr_cube, months)
 
     calendar = yr_cube.coord("time").units.calendar
-    expected = sum(_expected_days_in_month(data_year, m, calendar) for m in months)
+    expected = sum(
+        _expected_days_in_month(data_year, m, calendar) for m in months
+    )
     actual = yr_cube.coord("time").shape[0]
     if actual != expected:
         raise InvalidMemberDataError(
             f"Expected {expected} days for {data_year}/{months} (calendar={calendar}), got {actual}"
         )
     if not np.any(np.isfinite(yr_cube.data)):
-        raise InvalidMemberDataError(f"All-NaN/non-finite data for {data_year}/{months}")
+        raise InvalidMemberDataError(
+            f"All-NaN/non-finite data for {data_year}/{months}"
+        )
 
     return yr_cube

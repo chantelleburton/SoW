@@ -21,33 +21,52 @@ from attribution_pipeline.bias_correction.member_loader import (
 )
 from attribution_pipeline.bias_correction.metric_extract import extract_scalar
 from attribution_pipeline.metrics.run_metrics import METRICS
-from attribution_pipeline.pipeline_config import UNCORRECTED_METRICS, get_region
+from attribution_pipeline.pipeline_config import (
+    UNCORRECTED_METRICS,
+    get_region,
+)
 
 OUTPUT_DIR = UNCORRECTED_METRICS
 
 
-def run_uncorrected_extraction(country: str, run_type: str, index: str, metric_name: str,
-                                percentile: float = 95, **metric_kwargs):
+def run_uncorrected_extraction(
+    country: str,
+    run_type: str,
+    index: str,
+    metric_name: str,
+    percentile: float = 95,
+    **metric_kwargs,
+):
     region = get_region(country)
     shape_name = region["shape_name"]
     months = region["months"]
     data_years = region["bias_correction_years"]
 
-    metric_stem = METRICS[metric_name](index, percentile=percentile, **metric_kwargs).output_stem()
-    print(f"[uncorrected] country={country} run_type={run_type} metric={metric_stem}")
+    metric_stem = METRICS[metric_name](
+        index, percentile=percentile, **metric_kwargs
+    ).output_stem()
+    print(
+        f"[uncorrected] country={country} run_type={run_type} metric={metric_stem}"
+    )
 
     members = sorted(paired_members(index))
-    print(f"[uncorrected] {len(members)} paired members available for index={index}")
+    print(
+        f"[uncorrected] {len(members)} paired members available for index={index}"
+    )
 
     member_cubes = {}
     load_missing = []
     for member in members:
         try:
-            member_cubes[member] = load_member_cube(index, run_type, member, shape_name)
+            member_cubes[member] = load_member_cube(
+                index, run_type, member, shape_name
+            )
         except MissingMemberError as e:
             load_missing.append((member, str(e)))
-    print(f"[uncorrected] Loaded {len(member_cubes)}/{len(members)} member cubes "
-          f"({len(load_missing)} missing on disk)")
+    print(
+        f"[uncorrected] Loaded {len(member_cubes)}/{len(members)} member cubes "
+        f"({len(load_missing)} missing on disk)"
+    )
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     written = []
@@ -61,8 +80,15 @@ def run_uncorrected_extraction(country: str, run_type: str, index: str, metric_n
         for member in col_names:
             cube = member_cubes[member]
             try:
-                row[member] = extract_scalar(cube, months, data_year, metric_name, index,
-                                              percentile=percentile, **metric_kwargs)
+                row[member] = extract_scalar(
+                    cube,
+                    months,
+                    data_year,
+                    metric_name,
+                    index,
+                    percentile=percentile,
+                    **metric_kwargs,
+                )
                 successful.append(member)
             except MissingMemberError as e:
                 missing.append((member, str(e)))
@@ -80,7 +106,9 @@ def run_uncorrected_extraction(country: str, run_type: str, index: str, metric_n
         written.append(out_path)
 
         total = len(members)
-        print(f"[uncorrected] DATA_YEAR={data_year}: {len(successful)}/{total} successful, "
-              f"{len(missing)}/{total} missing, {len(errors)}/{total} errors -> {out_path}")
+        print(
+            f"[uncorrected] DATA_YEAR={data_year}: {len(successful)}/{total} successful, "
+            f"{len(missing)}/{total} missing, {len(errors)}/{total} errors -> {out_path}"
+        )
 
     return written

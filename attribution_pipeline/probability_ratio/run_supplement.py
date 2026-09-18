@@ -20,7 +20,9 @@ Usage (mirrors the CYLC_TASK_PARAM_* convention used elsewhere in the repo):
 import os
 
 from attribution_pipeline.pipeline_config import EXPORTS
-from attribution_pipeline.probability_ratio.plotting import generate_all_supplements
+from attribution_pipeline.probability_ratio.plotting import (
+    generate_all_supplements,
+)
 
 DEFAULT_OUTPUT_DIR = EXPORTS
 
@@ -28,10 +30,21 @@ DEFAULT_OUTPUT_DIR = EXPORTS
 if __name__ == "__main__":
     index = os.environ.get("CYLC_TASK_PARAM_index", "fwi")
     metric_name = os.environ.get("CYLC_TASK_PARAM_metric_name", "p95")
-    historical_source = os.environ.get("CYLC_TASK_PARAM_historical_source", "xclim")
+    historical_source = os.environ.get(
+        "CYLC_TASK_PARAM_historical_source", "xclim"
+    )
     percentile = float(os.environ.get("CYLC_TASK_PARAM_percentile", "95"))
-    paired_only = os.environ.get("CYLC_TASK_PARAM_paired_only", "true").lower() != "false"
+    paired_only = (
+        os.environ.get("CYLC_TASK_PARAM_paired_only", "true").lower()
+        != "false"
+    )
 
     out_dir = DEFAULT_OUTPUT_DIR
-    generate_all_supplements(index, metric_name, out_dir, percentile=percentile,
-                              historical_source=historical_source, paired_only=paired_only)
+    generate_all_supplements(
+        index,
+        metric_name,
+        out_dir,
+        percentile=percentile,
+        historical_source=historical_source,
+        paired_only=paired_only,
+    )

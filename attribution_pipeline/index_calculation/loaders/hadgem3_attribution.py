@@ -11,7 +11,10 @@ import os
 
 import xarray as xr
 
-from attribution_pipeline.index_calculation.config import ClusterConfig, DatasetConfig
+from attribution_pipeline.index_calculation.config import (
+    ClusterConfig,
+    DatasetConfig,
+)
 from attribution_pipeline.index_calculation.loaders._grid_utils import (
     fix_anonymous_time_dim,
     regrid_to_tracer,
@@ -38,7 +41,6 @@ VAR_CONFIG = {
 TIME_UNITS = "days since 1900-01-01"
 
 
-
 def _token_overlaps_window(month_token):
     """True if a filename month token ('YYYYMM' or 'YYYYMM-YYYYMM') overlaps the window."""
     if "-" in month_token:
@@ -58,12 +60,18 @@ class HadGEM3AttributionLoader(BaseLoader):
     tld = "/data/users/opatt/HadGEM3-A-N216"
 
     def __init__(self, run_type=None, member=None, out_dir=None):
-        self.run_type = (run_type or os.environ.get("CYLC_TASK_PARAM_run_type", "historicalExt")).strip()
-        self.member = (member or os.environ.get("CYLC_TASK_PARAM_member", "r001i1p1")).strip()
+        self.run_type = (
+            run_type
+            or os.environ.get("CYLC_TASK_PARAM_run_type", "historicalExt")
+        ).strip()
+        self.member = (
+            member or os.environ.get("CYLC_TASK_PARAM_member", "r001i1p1")
+        ).strip()
 
         cfg = DatasetConfig(
             name=self.name,
-            out_dir=out_dir or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution",
+            out_dir=out_dir
+            or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution",
             spatial_chunk=30,
             cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=5),
             cffwis_kwargs={"initial_start_up": True},
@@ -78,16 +86,33 @@ class HadGEM3AttributionLoader(BaseLoader):
 
     def _load_variable(self, var_name, cfg, chunks):
         var_dir = os.path.join(self.tld, self.run_type, cfg["dir"])
-        pattern = os.path.join(var_dir, f"{var_name}_day_HadGEM3-A-N216_{self.run_type}_{self.member}_*.nc")
+        pattern = os.path.join(
+            var_dir,
+            f"{var_name}_day_HadGEM3-A-N216_{self.run_type}_{self.member}_*.nc",
+        )
         files = sorted(glob.glob(pattern))
         assert len(files) > 0, f"No files found for {var_name}: {pattern}"
 
-        files = [f for f in files if _token_overlaps_window(os.path.basename(f).rsplit("_", 1)[-1].replace(".nc", ""))]
-        assert len(files) > 0, f"No files for {var_name} in window {WINDOW_START_MONTH}..{WINDOW_END_MONTH}: {pattern}"
-        print(f"[{self.name}]  {var_name}: {len(files)} files from {os.path.basename(files[0])} to {os.path.basename(files[-1])}")
+        files = [
+            f
+            for f in files
+            if _token_overlaps_window(
+                os.path.basename(f).rsplit("_", 1)[-1].replace(".nc", "")
+            )
+        ]
+        assert len(files) > 0, (
+            f"No files for {var_name} in window {WINDOW_START_MONTH}..{WINDOW_END_MONTH}: {pattern}"
+        )
+        print(
+            f"[{self.name}]  {var_name}: {len(files)} files from {os.path.basename(files[0])} to {os.path.basename(files[-1])}"
+        )
 
         da = xr.open_mfdataset(
-            files, chunks=chunks, combine="nested", concat_dim="time", preprocess=fix_anonymous_time_dim
+            files,
+            chunks=chunks,
+            combine="nested",
+            concat_dim="time",
+            preprocess=fix_anonymous_time_dim,
         )[cfg["nc_var"]]
         da = da.sortby("time").drop_duplicates("time")
 
@@ -113,10 +138,18 @@ class HadGEM3AttributionLoader(BaseLoader):
         # sfcWind is on a staggered (velocity) grid; regrid onto the tracer grid.
         print(f"[{self.name}] Regridding sfcWind onto tracer grid...")
         ws = regrid_to_tracer(ws, tas)
-        ws = ws.chunk({"latitude": self.spatial_chunk, "longitude": self.spatial_chunk, "time": -1})
+        ws = ws.chunk(
+            {
+                "latitude": self.spatial_chunk,
+                "longitude": self.spatial_chunk,
+                "time": -1,
+            }
+        )
         ws.attrs["units"] = VAR_CONFIG["sfcWind"]["units"]
 
-        print(f"[{self.name}] Clipping all variables to {WINDOW_START} .. {WINDOW_END}...")
+        print(
+            f"[{self.name}] Clipping all variables to {WINDOW_START} .. {WINDOW_END}..."
+        )
         tas = tas.sel(time=slice(WINDOW_START, WINDOW_END))
         pr = pr.sel(time=slice(WINDOW_START, WINDOW_END))
         ws = ws.sel(time=slice(WINDOW_START, WINDOW_END))
@@ -125,7 +158,11 @@ class HadGEM3AttributionLoader(BaseLoader):
         return {"tas": tas, "pr": pr, "sfcWind": ws, "hurs": hurs}
 
     def write(self, index_map):
-        chunk_by_dim = {"time": 365, "latitude": self.spatial_chunk, "longitude": self.spatial_chunk}
+        chunk_by_dim = {
+            "time": 365,
+            "latitude": self.spatial_chunk,
+            "longitude": self.spatial_chunk,
+        }
         for idx_name, (da, long_name, units) in index_map.items():
             da = da.rename(idx_name)
             da.attrs = {"long_name": long_name, "units": units}
@@ -133,9 +170,18 @@ class HadGEM3AttributionLoader(BaseLoader):
             da = da.drop_vars([c for c in ("height",) if c in da.coords])
             da = da.transpose("time", "latitude", "longitude")
 
-            out_path = os.path.join(self.out_dir, f"hadgem3a_{idx_name}_{self.run_type}_{self.member}.nc")
-            chunksizes = tuple(min(chunk_by_dim.get(dim, da.sizes[dim]), da.sizes[dim]) for dim in da.dims)
-            enc = {idx_name: {"chunksizes": chunksizes}, "time": {"units": TIME_UNITS}}
+            out_path = os.path.join(
+                self.out_dir,
+                f"hadgem3a_{idx_name}_{self.run_type}_{self.member}.nc",
+            )
+            chunksizes = tuple(
+                min(chunk_by_dim.get(dim, da.sizes[dim]), da.sizes[dim])
+                for dim in da.dims
+            )
+            enc = {
+                idx_name: {"chunksizes": chunksizes},
+                "time": {"units": TIME_UNITS},
+            }
             ds = xr.Dataset({idx_name: da})
             # Source files carry a 'bounds' attr on time (time_bnds) referencing a
             # bounds variable that is never written out here -- leaving it in

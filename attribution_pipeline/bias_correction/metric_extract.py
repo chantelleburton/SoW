@@ -16,12 +16,21 @@ since CumulativeMetric needs antecedent context across the year boundary and
 PercentileMetric/ExtremeWindowMetric constrain internally.
 """
 
-from attribution_pipeline.bias_correction.member_loader import validate_member_window
+from attribution_pipeline.bias_correction.member_loader import (
+    validate_member_window,
+)
 from attribution_pipeline.metrics.run_metrics import METRICS
 
 
-def extract_scalar(cube, months, data_year: int, metric_name: str, index: str,
-                    percentile: float = 95, **metric_kwargs) -> float:
+def extract_scalar(
+    cube,
+    months,
+    data_year: int,
+    metric_name: str,
+    index: str,
+    percentile: float = 95,
+    **metric_kwargs,
+) -> float:
     """cube: full-window, shapefile-masked member cube (from
     member_loader.load_member_cube). Returns a single scalar value for
     data_year/months."""
@@ -36,5 +45,7 @@ def extract_scalar(cube, months, data_year: int, metric_name: str, index: str,
     years, values = metric.compute(cube, months)
     years = list(years)
     if data_year not in years:
-        raise ValueError(f"No {metric_name} value for year {data_year}; available years: {years}")
+        raise ValueError(
+            f"No {metric_name} value for year {data_year}; available years: {years}"
+        )
     return float(values[years.index(data_year)])

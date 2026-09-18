@@ -31,7 +31,9 @@ def spatial_reduce(cube, method: str, percentile: float = 95):
         return CountryMax(cube)
     if method in ("p95", "percentile"):
         return CountryPercentile(cube, percentile)
-    raise ValueError(f"Unknown spatial_reduction method: {method!r}. Expected 'mean', 'max', or 'p95'.")
+    raise ValueError(
+        f"Unknown spatial_reduction method: {method!r}. Expected 'mean', 'max', or 'p95'."
+    )
 
 
 class BaseMetric(ABC):

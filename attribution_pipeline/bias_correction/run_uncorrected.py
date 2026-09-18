@@ -17,7 +17,9 @@ uncorrected_metrics/.
 
 import os
 
-from attribution_pipeline.bias_correction.uncorrected import run_uncorrected_extraction
+from attribution_pipeline.bias_correction.uncorrected import (
+    run_uncorrected_extraction,
+)
 
 if __name__ == "__main__":
     country = os.environ.get("CYLC_TASK_PARAM_country", "Iberia")
@@ -30,7 +32,15 @@ if __name__ == "__main__":
     if os.environ.get("CYLC_TASK_PARAM_window"):
         metric_kwargs["window"] = os.environ["CYLC_TASK_PARAM_window"]
     if os.environ.get("CYLC_TASK_PARAM_spatial_reduction"):
-        metric_kwargs["spatial_reduction"] = os.environ["CYLC_TASK_PARAM_spatial_reduction"]
+        metric_kwargs["spatial_reduction"] = os.environ[
+            "CYLC_TASK_PARAM_spatial_reduction"
+        ]
 
-    run_uncorrected_extraction(country, run_type, index, metric_name,
-                                percentile=percentile, **metric_kwargs)
+    run_uncorrected_extraction(
+        country,
+        run_type,
+        index,
+        metric_name,
+        percentile=percentile,
+        **metric_kwargs,
+    )

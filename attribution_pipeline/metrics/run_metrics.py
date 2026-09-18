@@ -42,10 +42,16 @@ from attribution_pipeline.pipeline_config import (
 # --- Metric registry -------------------------------------------------------
 # metric name (as passed via CYLC_TASK_PARAM_metric) -> factory(index, **kwargs)
 METRICS = {
-    "p95": lambda index, **kw: PercentileMetric(index, percentile=float(kw.get("percentile", 95))),
-    "7x": lambda index, **kw: ExtremeWindowMetric(index, window=int(kw.get("window", 7))),
+    "p95": lambda index, **kw: PercentileMetric(
+        index, percentile=float(kw.get("percentile", 95))
+    ),
+    "7x": lambda index, **kw: ExtremeWindowMetric(
+        index, window=int(kw.get("window", 7))
+    ),
     "cum": lambda index, **kw: CumulativeMetric(
-        index, window=int(kw.get("window", 360)), spatial_reduction=kw.get("spatial_reduction", "mean")
+        index,
+        window=int(kw.get("window", 360)),
+        spatial_reduction=kw.get("spatial_reduction", "mean"),
     ),
 }
 
@@ -58,7 +64,10 @@ _ALLOWED_COORDS = {"time", "latitude", "longitude", "year", "season_year"}
 
 def _validate_cube(cube: iris.cube.Cube, dataset: str, stage: str) -> None:
     context = f"{dataset} ({stage})"
-    print(context + f": cube shape={cube.shape}, coords={sorted(c.name() for c in cube.coords())}")
+    print(
+        context
+        + f": cube shape={cube.shape}, coords={sorted(c.name() for c in cube.coords())}"
+    )
     time_coords = cube.coords("time")
     if len(time_coords) != 1:
         raise RuntimeError(
@@ -97,15 +106,18 @@ def _validate_cube(cube: iris.cube.Cube, dataset: str, stage: str) -> None:
         expected_days = (last_date - first_date).days + 1
         actual_days = len(points)
         if actual_days > expected_days or actual_days < 0.5 * expected_days:
-            print(f"[{context}] WARNING: implausible day count -- {actual_days} timesteps "
-                  f"spanning {first_date} to {last_date} ({calendar} calendar, "
-                  f"~{expected_days} days expected).")
+            print(
+                f"[{context}] WARNING: implausible day count -- {actual_days} timesteps "
+                f"spanning {first_date} to {last_date} ({calendar} calendar, "
+                f"~{expected_days} days expected)."
+            )
 
 
 # --- Dataset file resolvers --------------------------------------------------
 # Each resolver returns a single concatenated iris cube spanning the full
 # available period for (index, member/run_type). Extend this dict to plug in
 # new datasets; the metric/CSV-writing code below is dataset-agnostic.
+
 
 def _concatenate_yearly_cubes(cubes: iris.cube.CubeList) -> iris.cube.Cube:
     """Concatenate per-year cubes loaded from separate NetCDF files.
@@ -137,18 +149,27 @@ def _concatenate_yearly_cubes(cubes: iris.cube.CubeList) -> iris.cube.Cube:
     return cubes.concatenate_cube()
 
 
-def _resolve_hg3_historical_xclim(index: str, member: str, **kw) -> iris.cube.Cube:
+def _resolve_hg3_historical_xclim(
+    index: str, member: str, **kw
+) -> iris.cube.Cube:
     """HadGEM3HistoricalLoader.write() (attribution_pipeline/index_calculation/loaders/hadgem3_historical.py)
     writes one file per calendar year (segmented ~10-year blocks, run
     independently with overwintering disabled -- see that module's docstring):
     hadgem3a_{index}_historical_{member}_{year}.nc.
     """
-    pattern = os.path.join(RAW_FWI_HG3_HISTORICAL, f"hadgem3a_{index}_historical_r1i1p{member}_*.nc")
+    pattern = os.path.join(
+        RAW_FWI_HG3_HISTORICAL,
+        f"hadgem3a_{index}_historical_r1i1p{member}_*.nc",
+    )
     files = sorted(glob.glob(pattern))
     if not files:
-        raise FileNotFoundError(f"No HadGEM3 historical {index} files found: {pattern}")
+        raise FileNotFoundError(
+            f"No HadGEM3 historical {index} files found: {pattern}"
+        )
 
-    cubes = iris.cube.CubeList(iris.load_cube(f, iris.NameConstraint(var_name=index)) for f in files)
+    cubes = iris.cube.CubeList(
+        iris.load_cube(f, iris.NameConstraint(var_name=index)) for f in files
+    )
     for coord_name in ("year", "season_year"):
         for cube in cubes:
             if cube.coords(coord_name):
@@ -161,8 +182,11 @@ def _resolve_hg3_historical_xclim(index: str, member: str, **kw) -> iris.cube.Cu
 # variable_id="fwi" attribute), unlike xclim's output where var_name=='fwi'
 # directly, so iris.NameConstraint(var_name=index) won't match it.
 _IMPACTTB_FWI_NAMES = {
-    "fwi", "Fire Weather Index", "fire_weather_index",
-    "Canadian Fire Weather Index", "canadian_fire_weather_index",
+    "fwi",
+    "Fire Weather Index",
+    "fire_weather_index",
+    "Canadian Fire Weather Index",
+    "canadian_fire_weather_index",
 }
 
 
@@ -171,13 +195,22 @@ def _load_impacttb_fwi_cube(fpath: str) -> iris.cube.Cube:
     FWI sub-indices, matching by var_name/name()/long_name/standard_name."""
     cubes = iris.load(fpath)
     for c in cubes:
-        names = {c.var_name, c.name(), getattr(c, "long_name", None), c.standard_name}
+        names = {
+            c.var_name,
+            c.name(),
+            getattr(c, "long_name", None),
+            c.standard_name,
+        }
         if names & _IMPACTTB_FWI_NAMES:
             return c
-    raise ValueError(f"No FWI cube found in {fpath}. Available: {[c.name() for c in cubes]}")
+    raise ValueError(
+        f"No FWI cube found in {fpath}. Available: {[c.name() for c in cubes]}"
+    )
 
 
-def _resolve_hg3_historical_impacttb(index: str, member: str, **kw) -> iris.cube.Cube:
+def _resolve_hg3_historical_impacttb(
+    index: str, member: str, **kw
+) -> iris.cube.Cube:
     """Impact-toolbox HadGEM3-A historical FWI: monthly 'gwl' files (FWI only,
     no DSR), member r1i1p1..15, 1980-2013, 360_day calendar (confirmed via
     ncdump), time units 'days since 1960-01-01' (differs from xclim's
@@ -198,13 +231,22 @@ def _resolve_hg3_historical_impacttb(index: str, member: str, **kw) -> iris.cube
     )
     files = sorted(glob.glob(pattern))
     if not files:
-        raise FileNotFoundError(f"No impact-toolbox HadGEM3 historical FWI files found: {pattern}")
+        raise FileNotFoundError(
+            f"No impact-toolbox HadGEM3 historical FWI files found: {pattern}"
+        )
 
     cubes = iris.cube.CubeList()
     reference_units = None
     for f in files:
         cube = _load_impacttb_fwi_cube(f)
-        for coord_name in ("month", "month_number", "season", "season_year", "year", "height"):
+        for coord_name in (
+            "month",
+            "month_number",
+            "season",
+            "season_year",
+            "year",
+            "height",
+        ):
             if cube.coords(coord_name):
                 cube.remove_coord(coord_name)
         time_coord = cube.coord("time")
@@ -228,7 +270,9 @@ def _resolve_hg3_historical_impacttb(index: str, member: str, **kw) -> iris.cube
     return cube
 
 
-def _resolve_era5(index: str, member: str = None, run_label: str = None, **kw) -> iris.cube.Cube:
+def _resolve_era5(
+    index: str, member: str = None, run_label: str = None, **kw
+) -> iris.cube.Cube:
     """ERA5Loader.write() (attribution_pipeline/index_calculation/loaders/era5.py) writes one file
     per calendar year: era5_{index}_{run_label}_{year}.nc, where run_label
     encodes the wind/RH statistic combo (e.g. 'Mean_RH_Mean_Wind'). ERA5 has no
@@ -242,7 +286,9 @@ def _resolve_era5(index: str, member: str = None, run_label: str = None, **kw) -
     if not files:
         raise FileNotFoundError(f"No ERA5 {index} files found: {pattern}")
 
-    cubes = iris.cube.CubeList(iris.load_cube(f, iris.NameConstraint(var_name=index)) for f in files)
+    cubes = iris.cube.CubeList(
+        iris.load_cube(f, iris.NameConstraint(var_name=index)) for f in files
+    )
     for coord_name in ("year", "season_year"):
         for cube in cubes:
             if cube.coords(coord_name):
@@ -250,18 +296,26 @@ def _resolve_era5(index: str, member: str = None, run_label: str = None, **kw) -
     return _concatenate_yearly_cubes(cubes)
 
 
-def _resolve_hg3_attribution(index: str, member: str, run_type: str = "historicalExt", **kw) -> iris.cube.Cube:
+def _resolve_hg3_attribution(
+    index: str, member: str, run_type: str = "historicalExt", **kw
+) -> iris.cube.Cube:
     """HadGEM3AttributionLoader.write() (attribution_pipeline/index_calculation/loaders/hadgem3_attribution.py)
     writes one file per (run_type, member) spanning the full 2019-2024 window:
     hadgem3a_{index}_{run_type}_{member}.nc. `run_type` is 'historicalExt'
     (factual) or 'historicalNatExt' (counterfactual); pass via
     CYLC_TASK_PARAM_run_type.
     """
-    pattern = os.path.join(RAW_FWI_HG3_ATTRIBUTION, f"hadgem3a_{index}_{run_type}_{member}.nc")
+    pattern = os.path.join(
+        RAW_FWI_HG3_ATTRIBUTION, f"hadgem3a_{index}_{run_type}_{member}.nc"
+    )
     files = sorted(glob.glob(pattern))
     if not files:
-        raise FileNotFoundError(f"No HadGEM3 attribution {index} file found: {pattern}")
-    assert len(files) == 1, f"Expected exactly one file for run_type={run_type} member={member}, found {len(files)}: {files}"
+        raise FileNotFoundError(
+            f"No HadGEM3 attribution {index} file found: {pattern}"
+        )
+    assert len(files) == 1, (
+        f"Expected exactly one file for run_type={run_type} member={member}, found {len(files)}: {files}"
+    )
     cube = iris.load_cube(files[0], iris.NameConstraint(var_name=index))
     for coord_name in ("year", "season_year"):
         if cube.coords(coord_name):
@@ -277,19 +331,32 @@ DATASET_RESOLVERS = {
 }
 
 
-def run(dataset: str, country: str, index: str, metric_name: str, member: str = "1", **metric_kwargs):
+def run(
+    dataset: str,
+    country: str,
+    index: str,
+    metric_name: str,
+    member: str = "1",
+    **metric_kwargs,
+):
     region = get_region(country)
     months = region["months"]
     shape_name = region["shape_name"]
 
     if dataset not in DATASET_RESOLVERS:
-        raise ValueError(f"Unknown/unregistered dataset {dataset!r}. Valid options: {sorted(DATASET_RESOLVERS)}")
+        raise ValueError(
+            f"Unknown/unregistered dataset {dataset!r}. Valid options: {sorted(DATASET_RESOLVERS)}"
+        )
     if metric_name not in METRICS:
-        raise ValueError(f"Unknown metric {metric_name!r}. Valid options: {sorted(METRICS)}")
+        raise ValueError(
+            f"Unknown metric {metric_name!r}. Valid options: {sorted(METRICS)}"
+        )
 
     metric: BaseMetric = METRICS[metric_name](index, **metric_kwargs)
 
-    print(f"[metrics] dataset={dataset} country={country} index={index} metric={metric.output_stem()} member={member}")
+    print(
+        f"[metrics] dataset={dataset} country={country} index={index} metric={metric.output_stem()} member={member}"
+    )
 
     cube = DATASET_RESOLVERS[dataset](index, member=member, **metric_kwargs)
     print(cube)
@@ -300,7 +367,9 @@ def run(dataset: str, country: str, index: str, metric_name: str, member: str = 
 
     years, values = metric.compute(cube, months)
     if not years:
-        raise RuntimeError(f"No results computed for {dataset}/{country}/{metric.output_stem()}")
+        raise RuntimeError(
+            f"No results computed for {dataset}/{country}/{metric.output_stem()}"
+        )
 
     out_dir = METRICS_OUT_DIR
     os.makedirs(out_dir, exist_ok=True)
@@ -331,7 +400,9 @@ if __name__ == "__main__":
     if os.environ.get("CYLC_TASK_PARAM_percentile"):
         metric_kwargs["percentile"] = os.environ["CYLC_TASK_PARAM_percentile"]
     if os.environ.get("CYLC_TASK_PARAM_spatial_reduction"):
-        metric_kwargs["spatial_reduction"] = os.environ["CYLC_TASK_PARAM_spatial_reduction"]
+        metric_kwargs["spatial_reduction"] = os.environ[
+            "CYLC_TASK_PARAM_spatial_reduction"
+        ]
     # dataset-resolver-specific kwargs, forwarded through **metric_kwargs
     if os.environ.get("CYLC_TASK_PARAM_run_label"):
         metric_kwargs["run_label"] = os.environ["CYLC_TASK_PARAM_run_label"]

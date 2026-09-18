@@ -27,7 +27,9 @@ from attribution_pipeline.metrics.base import BaseMetric, spatial_reduce
 
 
 class CumulativeMetric(BaseMetric):
-    def __init__(self, index: str, window: int = 360, spatial_reduction: str = "mean"):
+    def __init__(
+        self, index: str, window: int = 360, spatial_reduction: str = "mean"
+    ):
         super().__init__(index)
         self.window = window
         self.context_days = window
@@ -57,7 +59,9 @@ class CumulativeMetric(BaseMetric):
             window_start = event_start - timedelta(days=self.window)
 
             context_constraint = iris.Constraint(
-                time=lambda cell, ws=window_start, ee=event_end: ws <= cell.point < ee
+                time=lambda cell, ws=window_start, ee=event_end: (
+                    ws <= cell.point < ee
+                )
             )
             sub = cube.extract(context_constraint)
             n_context = 0 if sub is None else sub.coord("time").shape[0]
@@ -71,8 +75,10 @@ class CumulativeMetric(BaseMetric):
             # dropping the year entirely.
             use_window = min(self.window, n_context)
             if use_window < self.window:
-                print(f"[cumulative] {y}: partial window -- only {n_context} antecedent "
-                    f"timesteps available (need {self.window}), using window={use_window}")
+                print(
+                    f"[cumulative] {y}: partial window -- only {n_context} antecedent "
+                    f"timesteps available (need {self.window}), using window={use_window}"
+                )
 
             rolled = sub.rolling_window("time", iris.analysis.SUM, use_window)
 
@@ -84,7 +90,9 @@ class CumulativeMetric(BaseMetric):
             # sub.points[i : i + use_window], so its true end/as-of date is
             # sub.points[i + use_window - 1].
             sub_time_points = sub.coord("time").points
-            end_dates = time_coord.units.num2date(sub_time_points[use_window - 1:])
+            end_dates = time_coord.units.num2date(
+                sub_time_points[use_window - 1 :]
+            )
             mask = np.array([event_start <= d < event_end for d in end_dates])
             if not mask.any():
                 continue
