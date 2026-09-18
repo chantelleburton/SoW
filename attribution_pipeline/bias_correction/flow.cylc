@@ -1,0 +1,96 @@
+# Flow for the bias-correction stage
+# (attribution_pipeline/bias_correction/run_bias_correction.py), plus the
+# uncorrected-ensemble-extraction stage
+# (attribution_pipeline/bias_correction/run_uncorrected.py).
+#
+# bias_correction: one task per (country, baseline_member 1-15, run_type
+# hist/histnat, index, metric, historical_source xclim/impacttb). Each task
+# reads:
+#   * the ERA5 + HadGEM3-historical baseline metric CSVs (from the metrics stage)
+#   * this member's FWI-creation output cube
+# and writes one bias-corrected CSV per target year (region.bias_correction_years),
+# under bias_corrected_metrics/{historical_source}/.
+#
+# uncorrected_extraction: one task per (country, run_type, index, metric) --
+# no baseline_member/historical_source, since there's no baseline regression
+# involved. Each task loads the paired attribution-ensemble members' FWI-
+# creation output cubes and writes each member's RAW scalar per target year
+# (region.bias_correction_years), under uncorrected_metrics/. Used by the
+# supplement-figure panels that show the ensemble before bias correction.
+#
+# Requires the metrics stage to have produced era5_*, hg3_historical_xclim_*
+# and (for historical_source=impacttb) hg3_historical_impacttb_* metric CSVs
+# for the same (country, index, metric) first. Keep the index/metric rows
+# here aligned with those in metrics/flow.cylc.
+#
+# historical_source=impacttb only supports index=fwi (impact-toolbox data has
+# no DSR) -- restricted via explicit-value graph narrowing below.
+#
+# The 525 attribution members are NOT a parameter here: run_bias_correction.py
+# / run_uncorrected.py auto-derive the paired members (present for both hist
+# and histnat) from the FWI-creation output, so each task loops them internally.
+
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    country = Iberia, Chile, Canada#, Korea, Scotland, 
+    baseline_member = 1..15
+    runtype = hist, histnat
+    index = fwi#, dsr
+    metric = p95#, 7x, cum
+    historical_source = xclim, impacttb
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            bias_correction<country, baseline_member, runtype, index, metric, historical_source=xclim>
+            bias_correction<country, baseline_member, runtype, index=fwi, metric, historical_source=impacttb>
+            uncorrected_extraction<country, runtype, index, metric>
+        """
+
+[runtime]
+    [[bias_correction<country, baseline_member, runtype, index, metric, historical_source>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_baseline_member}
+        export CYLC_TASK_PARAM_runtype=${CYLC_TASK_PARAM_runtype}
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
+        export CYLC_TASK_PARAM_historical_source=${CYLC_TASK_PARAM_historical_source}
+        python -m attribution_pipeline.bias_correction.run_bias_correction
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 15G
+            --partition = cpu-long
+            --time = 180
+            --cpus-per-task = 2
+            --ntasks = 1
+
+    [[uncorrected_extraction<country, runtype, index, metric>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_runtype=${CYLC_TASK_PARAM_runtype}
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
+        python -m attribution_pipeline.bias_correction.run_uncorrected
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 15G
+            --partition = cpu-long
+            --time = 180
+            --cpus-per-task = 2
+            --ntasks = 1
+

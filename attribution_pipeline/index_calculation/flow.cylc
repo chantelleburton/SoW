@@ -1,0 +1,107 @@
+#!Jinja2
+{# Generate all 525 attribution-ensemble member IDs (r001i1p1 .. r105i1p5), #}
+{# matching the historicalExt/historicalNatExt HadGEM3-A Attribution runs. #}
+{% set N_RUNS = 105 %}
+{% set N_PHYSICS = 5 %}
+{% set attr_members = [] %}
+{% for r in range(1, N_RUNS + 1) %}
+{%   for p in range(1, N_PHYSICS + 1) %}
+{%     do attr_members.append('r%03di1p%d' | format(r, p)) %}
+{%   endfor %}
+{% endfor %}
+
+# Unified flow for the attribution_pipeline FWI creation framework. Runs the
+# ERA5, HadGEM3-A Attribution and HadGEM3-A Historical FWI calculations, each
+# through the shared run_fwi.py entrypoint (attribution_pipeline/index_calculation/run_fwi.py).
+#
+# To run only a subset of datasets (e.g. while iterating on one loader),
+# comment out the unwanted line(s) in [scheduling][[graph]] below — each
+# dataset's tasks are otherwise fully independent of the others.
+#
+# Task parameters are namespaced per source (era5_*, attr_*, hist_*) to avoid
+# collisions, then mapped back onto the plain CYLC_TASK_PARAM_* names
+# run_fwi.py / the loaders expect via an export in each runtime script.
+
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    era5_start_year = 1979, 1989, 1999, 2009, 2019
+    era5_wind_stat = mean#, max
+    era5_rh_stat = mean#, minimum
+
+    attr_run_type = historicalExt, historicalNatExt
+    attr_member = {{ attr_members | join(', ') }}
+
+    hist_member = 1..15
+    hist_block_start_year = 1970, 1980, 1990, 2000, 2010
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>
+            #hadgem_attribution_fwi_calculation<attr_run_type, attr_member>
+            #hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>
+        """
+
+[runtime]
+    [[era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_start_year=${CYLC_TASK_PARAM_era5_start_year}
+        export CYLC_TASK_PARAM_wind_stat=${CYLC_TASK_PARAM_era5_wind_stat}
+        export CYLC_TASK_PARAM_rh_stat=${CYLC_TASK_PARAM_era5_rh_stat}
+        echo "Running era5 start_year=${CYLC_TASK_PARAM_start_year} wind_stat=${CYLC_TASK_PARAM_wind_stat} rh_stat=${CYLC_TASK_PARAM_rh_stat}"
+        python -m attribution_pipeline.index_calculation.run_fwi era5
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 150G
+            --partition = cpu-long
+            --time = 720
+            --cpus-per-task = 4
+            --ntasks = 1
+
+    [[hadgem_attribution_fwi_calculation<attr_run_type, attr_member>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_run_type=${CYLC_TASK_PARAM_attr_run_type}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_attr_member}
+        echo "Running hg3_attribution run_type=${CYLC_TASK_PARAM_run_type} member=${CYLC_TASK_PARAM_member}"
+        python -m attribution_pipeline.index_calculation.run_fwi hg3_attribution
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 20G
+            --partition = cpu-long
+            --time = 360
+            --cpus-per-task = 4
+            --ntasks = 1
+
+    [[hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
+        export CYLC_TASK_PARAM_block_start_year=${CYLC_TASK_PARAM_hist_block_start_year}
+        echo "Running hg3_historical member=${CYLC_TASK_PARAM_member} block_start_year=${CYLC_TASK_PARAM_block_start_year}"
+        python -m attribution_pipeline.index_calculation.run_fwi hg3_historical
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 40G
+            --partition = cpu-long
+            --time = 360
+            --cpus-per-task = 4
+            --ntasks = 1

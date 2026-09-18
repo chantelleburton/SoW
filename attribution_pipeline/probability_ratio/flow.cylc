@@ -1,0 +1,94 @@
+# Flow for the probability-ratio stage
+# (attribution_pipeline/probability_ratio/run_probability_ratio.py).
+#
+# One task per (statistic, index, metric, historical_source). Each task loops
+# over all configured regions internally, reading:
+#   * the ERA5 threshold metric CSV (from the metrics stage)
+#   * the bias-corrected ensemble CSVs (from the bias-correction stage), from
+#     bias_corrected_metrics/{historical_source}/
+# and writes a summary CSV + plot per metric, nested under
+# exports/{historical_source}/ and exports/plots/{historical_source}/ --
+# mirroring bias_correction's own {historical_source}-nested output layout.
+#
+# Requires both the metrics and bias-correction stages to have completed for the
+# same (index, metric, historical_source) first. Keep the index/metric rows
+# aligned across all three downstream flows.
+#
+# historical_source=impacttb only supports index=fwi (impact-toolbox data has
+# no DSR) -- restricted via explicit-value graph narrowing below, same as
+# bias_correction/flow.cylc.
+#
+# statistic:
+#   risk_ratio   -> probability ratio + bootstrap CI + density-histogram grid
+#   amplification -> per-member intensity amplification box-whisker
+#
+# plot_supplement<index, historical_source>: 5-panel supplement figure
+# (attribution_pipeline/probability_ratio/run_supplement.py), one task per
+# (index, historical_source), looping over all configured regions internally.
+# Fixed to metric=p95 only for now. Writes exports/plots/{historical_source}/
+# Supplement_{country}.png.
+
+[scheduler]
+    allow implicit tasks = True
+
+[task parameters]
+    statistic = amplification#risk_ratio, 
+    index = fwi#, dsr
+    metric = p95#, 7x, cum
+    historical_source = xclim, impacttb
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            probability_ratio<statistic, index, metric, historical_source=xclim>
+            probability_ratio<statistic, index=fwi, metric, historical_source=impacttb>
+
+            #plot_supplement<index, historical_source=xclim>
+            #plot_supplement<index=fwi, historical_source=impacttb>
+        """
+
+[runtime]
+    [[probability_ratio<statistic, index, metric, historical_source>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        # Pass index + metric name; run_probability_ratio.py builds the metric
+        # stem (e.g. FWI_P95, DSR_CUM360_MEAN) via the METRICS registry so it
+        # always matches the bias-correction output filenames.
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric_name=${CYLC_TASK_PARAM_metric}
+        unset CYLC_TASK_PARAM_metric
+        export CYLC_TASK_PARAM_statistic=${CYLC_TASK_PARAM_statistic}
+        export CYLC_TASK_PARAM_historical_source=${CYLC_TASK_PARAM_historical_source}
+        python -m attribution_pipeline.probability_ratio.run_probability_ratio
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 15G
+            --partition = cpu
+            --time = 180
+            --cpus-per-task = 2
+            --ntasks = 1
+
+    [[plot_supplement<index, historical_source>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric_name=p95
+        export CYLC_TASK_PARAM_historical_source=${CYLC_TASK_PARAM_historical_source}
+        python -m attribution_pipeline.probability_ratio.run_supplement
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 15G
+            --partition = cpu
+            --time = 180
+            --cpus-per-task = 2
+            --ntasks = 1

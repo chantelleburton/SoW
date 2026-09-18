@@ -7,8 +7,10 @@ Compares:
   - ImpactTB monthly "gwl" historical files, e.g.
     FWI_HadGEM3-A-N216_r1i1p1_historical_gwl19800101-19800201_global_day_
     initialise-from=previous-and-save-input-data=True.nc
-  - xclim single-file-per-member historical output, e.g.
-    hadgem3a_fwi_historical_r1i1p6_1980-2013.nc
+  - xclim single-year-per-file historical output (attribution_pipeline's
+    HadGEM3HistoricalLoader), e.g. hadgem3a_fwi_historical_r1i1p6_1980.nc,
+    ..._1981.nc, ... concatenated across all available years for the
+    member/experiment.
 
 Unlike a script that collapses to a single monthly region-95th-percentile
 value, this script keeps every daily timestep and every grid cell within each
@@ -39,11 +41,12 @@ from utils.cubefuncs import apply_shapefile_inclusive  # noqa: E402
 # ImpactTB historical source: monthly ("gwl") files directly under this folder, e.g.
 # FWI_HadGEM3-A-N216_r1i1p1_historical_gwl19800101-19800201_global_day_initialise-from=previous-and-save-input-data=True.nc
 IMPACTTB_ROOT = '/data/users/bob.potts/sowf_data/historicalFWI/HadGEM'
-# xclim historical source: one file per member covering the full period, e.g.
-# hadgem3a_fwi_historical_r1i1p6_1980-2013.nc
-XCLIM_DIR = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/HadGEM3-A_Historical'
+# xclim historical source: one file per calendar year per member (written by
+# attribution_pipeline/index_calculation/loaders/hadgem3_historical.py), e.g.
+# hadgem3a_fwi_historical_r1i1p6_1980.nc
+XCLIM_DIR = '/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_historical'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-OUT_DIR = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/HadGEM3-A_Historical/validation/raw_fwi_diffs'
+OUT_DIR = '/data/scratch/bob.potts/sowf/attribution_pipeline/validation/raw_fwi_diffs'
 
 MEMBER     = os.environ.get("CYLC_TASK_PARAM_member", "r1i1p1").strip()
 EXPERIMENT = os.environ.get("CYLC_TASK_PARAM_run_type", "historical").strip()
@@ -58,9 +61,9 @@ REGION_SHAPES = {
 }
 
 region_months = {
-    'Iberia': (8,),
-    'Chile':  (1, 2),
-    'Canada': (7, 8),
+    'Iberia': np.arange(1,13,1),
+    'Chile':  np.arange(1,13,1),
+    'Canada': np.arange(1,13,1),
 }
 def _load_fwi_cube(fpath):
     """Load the FWI cube from a file that may contain several FWI sub-indices."""
@@ -129,10 +132,19 @@ def load_impacttb(member, experiment, start_year=START_YEAR, end_year=END_YEAR):
     return cube
 
 
-def load_xclim(member, experiment, start_year=START_YEAR, end_year=END_YEAR):
-    fpath = os.path.join(XCLIM_DIR, f'hadgem3a_fwi_{experiment}_{member}_{start_year}-{end_year}_modified.nc')
-    assert os.path.exists(fpath), f"Missing {fpath}"
-    return _load_fwi_cube(fpath)
+def load_xclim(member, experiment):
+    """Concatenate the per-calendar-year xclim historical files for one
+    member/experiment into a single cube (same pattern as
+    run_metrics.py::_resolve_hg3_historical)."""
+    pattern = os.path.join(XCLIM_DIR, f'hadgem3a_fwi_{experiment}_{member}_*.nc')
+    files = sorted(glob.glob(pattern))
+    assert files, f"No xclim files: {pattern}"
+
+    cubes = iris.cube.CubeList(_strip_aux_time_coords(_load_fwi_cube(f)) for f in files)
+    if len(cubes) == 1:
+        return cubes[0]
+    iris.util.equalise_attributes(cubes)
+    return cubes.concatenate_cube()
 
 
 def _months_present(cube):
@@ -266,11 +278,11 @@ def process_region(country, shape_name, tb_cube, xc_cube, expected_n_days):
     daily_df['expected_n_days'] = expected_n_days
     daily_df['pct_complete'] = 100.0 * n / expected_n_days if expected_n_days else np.nan
 
-    daily_path = os.path.join(OUT_DIR, f'daily_diff_{country}_{EXPERIMENT}_{MEMBER}_modified.csv')
+    daily_path = os.path.join(OUT_DIR, f'daily_diff_{country}_{EXPERIMENT}_{MEMBER}.csv')
     daily_df.to_csv(daily_path, index=False)
 
     map_df = time_mean_map(diff_cube)
-    map_path = os.path.join(OUT_DIR, f'meanmap_{country}_{EXPERIMENT}_{MEMBER}_modified.csv')
+    map_path = os.path.join(OUT_DIR, f'meanmap_{country}_{EXPERIMENT}_{MEMBER}.csv')
     map_df.to_csv(map_path, index=False)
 
     print(f"  {country}: n_days={n}/{expected_n_days} ({daily_df['pct_complete'].iloc[0]:.1f}% complete), "
@@ -282,12 +294,12 @@ if __name__ == '__main__':
     os.makedirs(OUT_DIR, exist_ok=True)
     print(f"Computing raw FWI diffs: member={MEMBER}, experiment={EXPERIMENT}")
 
-    xc_path = os.path.join(XCLIM_DIR, f'hadgem3a_fwi_{EXPERIMENT}_{MEMBER}_{START_YEAR}-{END_YEAR}.nc')
+    xc_pattern = os.path.join(XCLIM_DIR, f'hadgem3a_fwi_{EXPERIMENT}_{MEMBER}_*.nc')
     tb_pattern = os.path.join(
         IMPACTTB_ROOT,
         f'FWI_HadGEM3-A-N216_{MEMBER}_{EXPERIMENT}_gwl*_global_day_'
         f'initialise-from=previous-and-save-input-data=True.nc')
-    has_xc = os.path.exists(xc_path)
+    has_xc = bool(glob.glob(xc_pattern))
     has_tb = bool(glob.glob(tb_pattern))
     if not (has_xc and has_tb):
         print(f"Skipping {MEMBER}/{EXPERIMENT}: missing inputs (xclim={has_xc}, impacttb={has_tb}).")

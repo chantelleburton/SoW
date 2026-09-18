@@ -1,0 +1,151 @@
+#!Jinja2
+{# Generate all 525 attribution-ensemble member IDs (r001i1p1 .. r105i1p5). #}
+{% set N_RUNS = 105 %}
+{% set N_PHYSICS = 5 %}
+{% set attr_members = [] %}
+{% for r in range(1, N_RUNS + 1) %}
+{%   for p in range(1, N_PHYSICS + 1) %}
+{%     do attr_members.append('r%03di1p%d' | format(r, p)) %}
+{%   endfor %}
+{% endfor %}
+
+# Flow for the interim-metrics stage (attribution_pipeline/metrics/run_metrics.py).
+# Turns the daily FWI/DSR NetCDF files produced by the FWI-creation stage into
+# per-year, event-month metric CSVs consumed by bias correction and the ERA5
+# threshold lookup.
+#
+# Four dataset families, each a separate task because their parameter spaces
+# differ (ERA5 has no members but has run_label; hg3_historical_xclim has 15
+# baseline members and fwi/dsr; hg3_historical_impacttb also has 15 baseline
+# members but FWI only (no DSR -- impact-toolbox data doesn't have it);
+# hg3_attribution has 525 members x 2 run types). Comment out any line
+# in [scheduling][[graph]] to run a subset.
+#
+# To add a metric (e.g. dsr p95, fwi 7x, dsr cumulative) add rows to the
+# met_* task parameters below — no code change needed, run_metrics.py resolves
+# the metric from its METRICS registry.
+
+[scheduler]
+    allow implicit tasks = True
+
+# Country/region config (REGION_CONFIGS) now lives in
+# attribution_pipeline/pipeline_config.py (shared across all four
+# subpackages), not this metrics/ stage specifically.
+
+[task parameters]
+    country = Canada,Iberia, Chile, # Korea, Scotland, 
+
+    # index x metric combinations to compute. Keep these aligned across the
+    # three datasets so bias correction always finds a matching baseline +
+    # ensemble metric CSV.
+    index = fwi#, dsr
+    metric = p95#, 7x, cum
+
+    era5_run_label = Mean_RH_Mean_Wind
+
+    hist_member = 1..15
+
+    attr_run_type = historicalExt, historicalNatExt
+    attr_member = {{ attr_members | join(', ') }}
+
+[scheduling]
+    [[graph]]
+        R1 = """
+            era5_metrics<country, index, metric, era5_run_label>
+            #histxclim_metrics<country, index, metric, hist_member>
+            #histimpacttb_metrics<country, metric, hist_member>
+            #attr_metrics<country, index, metric, attr_run_type, attr_member>
+        """ #attr metrics only exists for diagnostic purposes if a deeper dive into the 
+        #attribution ensemble is needed should downstream results be off.
+        # histimpacttb_metrics has no 'index' parameter -- impact-toolbox historical
+        # data is FWI only (no DSR), unlike histxclim_metrics/era5_metrics/attr_metrics.
+
+[runtime]
+    [[era5_metrics<country, index, metric, era5_run_label>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_dataset=era5
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
+        export CYLC_TASK_PARAM_run_label=${CYLC_TASK_PARAM_era5_run_label}
+        python -m attribution_pipeline.metrics.run_metrics
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 30G
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 2
+            --ntasks = 1
+
+    [[histxclim_metrics<country, index, metric, hist_member>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_dataset=hg3_historical_xclim
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
+        python -m attribution_pipeline.metrics.run_metrics
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 20G
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 2
+            --ntasks = 1
+
+    [[histimpacttb_metrics<country, metric, hist_member>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_dataset=hg3_historical_impacttb
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_index=fwi
+        export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
+        python -m attribution_pipeline.metrics.run_metrics
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 20G
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 2
+            --ntasks = 1
+
+    [[attr_metrics<country, index, metric, attr_run_type, attr_member>]]
+        script = """
+        set -eux
+        conda activate sowf
+        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        export CYLC_TASK_PARAM_dataset=hg3_attribution
+        export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
+        export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
+        export CYLC_TASK_PARAM_metric=${CYLC_TASK_PARAM_metric}
+        export CYLC_TASK_PARAM_run_type=${CYLC_TASK_PARAM_attr_run_type}
+        export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_attr_member}
+        python -m attribution_pipeline.metrics.run_metrics
+        """
+
+        platform = spice
+
+        [[[directives]]]
+            --mem = 15G
+            --partition = cpu
+            --time = 60
+            --cpus-per-task = 2
+            --ntasks = 1
