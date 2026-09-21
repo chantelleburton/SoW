@@ -21,6 +21,10 @@
 # Task parameters are namespaced per source (era5_*, attr_*, hist_*) to avoid
 # collisions, then mapped back onto the plain CYLC_TASK_PARAM_* names
 # run_fwi.py / the loaders expect via an export in each runtime script.
+#
+# Set ATTRIBUTION_PIPELINE_CODE_DIR to override the repo checkout location
+# used by task scripts (defaults to the current known checkout).
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 
 [scheduler]
     allow implicit tasks = True
@@ -36,6 +40,11 @@
     hist_member = 1..15
     hist_block_start_year = 1970, 1980, 1990, 2000, 2010
 
+[runtime]
+    [[root]]
+        [[[environment]]]
+            CODE_DIR = {{ CODE_DIR }}
+
 [scheduling]
     [[graph]]
         R1 = """
@@ -44,12 +53,11 @@
             #hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>
         """
 
-[runtime]
     [[era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>]]
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_start_year=${CYLC_TASK_PARAM_era5_start_year}
         export CYLC_TASK_PARAM_wind_stat=${CYLC_TASK_PARAM_era5_wind_stat}
         export CYLC_TASK_PARAM_rh_stat=${CYLC_TASK_PARAM_era5_rh_stat}
@@ -70,7 +78,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_run_type=${CYLC_TASK_PARAM_attr_run_type}
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_attr_member}
         echo "Running hg3_attribution run_type=${CYLC_TASK_PARAM_run_type} member=${CYLC_TASK_PARAM_member}"
@@ -90,7 +98,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
         export CYLC_TASK_PARAM_block_start_year=${CYLC_TASK_PARAM_hist_block_start_year}
         echo "Running hg3_historical member=${CYLC_TASK_PARAM_member} block_start_year=${CYLC_TASK_PARAM_block_start_year}"

@@ -24,6 +24,10 @@
 # To add a metric (e.g. dsr p95, fwi 7x, dsr cumulative) add rows to the
 # met_* task parameters below — no code change needed, run_metrics.py resolves
 # the metric from its METRICS registry.
+#
+# Set ATTRIBUTION_PIPELINE_CODE_DIR to override the repo checkout location
+# used by task scripts (defaults to the current known checkout).
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 
 [scheduler]
     allow implicit tasks = True
@@ -48,6 +52,11 @@
     attr_run_type = historicalExt, historicalNatExt
     attr_member = {{ attr_members | join(', ') }}
 
+[runtime]
+    [[root]]
+        [[[environment]]]
+            CODE_DIR = {{ CODE_DIR }}
+
 [scheduling]
     [[graph]]
         R1 = """
@@ -65,7 +74,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=era5
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
@@ -87,7 +96,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_historical_xclim
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
@@ -109,7 +118,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_historical_impacttb
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_index=fwi
@@ -131,7 +140,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_attribution
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}

@@ -1,3 +1,4 @@
+#!Jinja2
 # Flow for the bias-correction stage
 # (attribution_pipeline/bias_correction/run_bias_correction.py), plus the
 # uncorrected-ensemble-extraction stage
@@ -29,6 +30,10 @@
 # The 525 attribution members are NOT a parameter here: run_bias_correction.py
 # / run_uncorrected.py auto-derive the paired members (present for both hist
 # and histnat) from the FWI-creation output, so each task loops them internally.
+#
+# Set ATTRIBUTION_PIPELINE_CODE_DIR to override the repo checkout location
+# used by task scripts (defaults to the current known checkout).
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 
 [scheduler]
     allow implicit tasks = True
@@ -41,6 +46,11 @@
     metric = p95#, 7x, cum
     historical_source = xclim, impacttb
 
+[runtime]
+    [[root]]
+        [[[environment]]]
+            CODE_DIR = {{ CODE_DIR }}
+
 [scheduling]
     [[graph]]
         R1 = """
@@ -49,12 +59,11 @@
             uncorrected_extraction<country, runtype, index, metric>
         """
 
-[runtime]
     [[bias_correction<country, baseline_member, runtype, index, metric, historical_source>]]
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_baseline_member}
         export CYLC_TASK_PARAM_runtype=${CYLC_TASK_PARAM_runtype}
@@ -77,7 +86,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_runtype=${CYLC_TASK_PARAM_runtype}
         export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}

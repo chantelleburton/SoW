@@ -1,3 +1,4 @@
+#!Jinja2
 # Flow for the probability-ratio stage
 # (attribution_pipeline/probability_ratio/run_probability_ratio.py).
 #
@@ -27,6 +28,10 @@
 # (index, historical_source), looping over all configured regions internally.
 # Fixed to metric=p95 only for now. Writes exports/plots/{historical_source}/
 # Supplement_{country}.png.
+#
+# Set ATTRIBUTION_PIPELINE_CODE_DIR to override the repo checkout location
+# used by task scripts (defaults to the current known checkout).
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 
 [scheduler]
     allow implicit tasks = True
@@ -36,6 +41,11 @@
     index = fwi#, dsr
     metric = p95#, 7x, cum
     historical_source = xclim, impacttb
+
+[runtime]
+    [[root]]
+        [[[environment]]]
+            CODE_DIR = {{ CODE_DIR }}
 
 [scheduling]
     [[graph]]
@@ -52,7 +62,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         # Pass index + metric name; run_probability_ratio.py builds the metric
         # stem (e.g. FWI_P95, DSR_CUM360_MEAN) via the METRICS registry so it
         # always matches the bias-correction output filenames.
@@ -77,7 +87,7 @@
         script = """
         set -eux
         conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code
+        cd $CODE_DIR
         export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
         export CYLC_TASK_PARAM_metric_name=p95
         export CYLC_TASK_PARAM_historical_source=${CYLC_TASK_PARAM_historical_source}
