@@ -145,9 +145,10 @@ class ERA5Loader(BaseLoader):
                     )
                 )
             )
-        assert len(tas_files) > 0, (
-            f"No temperature files found in {self.basepath}/2m_temperature/daily_maximum/"
-        )
+        if len(tas_files) == 0:
+            raise FileNotFoundError(
+                f"No temperature files found in {self.basepath}/2m_temperature/daily_maximum/"
+            )
         tas = xr.open_mfdataset(tas_files, chunks=chunks)["t2m"] - 273.15
         if "valid_time" in tas.dims:
             tas = tas.rename({"valid_time": "time"})
@@ -171,9 +172,10 @@ class ERA5Loader(BaseLoader):
                     )
                 )
             )
-        assert len(pr_files) > 0, (
-            f"No precipitation files found in {self.basepath}/total_precipitation/daily_sum/"
-        )
+        if len(pr_files) == 0:
+            raise FileNotFoundError(
+                f"No precipitation files found in {self.basepath}/total_precipitation/daily_sum/"
+            )
         pr = xr.open_mfdataset(pr_files, chunks=chunks)["tp"] * 1000  # m to mm
         if "valid_time" in pr.dims:
             pr = pr.rename({"valid_time": "time"})
@@ -206,12 +208,14 @@ class ERA5Loader(BaseLoader):
                         )
                     )
                 )
-            assert len(u_files) > 0, (
-                f"No u-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['u_subdir'])}/"
-            )
-            assert len(v_files) > 0, (
-                f"No v-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['v_subdir'])}/"
-            )
+            if len(u_files) == 0:
+                raise FileNotFoundError(
+                    f"No u-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['u_subdir'])}/"
+                )
+            if len(v_files) == 0:
+                raise FileNotFoundError(
+                    f"No v-wind files found in {self.basepath}/{os.path.join(*self.wind_cfg['v_subdir'])}/"
+                )
 
             u = xr.open_mfdataset(u_files, chunks=chunks)[
                 self.wind_cfg["u_var"]
@@ -246,9 +250,10 @@ class ERA5Loader(BaseLoader):
                         )
                     )
                 )
-            assert len(wind_files) > 0, (
-                f"No wind files found in {self.basepath}/{self.wind_cfg['subdir']}/"
-            )
+            if len(wind_files) == 0:
+                raise FileNotFoundError(
+                    f"No wind files found in {self.basepath}/{self.wind_cfg['subdir']}/"
+                )
             ws_parts = []
             for fpath in wind_files:
                 ds_wind = xr.open_dataset(
@@ -256,9 +261,10 @@ class ERA5Loader(BaseLoader):
                 )
                 da = ds_wind[self.wind_cfg["var"]]
                 m = re.search(r"(\d{4})-(\d{2})\.nc$", os.path.basename(fpath))
-                assert m, (
-                    f"Cannot parse year-month from wind filename: {fpath}"
-                )
+                if not m:
+                    raise FileNotFoundError(
+                        f"Cannot parse year-month from wind filename: {fpath}"
+                    )
                 yyyy, mm = int(m.group(1)), int(m.group(2))
                 n_days = da.sizes["time"]
                 new_time = pd.date_range(
@@ -283,9 +289,10 @@ class ERA5Loader(BaseLoader):
                     )
                 )
             )
-        assert len(hurs_files) > 0, (
-            f"No humidity files found in {self.basepath}/{'/'.join(self.rh_cfg['subdirs'])}/"
-        )
+        if len(hurs_files) == 0:
+            raise FileNotFoundError(
+                f"No humidity files found in {self.basepath}/{'/'.join(self.rh_cfg['subdirs'])}/"
+            )
         hurs = xr.open_mfdataset(hurs_files, chunks=chunks)["hurs"]
         if "valid_time" in hurs.dims:
             hurs = hurs.rename({"valid_time": "time"})

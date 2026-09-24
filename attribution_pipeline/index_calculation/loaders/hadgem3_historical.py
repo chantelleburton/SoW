@@ -117,7 +117,8 @@ class HadGEM3HistoricalLoader(BaseLoader):
             f"{var_name}_day_HadGEM3-A-N216_historical_{self.member}_*.nc",
         )
         files = sorted(glob.glob(pattern))
-        assert len(files) > 0, f"No files found for {var_name}: {pattern}"
+        if len(files) == 0:
+            raise FileNotFoundError(f"No files found for {var_name}: {pattern}")
 
         files = [
             f
@@ -126,9 +127,10 @@ class HadGEM3HistoricalLoader(BaseLoader):
                 f, self.data_start_year, self.block_end_year
             )
         ]
-        assert len(files) > 0, (
-            f"No files for {var_name} in range {self.data_start_year}..{self.block_end_year}: {pattern}"
-        )
+        if len(files) == 0:
+            raise FileNotFoundError(
+                f"No files for {var_name} in range {self.data_start_year}..{self.block_end_year}: {pattern}"
+            )
         print(
             f"[{self.name}]  {var_name}: {len(files)} files from {os.path.basename(files[0])} to {os.path.basename(files[-1])}"
         )

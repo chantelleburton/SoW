@@ -313,9 +313,10 @@ def _resolve_hg3_attribution(
         raise FileNotFoundError(
             f"No HadGEM3 attribution {index} file found: {pattern}"
         )
-    assert len(files) == 1, (
-        f"Expected exactly one file for run_type={run_type} member={member}, found {len(files)}: {files}"
-    )
+    if len(files) != 1:
+        raise FileNotFoundError(
+            f"Expected exactly one file for run_type={run_type} member={member}, found {len(files)}: {files}"
+        )
     cube = iris.load_cube(files[0], iris.NameConstraint(var_name=index))
     for coord_name in ("year", "season_year"):
         if cube.coords(coord_name):
