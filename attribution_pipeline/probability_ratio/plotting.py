@@ -562,7 +562,8 @@ def generate_all_supplements(
                     paired_only=paired_only,
                 )
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 -- intentionally skip any failing
+            # country so one bad region doesn't abort the whole batch run.
             print(f"[plot_supplement] Error processing {country}: {e}")
             continue
     return written
