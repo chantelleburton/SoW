@@ -33,6 +33,13 @@ class BaseLoader(ABC):
     #: kwargs forwarded to xclim.indices.cffwis_indices (tas/pr/sfcWind/hurs/lat excluded)
     cffwis_kwargs = {"initial_start_up": True}
 
+    #: Fixed time units reference for all yearly output files (rather than
+    #: xarray's per-file default, which would pick each file's own start
+    #: date) so Iris can concatenate cubes loaded from different yearly
+    #: files -- otherwise concatenate_cube() sees differing time-coordinate
+    #: metadata and errors.
+    TIME_UNITS: str = "days since 1900-01-01"
+
     @abstractmethod
     def load(self, chunks: dict) -> dict:
         """Load and unit-convert the four FWI input variables.

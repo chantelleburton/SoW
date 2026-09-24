@@ -25,9 +25,6 @@ from attribution_pipeline.pipeline_config import (
     RAW_FWI_ERA5,
 )
 
-# Fixed time units reference for all yearly output files -- see write() below.
-TIME_UNITS = "days since 1900-01-01"
-
 WIND_OPTIONS = {
     # Derived from daily-mean u/v components (hypot(u, v)) rather than a
     # precomputed daily-mean wind-speed file. NOTE: hypot(mean(u), mean(v)) is
@@ -359,7 +356,7 @@ class ERA5Loader(BaseLoader):
                             self.spatial_chunk,
                         )
                     },
-                    "time": {"units": TIME_UNITS},
+                    "time": {"units": self.TIME_UNITS},
                 }
                 ds = xr.Dataset({idx_name: da_year})
                 ds["time"].attrs = {}

@@ -47,12 +47,6 @@ END_YEAR = 2013
 BLOCK_LENGTH = 10
 SPIN_UP_YEARS = 1
 
-# Fixed time units reference for all yearly output files (rather than xarray's
-# per-file default, which would pick each year's own start date) so Iris can
-# concatenate cubes loaded from different yearly files -- otherwise
-# concatenate_cube() sees differing time-coordinate metadata and errors.
-TIME_UNITS = "days since 1900-01-01"
-
 
 def _decade_file_overlaps_range(fpath, start_year, end_year):
     m = re.search(r"_(\d{8})-(\d{8})\.nc$", os.path.basename(fpath))
@@ -235,7 +229,7 @@ class HadGEM3HistoricalLoader(BaseLoader):
                 )
                 enc = {
                     idx_name: {"chunksizes": chunksizes},
-                    "time": {"units": TIME_UNITS},
+                    "time": {"units": self.TIME_UNITS},
                 }
                 ds = xr.Dataset({idx_name: da_year})
                 # Source files carry 'bounds' attrs on time/lat/lon (time_bnds,

@@ -34,12 +34,6 @@ VAR_CONFIG = {
     "hurs": {"dir": "hurs/day", "nc_var": "hurs", "units": "%"},
 }
 
-# Fixed time units reference (rather than xarray's per-file default, which
-# would pick each file's own start date) -- matches the reference used by the
-# era5/hg3_historical loaders so time units are consistent across all three
-# datasets rather than varying per attribution member/run_type.
-TIME_UNITS = "days since 1900-01-01"
-
 
 def _token_overlaps_window(month_token):
     """True if a filename month token ('YYYYMM' or 'YYYYMM-YYYYMM') overlaps the window."""
@@ -182,7 +176,7 @@ class HadGEM3AttributionLoader(BaseLoader):
             )
             enc = {
                 idx_name: {"chunksizes": chunksizes},
-                "time": {"units": TIME_UNITS},
+                "time": {"units": self.TIME_UNITS},
             }
             ds = xr.Dataset({idx_name: da})
             # Source files carry a 'bounds' attr on time (time_bnds) referencing a
