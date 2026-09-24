@@ -65,6 +65,18 @@ RH_OPTIONS = {
 }
 
 
+def _fix_valid_time(da):
+    # ERA5's GRIB source data carries a leftover 'valid_time' coordinate
+    # alongside the real 'time' dim -- CF standard_name='time' on both makes
+    # Iris's cube.coord('time') ambiguous ("found 2 coordinates") once written
+    # out and reloaded. Rename/drop it here so it never propagates downstream.
+    if "valid_time" in da.dims:
+        da = da.rename({"valid_time": "time"})
+    if "valid_time" in da.coords:
+        da = da.drop_vars("valid_time")
+    return da
+
+
 class ERA5Loader(BaseLoader):
     name = "era5"
     basepath = ERA5_OBS_BASEPATH
@@ -150,14 +162,7 @@ class ERA5Loader(BaseLoader):
                 f"No temperature files found in {self.basepath}/2m_temperature/daily_maximum/"
             )
         tas = xr.open_mfdataset(tas_files, chunks=chunks)["t2m"] - 273.15
-        if "valid_time" in tas.dims:
-            tas = tas.rename({"valid_time": "time"})
-        # ERA5's GRIB source data carries a leftover 'valid_time' coordinate
-        # alongside the real 'time' dim -- CF standard_name='time' on both makes
-        # Iris's cube.coord('time') ambiguous ("found 2 coordinates") once written
-        # out and reloaded. Drop it here so it never propagates downstream.
-        if "valid_time" in tas.coords:
-            tas = tas.drop_vars("valid_time")
+        tas = _fix_valid_time(tas)
         tas.attrs["units"] = "degC"
 
         pr_files = []
@@ -177,10 +182,7 @@ class ERA5Loader(BaseLoader):
                 f"No precipitation files found in {self.basepath}/total_precipitation/daily_sum/"
             )
         pr = xr.open_mfdataset(pr_files, chunks=chunks)["tp"] * 1000  # m to mm
-        if "valid_time" in pr.dims:
-            pr = pr.rename({"valid_time": "time"})
-        if "valid_time" in pr.coords:
-            pr = pr.drop_vars("valid_time")
+        pr = _fix_valid_time(pr)
         pr.attrs["units"] = "mm/day"
 
         if self.wind_stat == "mean":
@@ -223,14 +225,8 @@ class ERA5Loader(BaseLoader):
             v = xr.open_mfdataset(v_files, chunks=chunks)[
                 self.wind_cfg["v_var"]
             ]
-            if "valid_time" in u.dims:
-                u = u.rename({"valid_time": "time"})
-            if "valid_time" in u.coords:
-                u = u.drop_vars("valid_time")
-            if "valid_time" in v.dims:
-                v = v.rename({"valid_time": "time"})
-            if "valid_time" in v.coords:
-                v = v.drop_vars("valid_time")
+            u = _fix_valid_time(u)
+            v = _fix_valid_time(v)
 
             ws = np.hypot(u, v)
             ws = ws.chunk(chunks)
@@ -271,8 +267,7 @@ class ERA5Loader(BaseLoader):
                     f"{yyyy}-{mm:02d}-01", periods=n_days, freq="D"
                 )
                 da = da.assign_coords(time=new_time)
-                if "valid_time" in da.coords:
-                    da = da.drop_vars("valid_time")
+                da = _fix_valid_time(da)
                 ws_parts.append(da)
             ws = xr.concat(ws_parts, dim="time")
             ws = ws.chunk(chunks)
@@ -294,10 +289,7 @@ class ERA5Loader(BaseLoader):
                 f"No humidity files found in {self.basepath}/{'/'.join(self.rh_cfg['subdirs'])}/"
             )
         hurs = xr.open_mfdataset(hurs_files, chunks=chunks)["hurs"]
-        if "valid_time" in hurs.dims:
-            hurs = hurs.rename({"valid_time": "time"})
-        if "valid_time" in hurs.coords:
-            hurs = hurs.drop_vars("valid_time")
+        hurs = _fix_valid_time(hurs)
 
         # normalise time-of-day so alignment works across sources
         tas = tas.assign_coords(time=tas.indexes["time"].normalize())
