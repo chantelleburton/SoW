@@ -29,18 +29,19 @@
 # Fixed to metric=p95 only for now. Writes exports/plots/{historical_source}/
 # Supplement_{country}.png.
 #
-# Set ATTRIBUTION_PIPELINE_CODE_DIR to override the repo checkout location
-# used by task scripts (defaults to the current known checkout).
+# All tunable values (task-parameter lists and CODE_DIR) live in the sibling
+# rose-suite.conf -- edit that file to reconfigure this workflow rather than
+# this file.
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 
 [scheduler]
     allow implicit tasks = True
 
 [task parameters]
-    statistic = amplification#risk_ratio, 
-    index = fwi#, dsr
-    metric = p95#, 7x, cum
-    historical_source = xclim, impacttb
+    statistic = {{ STATISTIC | join(', ') }}
+    index = {{ INDEX | join(', ') }}
+    metric = {{ METRIC | join(', ') }}
+    historical_source = {{ HISTORICAL_SOURCE | join(', ') }}
 
 [runtime]
     [[root]]

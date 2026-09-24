@@ -1,7 +1,6 @@
 #!Jinja2
 {# Generate all 525 attribution-ensemble member IDs (r001i1p1 .. r105i1p5). #}
-{% set N_RUNS = 105 %}
-{% set N_PHYSICS = 5 %}
+{# N_RUNS/N_PHYSICS come from rose-suite.conf [jinja2:suite.rc]. #}
 {% set attr_members = [] %}
 {% for r in range(1, N_RUNS + 1) %}
 {%   for p in range(1, N_PHYSICS + 1) %}
@@ -22,11 +21,12 @@
 # in [scheduling][[graph]] to run a subset.
 #
 # To add a metric (e.g. dsr p95, fwi 7x, dsr cumulative) add rows to the
-# met_* task parameters below — no code change needed, run_metrics.py resolves
-# the metric from its METRICS registry.
+# METRIC value in the sibling rose-suite.conf -- no code change needed,
+# run_metrics.py resolves the metric from its METRICS registry.
 #
-# Set ATTRIBUTION_PIPELINE_CODE_DIR to override the repo checkout location
-# used by task scripts (defaults to the current known checkout).
+# All tunable values (task-parameter lists, ensemble geometry, and
+# CODE_DIR) live in the sibling rose-suite.conf -- edit that file to
+# reconfigure this workflow rather than this file.
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 
 [scheduler]
@@ -37,19 +37,19 @@
 # subpackages), not this metrics/ stage specifically.
 
 [task parameters]
-    country = Canada,Iberia, Chile, # Korea, Scotland, 
+    country = {{ COUNTRY | join(', ') }}
 
     # index x metric combinations to compute. Keep these aligned across the
     # three datasets so bias correction always finds a matching baseline +
     # ensemble metric CSV.
-    index = fwi#, dsr
-    metric = p95#, 7x, cum
+    index = {{ INDEX | join(', ') }}
+    metric = {{ METRIC | join(', ') }}
 
-    era5_run_label = Mean_RH_Mean_Wind
+    era5_run_label = {{ ERA5_RUN_LABEL }}
 
-    hist_member = 1..15
+    hist_member = {{ HIST_MEMBER }}
 
-    attr_run_type = historicalExt, historicalNatExt
+    attr_run_type = {{ ATTR_RUN_TYPE | join(', ') }}
     attr_member = {{ attr_members | join(', ') }}
 
 [runtime]
@@ -61,8 +61,8 @@
     [[graph]]
         R1 = """
             era5_metrics<country, index, metric, era5_run_label>
-            #histxclim_metrics<country, index, metric, hist_member>
-            #histimpacttb_metrics<country, metric, hist_member>
+            histxclim_metrics<country, index, metric, hist_member>
+            histimpacttb_metrics<country, metric, hist_member>
             #attr_metrics<country, index, metric, attr_run_type, attr_member>
         """ #attr metrics only exists for diagnostic purposes if a deeper dive into the 
         #attribution ensemble is needed should downstream results be off.

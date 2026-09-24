@@ -4,9 +4,21 @@ attribution_pipeline/metrics/ (interim metric CSVs),
 attribution_pipeline/bias_correction/ (baseline regression + read window), and
 attribution_pipeline/probability_ratio/ (risk ratio / amplification / supplement figure).
 
+Loads its values from config.json (sibling to this file) so paths and region
+definitions can be edited without touching code. Override the JSON file
+location via ATTRIBUTION_PIPELINE_CONFIG; override the output root via
+ATTRIBUTION_PIPELINE_ROOT (as before).
 """
 
+import json
 import os
+
+_CONFIG_PATH = os.environ.get(
+    "ATTRIBUTION_PIPELINE_CONFIG",
+    os.path.join(os.path.dirname(__file__), "config.json"),
+)
+with open(_CONFIG_PATH) as _f:
+    _CONFIG = json.load(_f)
 
 # --- Pipeline output root ---------------------------------------------------
 # Every attribution_pipeline-generated file (raw FWI/DSR, interim metric CSVs,
@@ -14,7 +26,7 @@ import os
 # exports) lives under this single root. Override via env var to relocate
 PIPELINE_ROOT = os.environ.get(
     "ATTRIBUTION_PIPELINE_ROOT",
-    "/data/scratch/bob.potts/sowf/attribution_pipeline",
+    _CONFIG["pipeline_root_default"],
 )
 
 # index_calculation/ raw FWI/DSR output (one subfolder per data source).
@@ -37,81 +49,26 @@ UNCORRECTED_METRICS = os.path.join(PIPELINE_ROOT, "uncorrected_metrics")
 EXPORTS = os.path.join(PIPELINE_ROOT, "exports")
 
 # --- External, read-only data sources ---------------------------------------
-ERA5_OBS_BASEPATH = "/data/users/appldata/Data/OBS-ERA5/daily"
-IMPACTTB_HISTORICAL_FWI_DIR = (
-    "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM"
-)
+_EXTERNAL = _CONFIG["external_data_sources"]
+ERA5_OBS_BASEPATH = _EXTERNAL["era5_obs_basepath"]
+IMPACTTB_HISTORICAL_FWI_DIR = _EXTERNAL["impacttb_historical_fwi_dir"]
+SHAPEFILE = _EXTERNAL["shapefile"]
 
 # HadGEM3-A Attribution raw-data read window: a dataset-availability constraint
 # on the whole ensemble (hurs single-month files only start at 201911, and all
 # four variables have continuous single-month files 201911..202502) -- global,
 # not region-specific, since it gates which raw files the loader reads before
 # any region/country is selected.
-WINDOW_START_MONTH = 201911
-WINDOW_END_MONTH = 202412
-WINDOW_START = "2019-11-01"
-WINDOW_END = "2024-12-30"
+_WINDOW = _CONFIG["hadgem3_attribution_window"]
+WINDOW_START_MONTH = _WINDOW["start_month"]
+WINDOW_END_MONTH = _WINDOW["end_month"]
+WINDOW_START = _WINDOW["start"]
+WINDOW_END = _WINDOW["end"]
 
-REGION_CONFIGS = {
-    # "Korea": {
-    #     "months": (3,),
-    #     "month_name": "March",
-    #     "shape_name": "Southeast South Korea",
-    #     "display_name": "SE S. Korea",
-    #     "event_year": 2025,
-    #     "percentile": 95,
-    #     "baseline_start": 1980,
-    #     "baseline_end": 2013,
-    #     "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
-    # },
-    "Iberia": {
-        "months": (8,),
-        "month_name": "Aug",
-        "shape_name": "Northwest Iberia",
-        "display_name": "NW Iberia",
-        "event_year": 2025,
-        "percentile": 95,
-        "baseline_start": 1980,
-        "baseline_end": 2013,
-        "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
-    },
-    # "Scotland": {
-    #     "months": (6, 7),
-    #     "month_name": "June-July",
-    #     "shape_name": "Scottish Highlands",
-    #     "display_name": "Scottish Highlands",
-    #     "event_year": 2025,
-    #     "percentile": 95,
-    #     "baseline_start": 1980,
-    #     "baseline_end": 2013,
-    #     "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
-    # },
-    "Chile": {
-        "months": (1, 2),
-        "month_name": "January-February",
-        "shape_name": "Chilean Temperate Forests and Matorral",
-        "display_name": "Chile Forests & Matorral",
-        "event_year": 2026,
-        "percentile": 95,
-        "baseline_start": 1980,
-        "baseline_end": 2013,
-        # Chile's spin-up requirement excludes 2020.
-        "bias_correction_years": (2021, 2022, 2023, 2024),
-    },
-    "Canada": {
-        "months": (7, 8),
-        "month_name": "July-August",
-        "shape_name": "Midwestern Canadian Shield forests",
-        "display_name": "Canadian Shield Forests",
-        "event_year": 2025,
-        "percentile": 95,
-        "baseline_start": 1980,
-        "baseline_end": 2013,
-        "bias_correction_years": (2020, 2021, 2022, 2023, 2024),
-    },
-}
-
-SHAPEFILE = "/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp"
+# Region/country definitions. All regions always live here; which ones
+# actually get run is controlled by the Rose-suite COUNTRY task parameter
+# in metrics/rose-suite.conf and bias_correction/rose-suite.conf, not here.
+REGION_CONFIGS = _CONFIG["regions"]
 
 
 def get_region(country: str) -> dict:
@@ -127,3 +84,4 @@ def month_label(months) -> str:
     import calendar
 
     return "-".join(calendar.month_abbr[m] for m in months)
+

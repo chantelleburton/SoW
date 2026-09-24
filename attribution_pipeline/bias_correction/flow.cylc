@@ -31,20 +31,21 @@
 # / run_uncorrected.py auto-derive the paired members (present for both hist
 # and histnat) from the FWI-creation output, so each task loops them internally.
 #
-# Set ATTRIBUTION_PIPELINE_CODE_DIR to override the repo checkout location
-# used by task scripts (defaults to the current known checkout).
+# All tunable values (task-parameter lists and CODE_DIR) live in the sibling
+# rose-suite.conf -- edit that file to reconfigure this workflow rather than
+# this file.
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 
 [scheduler]
     allow implicit tasks = True
 
 [task parameters]
-    country = Iberia, Chile, Canada#, Korea, Scotland, 
-    baseline_member = 1..15
-    runtype = hist, histnat
-    index = fwi#, dsr
-    metric = p95#, 7x, cum
-    historical_source = xclim, impacttb
+    country = {{ COUNTRY | join(', ') }}
+    baseline_member = {{ BASELINE_MEMBER }}
+    runtype = {{ RUNTYPE | join(', ') }}
+    index = {{ INDEX | join(', ') }}
+    metric = {{ METRIC | join(', ') }}
+    historical_source = {{ HISTORICAL_SOURCE | join(', ') }}
 
 [runtime]
     [[root]]
@@ -59,6 +60,7 @@
             uncorrected_extraction<country, runtype, index, metric>
         """
 
+[runtime]
     [[bias_correction<country, baseline_member, runtype, index, metric, historical_source>]]
         script = """
         set -eux
