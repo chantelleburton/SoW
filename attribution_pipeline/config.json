@@ -1,6 +1,12 @@
 {
     "pipeline_root_default": "/data/scratch/bob.potts/sowf/attribution_pipeline",
 
+    "raw_fwi_output": {
+        "era5": "raw_fwi/era5",
+        "hg3_historical": "raw_fwi/hg3_historical",
+        "hg3_attribution": "raw_fwi/hg3_attribution"
+    },
+
     "external_data_sources": {
         "era5_obs_basepath": "/data/users/appldata/Data/OBS-ERA5/daily",
         "impacttb_historical_fwi_dir": "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM",
