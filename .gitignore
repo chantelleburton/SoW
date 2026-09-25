@@ -14,3 +14,5 @@ explore_DataPrep.ipynb # this is used for exploratory testing
 PDF_95%.py
 *.nc
 *.grib
+claude.md
+attribution_pipeline/plan.md

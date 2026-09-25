@@ -1,0 +1,82 @@
+{
+    "pipeline_root_default": "/data/scratch/bob.potts/sowf/attribution_pipeline",
+
+    "raw_fwi_output": {
+        "era5": "raw_fwi/era5",
+        "hg3_historical": "raw_fwi/hg3_historical",
+        "hg3_attribution": "raw_fwi/hg3_attribution"
+    },
+
+    "external_data_sources": {
+        "era5_obs_basepath": "/data/users/appldata/Data/OBS-ERA5/daily",
+        "impacttb_historical_fwi_dir": "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM",
+        "shapefile": "/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp"
+    },
+
+    "hadgem3_attribution_window": {
+        "_comment": "Dataset-availability constraint on the whole HadGEM3-A Attribution ensemble (hurs single-month files only start at 201911, and all four variables have continuous single-month files 201911..202502) -- global, not region-specific, since it gates which raw files the loader reads before any region/country is selected.",
+        "start_month": 201911,
+        "end_month": 202412,
+        "start": "2019-11-01",
+        "end": "2024-12-30"
+    },
+
+    "regions": {
+        "Korea": {
+            "months": [3],
+            "month_name": "March",
+            "shape_name": "Southeast South Korea",
+            "display_name": "SE S. Korea",
+            "event_year": 2025,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
+        },
+        "Iberia": {
+            "months": [8],
+            "month_name": "Aug",
+            "shape_name": "Northwest Iberia",
+            "display_name": "NW Iberia",
+            "event_year": 2025,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
+        },
+        "Scotland": {
+            "months": [6, 7],
+            "month_name": "June-July",
+            "shape_name": "Scottish Highlands",
+            "display_name": "Scottish Highlands",
+            "event_year": 2025,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
+        },
+        "Chile": {
+            "months": [1, 2],
+            "month_name": "January-February",
+            "shape_name": "Chilean Temperate Forests and Matorral",
+            "display_name": "Chile Forests & Matorral",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "_comment": "Chile's spin-up requirement excludes 2020.",
+            "bias_correction_years": [2021, 2022, 2023, 2024]
+        },
+        "Canada": {
+            "months": [7, 8],
+            "month_name": "July-August",
+            "shape_name": "Midwestern Canadian Shield forests",
+            "display_name": "Canadian Shield Forests",
+            "event_year": 2025,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
+        }
+    }
+}

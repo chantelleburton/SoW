@@ -2,9 +2,10 @@
 Compare HadGEM3-A historical FWI-family index percentile time series produced
 by two different pipelines:
 
-  - "xclim"    : new xclim-based pipeline outputs, e.g.
-                 /data/scratch/bob.potts/sowf/fwi-calculation-pipeline/Metric_Files/
-                 HadGEM3_BUI95_1980-2013_Iberia_8_95%.csv
+  - "xclim"    : new xclim-based pipeline metric outputs (attribution_pipeline's
+                 run_metrics.py), e.g.
+                 /data/scratch/bob.potts/sowf/attribution_pipeline/metrics/
+                 hg3_historical_BUI_P95_Iberia_8.csv
   - "impactTB" : legacy ImpactTB-based pipeline outputs, e.g.
                  /data/scratch/bob.potts/sowf/test_output/Baseline/
                  HadGEM3_ISI_1980-2013_Chile_15_95%.csv
@@ -36,10 +37,14 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 ############# Configuration #############
 
-XCLIM_DIR = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/Historical_Metrics'
+# xclim metric CSVs are written by attribution_pipeline/metrics/run_metrics.py
+# for dataset='hg3_historical', filenames: hg3_historical_{INDEX}_{METRICID}_{country}_{member}.csv
+# (only the percentile metric ('p95' -> METRICID 'P95') is comparable here --
+# the 7x/cum metrics have no ImpactTB-side equivalent to diff against).
+XCLIM_DIR = '/data/scratch/bob.potts/sowf/attribution_pipeline/metrics'
 IMPACTTB_DIR = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
-PLOT_DIR = '/data/scratch/bob.potts/sowf/test_output/Plots/XCLIM_vs_ImpactTB'
-SUMMARY_CSV = os.path.join(PLOT_DIR, 'xclim_vs_impacttb_differences_modified.csv')
+PLOT_DIR = '/data/scratch/bob.potts/sowf/attribution_pipeline/validation/XCLIM_vs_ImpactTB'
+SUMMARY_CSV = os.path.join(PLOT_DIR, 'xclim_vs_impacttb_differences.csv')
 
 INDEX_NAMES = {
     'FFMC': 'Fine Fuel Moisture Content',
@@ -54,10 +59,10 @@ COLOUR_XCLIM = '#008787'     # teal
 COLOUR_IMPACTTB = '#E27226'  # orange
 COLOUR_DIFF = '#862976'      # hotpink/purple, from SoW_gradient_hues
 
-# Filenames look like: HadGEM3_BUI95_1980-2013_Iberia_8_95%.csv (xclim)
-#                       HadGEM3_ISI_1980-2013_Chile_15_95%.csv  (impactTB)
+# xclim filenames look like: hg3_historical_BUI_P95_Iberia_8.csv
+# impactTB filenames look like: HadGEM3_ISI_1980-2013_Chile_15_95%.csv
 XCLIM_PATTERN = re.compile(
-    r'HadGEM3_(?P<index>[A-Z]+)\d+_(?P<start>\d+)-(?P<end>\d+)_(?P<country>[A-Za-z]+)_(?P<member>\d+)_(?P<pct>\d+)%_modified\.csv$'
+    r'hg3_historical_(?P<index>[A-Z]+)_P(?P<pct>\d+)_(?P<country>[A-Za-z]+)_(?P<member>\d+)\.csv$'
 )
 IMPACTTB_PATTERN = re.compile(
     r'HadGEM3_(?P<index>[A-Z]+)_(?P<start>\d+)-(?P<end>\d+)_(?P<country>[A-Za-z]+)_(?P<member>\d+)_(?P<pct>\d+)%\.csv$'
