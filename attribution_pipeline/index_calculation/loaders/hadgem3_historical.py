@@ -5,13 +5,8 @@ produces baseline FWI (typically 1980-2013).
 Ported from
 index_calculation/fwi/FWI-HadGEM3-A_Historical/hadgem3-a_historical_fwi_calculation.py
 
-NOTE: this loader is known to be "wrong but very close" (per the pipeline plan) —
-it is kept isolated from the shared core deliberately so it can keep being tuned
-without touching the ERA5 / HG3-Attribution loaders or FWICalculator.
-
 Runs in independent ~10-year BLOCKS (mirroring ERA5Loader's segmented
-start_year/end_year pattern) rather than one 1970-2013 monolithic call, to
-reduce memory footprint. Each block loads SPIN_UP_YEARS of lead-in before its
+start_year/end_year pattern).  Each block loads SPIN_UP_YEARS of lead-in before its
 nominal start, discards that lead-in year(s) before writing (same idea as
 ERA5's spin-up-year discard)."""
 
