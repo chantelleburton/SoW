@@ -18,6 +18,8 @@ from utils.cubefuncs import (
     apply_shapefile_inclusive,
     constrain_cube_to_months,
 )
+from utils.constrain_cubes_standard import (constrain_to_sow_shapefile_countries)
+
 
 from attribution_pipeline.pipeline_config import (
     RAW_FWI_HG3_ATTRIBUTION,
@@ -83,7 +85,8 @@ def load_member_cube(index: str, run_type: str, member: str, shape_name: str):
     for coord_name in ("year", "season_year"):
         if cube.coords(coord_name):
             cube.remove_coord(coord_name)
-    cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
+    #cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
+    cube = constrain_to_sow_shapefile_countries(cube, SHAPEFILE, shape_name, mainland_only=True)
     return cube
 
 
