@@ -14,8 +14,9 @@
 # through the shared run_fwi.py entrypoint (attribution_pipeline/index_calculation/run_fwi.py).
 #
 # To run only a subset of datasets (e.g. while iterating on one loader),
-# comment out the unwanted line(s) in [scheduling][[graph]] below — each
-# dataset's tasks are otherwise fully independent of the others.
+# set RUN_ERA5 / RUN_HG3_ATTRIBUTION / RUN_HG3_HISTORICAL in the sibling
+# rose-suite.conf — each dataset's tasks are otherwise fully independent
+# of the others. You should not need to edit this file to select datasets.
 #
 # Task parameters are namespaced per source (era5_*, attr_*, hist_*) to avoid
 # collisions, then mapped back onto the plain CYLC_TASK_PARAM_* names
@@ -25,6 +26,9 @@
 # CODE_DIR) live in the sibling rose-suite.conf -- edit that file to
 # reconfigure this workflow rather than this file.
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
+{% set RUN_ERA5 = RUN_ERA5 | default(false) %}
+{% set RUN_HG3_ATTRIBUTION = RUN_HG3_ATTRIBUTION | default(false) %}
+{% set RUN_HG3_HISTORICAL = RUN_HG3_HISTORICAL | default(false) %}
 
 [scheduler]
     allow implicit tasks = True
@@ -48,9 +52,15 @@
 [scheduling]
     [[graph]]
         R1 = """
+{% if RUN_ERA5 %}
             era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>
+{% endif %}
+{% if RUN_HG3_ATTRIBUTION %}
             hadgem_attribution_fwi_calculation<attr_run_type, attr_member>
+{% endif %}
+{% if RUN_HG3_HISTORICAL %}
             hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>
+{% endif %}
         """
 
 [runtime]
