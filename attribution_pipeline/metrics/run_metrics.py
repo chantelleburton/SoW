@@ -343,6 +343,7 @@ def run(
     region = get_region(country)
     months = region["months"]
     shape_name = region["shape_name"]
+    mainland_only = region.get("mainland_only", False)
     season_wrap = region.get("season_wrap", False)
 
     if dataset not in DATASET_RESOLVERS:
@@ -364,7 +365,9 @@ def run(
     print(cube)
     _validate_cube(cube, dataset, "post-resolve")
     print(cube)
-    cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
+    cube = apply_shapefile_inclusive(
+        SHAPEFILE, shape_name, cube, mainland_only=mainland_only
+    )
     _validate_cube(cube, dataset, "post-mask")
 
     years, values = metric.compute(cube, months, season_wrap=season_wrap)

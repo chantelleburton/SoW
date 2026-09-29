@@ -34,6 +34,7 @@
             "baseline_start": 1980,
             "baseline_end": 2013,
             "season_wrap": false,
+            "mainland_only": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         },
         "Iberia": {
@@ -46,6 +47,7 @@
             "baseline_start": 1980,
             "baseline_end": 2013,
             "season_wrap": false,
+            "mainland_only": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         },
         "Scotland": {
@@ -57,6 +59,7 @@
             "percentile": 95,
             "baseline_start": 1980,
             "baseline_end": 2013,
+            "mainland_only": false,
             "season_wrap": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         },
@@ -69,6 +72,7 @@
             "percentile": 95,
             "baseline_start": 1980,
             "baseline_end": 2013,
+            "mainland_only": false,
             "season_wrap": false,
             "_comment": "Chile's spin-up requirement excludes 2020.",
             "bias_correction_years": [2021, 2022, 2023, 2024]
@@ -82,6 +86,7 @@
             "percentile": 95,
             "baseline_start": 1980,
             "baseline_end": 2013,
+            "mainland_only": false,
             "season_wrap": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         }
