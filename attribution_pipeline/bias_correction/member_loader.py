@@ -18,8 +18,6 @@ from utils.cubefuncs import (
     apply_shapefile_inclusive,
     constrain_cube_to_months,
 )
-
-
 from attribution_pipeline.pipeline_config import (
     RAW_FWI_HG3_ATTRIBUTION,
     SHAPEFILE,

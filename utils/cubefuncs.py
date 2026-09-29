@@ -231,8 +231,25 @@ def apply_shapefile_inclusive(shp_file, shape_name, cube, mainland_only=False):
 
     # Optionally drop offshore islands: keep only the single largest polygon
     # (the mainland). Default off -- masking is otherwise unchanged.
-    if mainland_only and isinstance(region_geom, MultiPolygon):
-        region_geom = max(region_geom.geoms, key=lambda g: g.area)
+    if mainland_only:
+        if isinstance(region_geom, MultiPolygon):
+            total_area = region_geom.area
+            mainland_geom = max(region_geom.geoms, key=lambda g: g.area)
+            kept_area = mainland_geom.area
+            dropped_area = total_area - kept_area
+            dropped_pct = 100 * dropped_area / total_area
+            print(
+                f"mainland_only: kept 1 of {len(region_geom.geoms)} polygons "
+                f"for '{shape_name}' -- kept area {kept_area:.2f} deg^2, "
+                f"dropped area {dropped_area:.2f} deg^2 "
+                f"({dropped_pct:.1f}% of total area)"
+            )
+            region_geom = mainland_geom
+        else:
+            print(
+                f"mainland_only: '{shape_name}' is a single polygon -- "
+                "nothing to drop"
+            )
     
     # Step 1: Crop to bounding box to reduce data volume
     from .constrain_cubes_standard import contrain_coords

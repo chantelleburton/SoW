@@ -304,6 +304,7 @@ def contrain_to_shape(cube, geom, constrain = True):
     
     return masked_cube
 
+
 def contrain_to_sow_shapefile(cube, shp_filename, name, column='name', *args, **kw):
     """
     Mask cube to region(s) in shapefile by name, using specified column (default 'name').
