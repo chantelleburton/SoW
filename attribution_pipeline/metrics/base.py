@@ -16,9 +16,35 @@ import iris.coord_categorisation as icc
 from utils.cubefuncs import CountryMax, CountryMean, CountryPercentile
 
 
-def _ensure_year_coord(cube):
+def _ensure_year_coord(cube, months=None, season_wrap=False):
+    """Add (if missing) a "year" aux coord to `cube`.
+
+    When season_wrap is False (the default -- all pre-existing regions),
+    this is identical to a plain icc.add_year: "year" == calendar year, no
+    behaviour change.
+
+    When season_wrap is True, `months` must be the region's chronological
+    event-month list (e.g. [12, 1] for a Dec-Jan event). Timesteps whose
+    month_number is BEFORE months[0] (the trailing, January-side months) are
+    relabelled to calendar_year - 1, so the whole wrapping season is labelled
+    by its START (December) year -- matching the config's event_year
+    convention. Leading (December-side) months keep their calendar year.
+    """
     if not cube.coords("year"):
         icc.add_year(cube, "time")
+    if season_wrap:
+        if not months:
+            raise ValueError(
+                "season_wrap=True requires `months` to determine the wrap threshold."
+            )
+        if not cube.coords("month_number"):
+            icc.add_month_number(cube, "time")
+        wrap_start = months[0]
+        year_coord = cube.coord("year")
+        adjusted = year_coord.points.copy()
+        trailing = cube.coord("month_number").points < wrap_start
+        adjusted[trailing] -= 1
+        year_coord.points = adjusted
     return cube
 
 
@@ -52,10 +78,13 @@ class BaseMetric(ABC):
         self.index = index
 
     @abstractmethod
-    def compute(self, cube, months):
+    def compute(self, cube, months, season_wrap=False):
         """Given a region-masked cube spanning the full year range (NOT yet
-        constrained to event months) and the event month(s) (1-indexed tuple),
-        return (years: list[int], values: list[float])."""
+        constrained to event months), the event month(s) (chronological
+        event-order tuple/list), and whether the event crosses the year
+        boundary (region's "season_wrap" config flag), return
+        (years: list[int], values: list[float]). `years` are labelled by the
+        event's START year when season_wrap is True (see _ensure_year_coord)."""
         raise NotImplementedError
 
     def output_stem(self) -> str:

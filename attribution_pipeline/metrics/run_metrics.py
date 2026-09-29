@@ -343,6 +343,7 @@ def run(
     region = get_region(country)
     months = region["months"]
     shape_name = region["shape_name"]
+    season_wrap = region.get("season_wrap", False)
 
     if dataset not in DATASET_RESOLVERS:
         raise ValueError(
@@ -366,7 +367,7 @@ def run(
     cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
     _validate_cube(cube, dataset, "post-mask")
 
-    years, values = metric.compute(cube, months)
+    years, values = metric.compute(cube, months, season_wrap=season_wrap)
     if not years:
         raise RuntimeError(
             f"No results computed for {dataset}/{country}/{metric.output_stem()}"

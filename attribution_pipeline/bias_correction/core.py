@@ -59,6 +59,7 @@ def run_bias_correction(
     region = get_region(country)
     shape_name = region["shape_name"]
     months = region["months"]
+    season_wrap = region.get("season_wrap", False)
     data_years = region.get("bias_correction_years", DEFAULT_DATA_YEARS)
     baseline_start_year = region["baseline_start"]
     baseline_end_year = region["baseline_end"]
@@ -148,6 +149,7 @@ def run_bias_correction(
                     metric_name,
                     index,
                     percentile=percentile,
+                    season_wrap=season_wrap,
                     **metric_kwargs,
                 )
                 scalar_log = soft_log(scalar)

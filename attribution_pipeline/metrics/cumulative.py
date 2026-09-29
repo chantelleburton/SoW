@@ -36,13 +36,22 @@ class CumulativeMetric(BaseMetric):
         self.spatial_reduction = spatial_reduction
         self.metric_id = f"cum{window}_{spatial_reduction}"
 
-    def compute(self, cube, months):
+    def compute(self, cube, months, season_wrap=False):
         time_coord = cube.coord("time")
         calendar = time_coord.units.calendar
         dates = time_coord.units.num2date(time_coord.points)
+        # Candidate START years for the event window. `months` is in
+        # chronological event order (e.g. [12, 1] for a Dec-Jan event), so
+        # use months[0]/months[-1] directly rather than min()/max() -- for a
+        # wrapping event min/max would silently collapse [12, 1] to (1, 12)
+        # i.e. "the whole calendar year". We simply try every calendar year
+        # present as a candidate start year; a bogus candidate (e.g. trying
+        # the trailing Jan-only year as its own start year) naturally
+        # produces no antecedent context / no in-window timesteps below and
+        # is skipped via the existing `continue`/`mask.any()` checks -- same
+        # pattern already relied on for the non-wrap case.
         years_present = sorted({d.year for d in dates})
-
-        start_month, end_month = min(months), max(months)
+        start_month, end_month = months[0], months[-1]
         years, values = [], []
 
         for y in years_present:
@@ -51,11 +60,21 @@ class CumulativeMetric(BaseMetric):
             # plain datetime.date, which is not comparable to cftime objects
             # and raises TypeError when the cube uses a non-standard calendar.
             event_start = cftime.datetime(y, start_month, 1, calendar=calendar)
-            event_end = (
-                cftime.datetime(y + 1, 1, 1, calendar=calendar)
-                if end_month == 12
-                else cftime.datetime(y, end_month + 1, 1, calendar=calendar)
-            )
+            if season_wrap:
+                # end_month is on the Jan-side (trailing), i.e. in year y+1.
+                event_end = (
+                    cftime.datetime(y + 2, 1, 1, calendar=calendar)
+                    if end_month == 12
+                    else cftime.datetime(
+                        y + 1, end_month + 1, 1, calendar=calendar
+                    )
+                )
+            else:
+                event_end = (
+                    cftime.datetime(y + 1, 1, 1, calendar=calendar)
+                    if end_month == 12
+                    else cftime.datetime(y, end_month + 1, 1, calendar=calendar)
+                )
             window_start = event_start - timedelta(days=self.window)
 
             context_constraint = iris.Constraint(

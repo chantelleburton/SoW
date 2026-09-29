@@ -29,20 +29,21 @@ def extract_scalar(
     metric_name: str,
     index: str,
     percentile: float = 95,
+    season_wrap: bool = False,
     **metric_kwargs,
 ) -> float:
     """cube: full-window, shapefile-masked member cube (from
     member_loader.load_member_cube). Returns a single scalar value for
     data_year/months."""
     # Validate first -- raises MissingMemberError/InvalidMemberDataError.
-    validate_member_window(cube, data_year, months)
+    validate_member_window(cube, data_year, months, season_wrap=season_wrap)
 
     kwargs = dict(metric_kwargs)
     if metric_name.startswith("p"):
         kwargs.setdefault("percentile", percentile)
 
     metric = METRICS[metric_name](index, **kwargs)
-    years, values = metric.compute(cube, months)
+    years, values = metric.compute(cube, months, season_wrap=season_wrap)
     years = list(years)
     if data_year not in years:
         raise ValueError(

@@ -21,6 +21,8 @@
         "end": "2024-12-30"
     },
 
+    "_regions_comment": "List months in event order. Set season_wrap to false for an event inside one calendar year. Set season_wrap to true for an event that crosses the year boundary (for example December to January); list the months in order (for example [12, 1]) and set event_year to the START year (the earlier, December year).",
+
     "regions": {
         "Korea": {
             "months": [3],
@@ -31,6 +33,7 @@
             "percentile": 95,
             "baseline_start": 1980,
             "baseline_end": 2013,
+            "season_wrap": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         },
         "Iberia": {
@@ -42,6 +45,7 @@
             "percentile": 95,
             "baseline_start": 1980,
             "baseline_end": 2013,
+            "season_wrap": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         },
         "Scotland": {
@@ -53,6 +57,7 @@
             "percentile": 95,
             "baseline_start": 1980,
             "baseline_end": 2013,
+            "season_wrap": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         },
         "Chile": {
@@ -64,6 +69,7 @@
             "percentile": 95,
             "baseline_start": 1980,
             "baseline_end": 2013,
+            "season_wrap": false,
             "_comment": "Chile's spin-up requirement excludes 2020.",
             "bias_correction_years": [2021, 2022, 2023, 2024]
         },
@@ -76,6 +82,7 @@
             "percentile": 95,
             "baseline_start": 1980,
             "baseline_end": 2013,
+            "season_wrap": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         }
     }

@@ -40,6 +40,7 @@ def run_uncorrected_extraction(
     region = get_region(country)
     shape_name = region["shape_name"]
     months = region["months"]
+    season_wrap = region.get("season_wrap", False)
     data_years = region["bias_correction_years"]
 
     metric_stem = METRICS[metric_name](
@@ -87,6 +88,7 @@ def run_uncorrected_extraction(
                     metric_name,
                     index,
                     percentile=percentile,
+                    season_wrap=season_wrap,
                     **metric_kwargs,
                 )
                 successful.append(member)

@@ -18,9 +18,9 @@ class PercentileMetric(BaseMetric):
         self.percentile = percentile
         self.metric_id = f"p{percentile:g}"
 
-    def compute(self, cube, months):
+    def compute(self, cube, months, season_wrap=False):
         cube = constrain_cube_to_months(cube, months)
-        cube = _ensure_year_coord(cube)
+        cube = _ensure_year_coord(cube, months, season_wrap)
 
         # 1) percentile over time within each year
         yr_time_p = cube.aggregated_by(
