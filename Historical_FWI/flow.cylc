@@ -3,7 +3,7 @@
 
 [task parameters]
     member = 1..15
-    country = Chile, Canada, Iberia#, Scotland, Korea
+    country = France #Chile, Canada, Iberia#, Scotland, Korea
     index = ffmc, fwi, isi, bui, dmc, dc
 [scheduling]
 
@@ -16,8 +16,10 @@
     [[hadgem_historical_fwi<member,country,index>]]
         script = """
         set -eux
-        conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/Historical_FWI/
+        conda activate SoW
+        cd /home/users/chantelle.burton/GitHub/SoW/Historical_FWI/
+        #conda activate sowf
+        #cd /data/users/bob.potts/StateOfFires_2025-26/code/Historical_FWI/
         python HadGEM3_Historical_FWI.py
         """
 

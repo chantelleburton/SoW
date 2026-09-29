@@ -3,7 +3,7 @@
 
 [task parameters]
     index = fine_fuel_moisture_content,duff_moisture_content, drought_code, initial_spread_index, build_up_index,canadian_fire_weather_index,
-    country = Chile, Canada, Korea, Iberia, Scotland, 
+    country = France #Chile, Canada, Korea, Iberia, Scotland, 
 
 [scheduling]
 
@@ -16,8 +16,10 @@
     [[era5_historical_fwi<index,country>]]
         script = """
         set -eux
-        conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/Historical_FWI/ERA5/
+        conda activate SoW
+        cd /home/users/chantelle.burton/GitHub/SoW/Historical_FWI/ERA5
+        #conda activate sowf
+        #cd /data/users/bob.potts/StateOfFires_2025-26/code/Historical_FWI/ERA5/
         python ERA5_Historical_FWI.py
         """
 

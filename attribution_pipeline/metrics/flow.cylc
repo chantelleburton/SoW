@@ -27,7 +27,7 @@
 # All tunable values (task-parameter lists, ensemble geometry, and
 # CODE_DIR) live in the sibling rose-suite.conf -- edit that file to
 # reconfigure this workflow rather than this file.
-{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/home/users/chantelle.burton/GitHub/SoW') %}
 
 [scheduler]
     allow implicit tasks = True
@@ -73,7 +73,7 @@
     [[era5_metrics<country, index, metric, era5_run_label>]]
         script = """
         set -eux
-        conda activate sowf
+        conda activate SoW
         cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=era5
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
@@ -95,7 +95,7 @@
     [[histxclim_metrics<country, index, metric, hist_member>]]
         script = """
         set -eux
-        conda activate sowf
+        conda activate SoW
         cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_historical_xclim
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
@@ -117,7 +117,7 @@
     [[histimpacttb_metrics<country, metric, hist_member>]]
         script = """
         set -eux
-        conda activate sowf
+        conda activate SoW
         cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_historical_impacttb
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
@@ -139,7 +139,7 @@
     [[attr_metrics<country, index, metric, attr_run_type, attr_member>]]
         script = """
         set -eux
-        conda activate sowf
+        conda activate SoW
         cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_attribution
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}

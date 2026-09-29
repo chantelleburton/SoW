@@ -24,7 +24,7 @@ CSV_EXPORT = True #True for CSV, False for .dat
 ############# User inputs end here #############
 
 folder = '/data/scratch/chantelle.burton/SoW2526/'
-shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
+shp_file = '/data/scratch/chantelle.burton/sow26/Countries/Countries/GCP_Country_Domains_v1.6_ed.shp'
 index_dict = {
     'canadian_fire_weather_index': 'FWI',
     'fine_fuel_moisture_content': 'FFMC',
@@ -70,6 +70,13 @@ elif Country == 'Canada':
     month = 'July-August'
     percentile = 95
     shape_name = 'Midwestern Canadian Shield forests'
+    
+elif Country == 'France':
+    print('Running France')
+    Month = 7
+    month = 'July'
+    percentile = 95
+    shape_name = 'France'
 
 start_time = time.time()
 
@@ -118,7 +125,8 @@ try:
     icc.add_year(ERA5_hist_all, 'time')
 except ValueError:
     pass  # already  exists
-iris.save(ERA5_hist_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Interim/ERA5_{index_dict[INDEX]}_{START_YEAR}-{END_YEAR}_{Country}.nc')
+#iris.save(ERA5_hist_all, f'/data/scratch/bob.potts/sowf/test_output/Zenodo_Interim/ERA5_{index_dict[INDEX]}_{START_YEAR}-{END_YEAR}_{Country}.nc')
+#iris.save(ERA5_hist_all, f'/data/scratch/chantelle.burton/sow26/test_output/Zenodo_Interim/ERA5_{index_dict[INDEX]}_{START_YEAR}-{END_YEAR}_{Country}.nc')
 # 1) Percentile over time within each year
 print("Computing time percentile by year...")
 yr_time_p = ERA5_hist_all.aggregated_by('year', iris.analysis.PERCENTILE, percent=percentile)

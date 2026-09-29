@@ -50,7 +50,8 @@ end_year = min(start_year + 10, MAX_END_YEAR)
 
 #I/O: OBS_ERA5 shouldn't change, outdir is configurable. 
 basepath = '/data/users/appldata/Data/OBS-ERA5/daily'
-out_dir = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/ERA5'
+#out_dir = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/ERA5'
+out_dir = '/data/scratch/chantelle.burton/sow26/fwi-calculation-pipeline/ERA5'
 
 #lookups based on cylc passed varis for determaning inputs to fwi calc, wind and rh mean vs min/max has moderate sensativity on the fwi.
 WIND_OPTIONS = {

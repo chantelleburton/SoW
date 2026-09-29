@@ -34,7 +34,7 @@
 # All tunable values (task-parameter lists and CODE_DIR) live in the sibling
 # rose-suite.conf -- edit that file to reconfigure this workflow rather than
 # this file.
-{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/home/users/chantelle.burton/GitHub/SoW') %}
 
 [scheduler]
     allow implicit tasks = True
@@ -64,7 +64,7 @@
     [[bias_correction<country, baseline_member, runtype, index, metric, historical_source>]]
         script = """
         set -eux
-        conda activate sowf
+        conda activate SoW
         cd $CODE_DIR
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_baseline_member}
@@ -78,7 +78,7 @@
         platform = spice
 
         [[[directives]]]
-            --mem = 15G
+            --mem = 20G
             --partition = cpu-long
             --time = 180
             --cpus-per-task = 2
@@ -87,7 +87,7 @@
     [[uncorrected_extraction<country, runtype, index, metric>]]
         script = """
         set -eux
-        conda activate sowf
+        conda activate SoW
         cd $CODE_DIR
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
         export CYLC_TASK_PARAM_runtype=${CYLC_TASK_PARAM_runtype}
@@ -99,7 +99,7 @@
         platform = spice
 
         [[[directives]]]
-            --mem = 15G
+            --mem = 20G
             --partition = cpu-long
             --time = 180
             --cpus-per-task = 2

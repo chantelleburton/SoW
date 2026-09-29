@@ -32,7 +32,7 @@
 # All tunable values (task-parameter lists and CODE_DIR) live in the sibling
 # rose-suite.conf -- edit that file to reconfigure this workflow rather than
 # this file.
-{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/home/users/chantelle.burton/GitHub/SoW') %}
 
 [scheduler]
     allow implicit tasks = True
@@ -62,7 +62,7 @@
     [[probability_ratio<statistic, index, metric, historical_source>]]
         script = """
         set -eux
-        conda activate sowf
+        conda activate SoW
         cd $CODE_DIR
         # Pass index + metric name; run_probability_ratio.py builds the metric
         # stem (e.g. FWI_P95, DSR_CUM360_MEAN) via the METRICS registry so it
@@ -87,7 +87,7 @@
     [[plot_supplement<index, historical_source>]]
         script = """
         set -eux
-        conda activate sowf
+        conda activate SoW
         cd $CODE_DIR
         export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
         export CYLC_TASK_PARAM_metric_name=p95

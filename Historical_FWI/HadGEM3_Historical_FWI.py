@@ -40,8 +40,9 @@ index_code = os.environ.get("CYLC_TASK_PARAM_index", 'fwi')
 print(index_code)
 index = INDEX_NAMES[index_code]
 print(index)
-folder = '/data/users/bob.potts/sowf_data/historicalFWI/HadGEM/'
-shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
+folder = '/data/scratch/chantelle.burton/sow26/sowf_data/historicalFWI/HadGEM/'
+#folder = '/data/users/bob.potts/sowf_data/historicalFWI/HadGEM/'
+shp_file = '/data/scratch/chantelle.burton/sow26/Countries/Countries/GCP_Country_Domains_v1.6_ed.shp'
 #Set up the 2025 files and months automatically
 if Country == 'Korea':
     print('Running South Korea')
@@ -78,7 +79,13 @@ elif Country == 'Canada':
     percentile = 95
     shape_name = 'Midwestern Canadian Shield forests'
 
-
+elif Country == 'France':
+    print('Running France')
+    Month = 7
+    month = 'July'
+    percentile = 95
+    shape_name = 'France'
+    
 start_time = time.time()  
 
 if isinstance(Month, tuple): #handles mlti month events
@@ -119,7 +126,8 @@ for cube in cubes:
 HadGEM3_all = cubes.concatenate_cube()
 
 # Constrain once
-HadGEM3_all = apply_shapefile_inclusive(shp_file, shape_name, HadGEM3_all)
+#HadGEM3_all = apply_shapefile_inclusive(shp_file, shape_name, HadGEM3_all)
+HadGEM3_all = constrain_to_sow_shapefile_countries(HadGEM3_all, shp_file, shape_name)
 
 # Add year coordinate
 try:
@@ -137,7 +145,8 @@ yr_country_p = yr_time_p.collapsed(['latitude', 'longitude'], iris.analysis.PERC
 HadGEM3_Arr = np.ravel(yr_country_p.data)
 
 # Save HadGEM3 text out to a file
-output_file = f'/data/scratch/bob.potts/sowf/test_output/Baseline/HadGEM3_{index_code.upper()}_{START_YEAR}-{END_YEAR}_{Country}_{member}_{percentile}%'
+#output_file = f'/data/scratch/bob.potts/sowf/test_output/Baseline/HadGEM3_{index_code.upper()}_{START_YEAR}-{END_YEAR}_{Country}_{member}_{percentile}%'
+output_file = f'/data/scratch/chantelle.burton/sow26/test_output/Baseline/HadGEM3_{index_code.upper()}_{START_YEAR}-{END_YEAR}_{Country}_{member}_{percentile}%'
 
 if CSV_EXPORT:
     # Get the years from the cube

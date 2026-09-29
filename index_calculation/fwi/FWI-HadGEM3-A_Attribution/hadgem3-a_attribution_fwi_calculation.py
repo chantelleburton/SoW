@@ -19,7 +19,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 #swap back to opatt which has redownloaded wind data and pray. 
 # ─── Configuration ───────────────────────────────────────────────────────────
 tld = '/data/users/opatt/HadGEM3-A-N216'
-out_dir = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Raw_FWI_Files'
+#out_dir = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Raw_FWI_Files'
+out_dir = '/data/scratch/chantelle.burton/sow26/Attribution_Ensemble_xclim/Raw_FWI_Files'
 
 start_time = time.time()
 run_type = os.environ.get("CYLC_TASK_PARAM_run_type", "historicalExt").strip()

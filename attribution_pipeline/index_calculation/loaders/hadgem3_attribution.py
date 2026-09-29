@@ -65,7 +65,7 @@ class HadGEM3AttributionLoader(BaseLoader):
         cfg = DatasetConfig(
             name=self.name,
             out_dir=out_dir
-            or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution",
+            or "/data/scratch/chantelle.burton/sow26/attribution_pipeline/raw_fwi/hg3_attribution",
             spatial_chunk=30,
             cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=5),
             cffwis_kwargs={"initial_start_up": True},

@@ -34,14 +34,16 @@ if run_type is None:
 print(f'Processing Country: {Country}, baseline member: {baseline_member}, run type: {run_type}')
 
 
-
-shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
+shp_file = '/data/scratch/chantelle.burton/sow26/Countries/Countries/GCP_Country_Domains_v1.6_ed.shp'
+#shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
 attribution_folder = '/data/scratch/chantelle.burton/SoW2526/'
-output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
-baseline_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
+output_dir = '/data/scratch/chantelle.burton/sow26/test_output/Condensed_Log_Transforms/'
+baseline_folder = '/data/scratch/chantelle.burton/sow26/test_output/Baseline/'
+#output_dir = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms/'
+#baseline_folder = '/data/scratch/bob.potts/sowf/test_output/Baseline/'
 
 
-DATA_YEARS = [2024]#[2021, 2022, 2023, 2024]# List of years to process. Currently set to just 2024 until 2020-2024 attribtution ensemble runs are processed.
+DATA_YEARS = [2020, 2021, 2022, 2023, 2024]# List of years to process
 BASELINE_START_YEAR = 1980 # start of the regression baseline period (inclusive)
 BASELINE_END_YEAR = 2013 # end of the regression baseline period (inclusive)
 
@@ -81,6 +83,13 @@ elif Country == 'Canada':
     percentile = 95
     shape_name = 'Midwestern Canadian Shield forests'
 
+elif Country == 'France':
+    print('Running France')
+    Month = 7
+    month = 'July'
+    percentile = 95
+    shape_name = 'France'
+    
 else:
     raise ValueError(f"Unknown Country: {Country}. Expected one of: SouthKorea, Iberia, Scotland, Chile, Canada")
 

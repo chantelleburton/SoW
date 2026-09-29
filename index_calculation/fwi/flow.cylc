@@ -42,8 +42,10 @@
     [[era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>]]
         script = """
         set -eux
-        conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/index_calculation/fwi/FWI-ERA5/
+        conda activate SoW
+        cd /home/users/chantelle.burton/GitHub/SoW/index_calculation/fwi/FWI-ERA5/
+        #conda activate sowf
+        #cd /data/users/bob.potts/StateOfFires_2025-26/code/index_calculation/fwi/FWI-ERA5/
         export CYLC_TASK_PARAM_start_year=${CYLC_TASK_PARAM_era5_start_year}
         export CYLC_TASK_PARAM_wind_stat=${CYLC_TASK_PARAM_era5_wind_stat}
         export CYLC_TASK_PARAM_rh_stat=${CYLC_TASK_PARAM_era5_rh_stat}
@@ -63,8 +65,10 @@
     [[hadgem_attribution_fwi_calculation<attr_run_type, attr_member>]]
         script = """
         set -eux
-        conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/index_calculation/fwi/FWI-HadGEM3-A_Attribution/
+        conda activate SoW
+        cd /home/users/chantelle.burton/GitHub/SoW/index_calculation/fwi/FWI-HadGEM3-A_Attribution/
+        #conda activate sowf
+        #cd /data/users/bob.potts/StateOfFires_2025-26/code/index_calculation/fwi/FWI-HadGEM3-A_Attribution/
         export CYLC_TASK_PARAM_run_type=${CYLC_TASK_PARAM_attr_run_type}
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_attr_member}
         echo "Running run_type=${CYLC_TASK_PARAM_run_type} member=${CYLC_TASK_PARAM_member}"
@@ -83,8 +87,10 @@
     [[hadgem_historical_fwi_calculation<hist_member>]]
         script = """
         set -eux
-        conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/index_calculation/fwi/FWI-HadGEM3-A_Historical/
+        conda activate SoW
+        cd /home/users/chantelle.burton/GitHub/SoW/index_calculation/fwi/FWI-HadGEM3-A_Historical/        
+        #conda activate sowf
+        #cd /data/users/bob.potts/StateOfFires_2025-26/code/index_calculation/fwi/FWI-HadGEM3-A_Historical/
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
         echo "Running member=${CYLC_TASK_PARAM_member}"
         python hadgem3-a_historical_fwi_calculation.py

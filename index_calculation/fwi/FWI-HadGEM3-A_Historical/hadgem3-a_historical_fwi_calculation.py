@@ -19,8 +19,8 @@ warnings.filterwarnings("ignore", category=UserWarning, message=".*chunking.*")
 warnings.filterwarnings("ignore", category=FutureWarning)
 # ─── Configuration ───────────────────────────────────────────────────────────
 tld = '/data/users/opatt/HadGEM3-A-N216/historical'
-out_dir = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/HadGEM3-A_Historical'
-
+#out_dir = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/HadGEM3-A_Historical'
+out_dir = '/data/scratch/chantelle.burton/sow26/fwi-calculation-pipeline/HadGEM3-A_Historical'
 start_time = time.time()
 
 member_num = int(os.environ.get("CYLC_TASK_PARAM_member", "1"))

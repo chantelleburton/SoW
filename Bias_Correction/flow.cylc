@@ -4,7 +4,7 @@
 [task parameters]
     member = 1..15
     runtype = hist,histnat
-    country =  Iberia, Scotland, Chile, Canada, Korea
+    country =  France#Iberia, Scotland, Chile, Canada, Korea
 
 [scheduling]
     [[graph]]
@@ -16,8 +16,10 @@
     [[hadgem_log_bias_correction<country, member, runtype>]]
         script = """
         set -eux
-        conda activate sowf
-        cd /data/users/bob.potts/StateOfFires_2025-26/code/Bias_Correction/
+        conda activate SoW
+        cd /home/users/chantelle.burton/GitHub/SoW/Bias_Correction/       
+        #conda activate sowf
+        #cd /data/users/bob.potts/StateOfFires_2025-26/code/Bias_Correction/
         python HadGEM3_LogBiasCorrection_MultiYear.py
         """
 

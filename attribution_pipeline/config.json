@@ -1,10 +1,10 @@
 {
-    "pipeline_root_default": "/data/scratch/bob.potts/sowf/attribution_pipeline",
+    "pipeline_root_default": "/data/scratch/chantelle.burton/sow26/attribution_pipeline",
 
     "external_data_sources": {
         "era5_obs_basepath": "/data/users/appldata/Data/OBS-ERA5/daily",
         "impacttb_historical_fwi_dir": "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM",
-        "shapefile": "/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp"
+        "shapefile": "/data/scratch/chantelle.burton/sow26/Countries/Countries/GCP_Country_Domains_v1.6_ed.shp"
     },
 
     "hadgem3_attribution_window": {
@@ -16,6 +16,17 @@
     },
 
     "regions": {
+        "France": {
+            "months": [7],
+            "month_name": "July",
+            "shape_name": "France",
+            "display_name": "France",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
+        },
         "Korea": {
             "months": [3],
             "month_name": "March",
