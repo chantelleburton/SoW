@@ -36,6 +36,7 @@ from attribution_pipeline.pipeline_config import (
     RAW_FWI_HG3_ATTRIBUTION,
     RAW_FWI_HG3_HISTORICAL,
     SHAPEFILE,
+    SHAPEFILE_NAME_COLUMN,
     get_region,
 )
 
@@ -366,7 +367,8 @@ def run(
     _validate_cube(cube, dataset, "post-resolve")
     print(cube)
     cube = apply_shapefile_inclusive(
-        SHAPEFILE, shape_name, cube, mainland_only=mainland_only
+        SHAPEFILE, shape_name, cube, mainland_only=mainland_only,
+        name_column=SHAPEFILE_NAME_COLUMN,
     )
     _validate_cube(cube, dataset, "post-mask")
 

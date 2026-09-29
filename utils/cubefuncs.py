@@ -217,7 +217,8 @@ def GetERA5ThresholdFromMonthly(era5_dir, shp_file, shape_name, months, event_ye
     return float(np.array(era5_cube.data))
 
 
-def apply_shapefile_inclusive(shp_file, shape_name, cube, mainland_only=False):
+def apply_shapefile_inclusive(shp_file, shape_name, cube, mainland_only=False,
+                              name_column='name'):
     
     shapefile = gpd.read_file(shp_file)
     
@@ -226,7 +227,17 @@ def apply_shapefile_inclusive(shp_file, shape_name, cube, mainland_only=False):
     cube.coord('longitude').coord_system = iris.coord_systems.GeogCS(iris.fileformats.pp.EARTH_RADIUS)
     
     # Get geometry for this region
-    region_gdf = shapefile[shapefile['name'] == shape_name]
+    if name_column not in shapefile.columns:
+        raise KeyError(
+            f"Column {name_column!r} not found in {shp_file!r}. "
+            f"Available columns: {shapefile.columns.tolist()}"
+        )
+    region_gdf = shapefile[shapefile[name_column] == shape_name]
+    if region_gdf.empty:
+        raise ValueError(
+            f"No feature with {name_column}={shape_name!r} found in "
+            f"{shp_file!r}."
+        )
     region_geom = region_gdf['geometry'].values[0]
 
     # Optionally drop offshore islands: keep only the single largest polygon

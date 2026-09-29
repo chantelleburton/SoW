@@ -21,6 +21,7 @@ from utils.cubefuncs import (
 from attribution_pipeline.pipeline_config import (
     RAW_FWI_HG3_ATTRIBUTION,
     SHAPEFILE,
+    SHAPEFILE_NAME_COLUMN,
 )
 
 RAW_FWI_DIR = RAW_FWI_HG3_ATTRIBUTION
@@ -84,7 +85,8 @@ def load_member_cube(index: str, run_type: str, member: str, shape_name: str,
         if cube.coords(coord_name):
             cube.remove_coord(coord_name)
     cube = apply_shapefile_inclusive(
-        SHAPEFILE, shape_name, cube, mainland_only=mainland_only
+        SHAPEFILE, shape_name, cube, mainland_only=mainland_only,
+        name_column=SHAPEFILE_NAME_COLUMN,
     )
     return cube
 
