@@ -79,7 +79,7 @@ class HadGEM3HistoricalLoader(BaseLoader):
             name=self.name,
             out_dir=out_dir or RAW_FWI_HG3_HISTORICAL,
             spatial_chunk=30,
-            cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=30),
+            cluster=ClusterConfig(n_workers=30, memory_per_worker_gb=4),
             cffwis_kwargs={"initial_start_up": True},
         )
         self.out_dir = cfg.out_dir

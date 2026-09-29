@@ -67,7 +67,7 @@ class HadGEM3AttributionLoader(BaseLoader):
             out_dir=out_dir
             or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution",
             spatial_chunk=30,
-            cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=5),
+            cluster=ClusterConfig(n_workers=8, memory_per_worker_gb=2),
             cffwis_kwargs={"initial_start_up": True},
         )
         self.out_dir = cfg.out_dir

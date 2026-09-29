@@ -84,9 +84,9 @@
 
         [[[directives]]]
             --mem = 150G
-            --partition = cpu-long
-            --time = 720
-            --cpus-per-task = 4
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 32
             --ntasks = 1
 
     [[hadgem_attribution_fwi_calculation<attr_run_type, attr_member>]]
@@ -104,9 +104,9 @@
 
         [[[directives]]]
             --mem = 20G
-            --partition = cpu-long
-            --time = 360
-            --cpus-per-task = 4
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 10
             --ntasks = 1
 
     [[hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>]]
@@ -123,8 +123,8 @@
         platform = spice
 
         [[[directives]]]
-            --mem = 40G
-            --partition = cpu-long
-            --time = 360
-            --cpus-per-task = 4
+            --mem = 150G
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 32
             --ntasks = 1

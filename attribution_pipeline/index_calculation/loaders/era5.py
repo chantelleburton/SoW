@@ -121,7 +121,7 @@ class ERA5Loader(BaseLoader):
             name=self.name,
             out_dir=out_dir or RAW_FWI_ERA5,
             spatial_chunk=90,
-            cluster=ClusterConfig(n_workers=3, memory_per_worker_gb=40),
+            cluster=ClusterConfig(n_workers=30, memory_per_worker_gb=4),
             cffwis_kwargs={"initial_start_up": True},
         )
         self.out_dir = cfg.out_dir
