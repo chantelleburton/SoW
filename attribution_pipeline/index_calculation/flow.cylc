@@ -51,6 +51,7 @@
     [[root]]
         [[[environment]]]
             CODE_DIR = {{ CODE_DIR }}
+            MAX_END_YEAR = {{ MAX_END_YEAR }}
 
 [scheduling]
     [[graph]]
