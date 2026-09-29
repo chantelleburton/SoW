@@ -18,7 +18,6 @@ from utils.cubefuncs import (
     apply_shapefile_inclusive,
     constrain_cube_to_months,
 )
-from utils.constrain_cubes_standard import (constrain_to_sow_shapefile_countries)
 
 
 from attribution_pipeline.pipeline_config import (
@@ -70,7 +69,8 @@ def paired_members(index: str) -> set:
     )
 
 
-def load_member_cube(index: str, run_type: str, member: str, shape_name: str):
+def load_member_cube(index: str, run_type: str, member: str, shape_name: str,
+                     mainland_only: bool = False):
     """Load and shapefile-mask a member's full-window cube (2019-11..2024-12).
     Does NOT constrain to a specific year/month -- callers needing antecedent
     context (e.g. CumulativeMetric) need the full window; use
@@ -85,8 +85,9 @@ def load_member_cube(index: str, run_type: str, member: str, shape_name: str):
     for coord_name in ("year", "season_year"):
         if cube.coords(coord_name):
             cube.remove_coord(coord_name)
-    #cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
-    cube = constrain_to_sow_shapefile_countries(cube, SHAPEFILE, shape_name, mainland_only=True)
+    cube = apply_shapefile_inclusive(
+        SHAPEFILE, shape_name, cube, mainland_only=mainland_only
+    )
     return cube
 
 

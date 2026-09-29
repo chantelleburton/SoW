@@ -24,7 +24,6 @@ import os
 import iris
 import numpy as np
 from utils.cubefuncs import apply_shapefile_inclusive
-from utils.constrain_cubes_standard import (constrain_to_sow_shapefile_countries)
 
 from attribution_pipeline.metrics.base import BaseMetric
 from attribution_pipeline.metrics.cumulative import CumulativeMetric
@@ -344,6 +343,7 @@ def run(
     region = get_region(country)
     months = region["months"]
     shape_name = region["shape_name"]
+    mainland_only = region.get("mainland_only", False)
 
     if dataset not in DATASET_RESOLVERS:
         raise ValueError(
@@ -364,8 +364,9 @@ def run(
     print(cube)
     _validate_cube(cube, dataset, "post-resolve")
     print(cube)
-    #cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
-    cube = constrain_to_sow_shapefile_countries(cube, SHAPEFILE, shape_name, mainland_only=True)
+    cube = apply_shapefile_inclusive(
+        SHAPEFILE, shape_name, cube, mainland_only=mainland_only
+    )
     _validate_cube(cube, dataset, "post-mask")
 
     years, values = metric.compute(cube, months)

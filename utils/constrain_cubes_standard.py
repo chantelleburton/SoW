@@ -22,7 +22,6 @@ from pdb import set_trace
 import iris.quickplot as qplt
 import matplotlib.pyplot as plt
 import datetime
-from shapely.geometry import MultiPolygon
 
 def constrain_to_data(cube):
     """constrain cube to the lats and lons that contain data that isn't 'nan'   
@@ -305,32 +304,6 @@ def contrain_to_shape(cube, geom, constrain = True):
     
     return masked_cube
 
-def constrain_to_sow_shapefile_countries(cube, shp_filename, names,
-                              column='region_nam',mainland_only=False, *args, **kw):
-    """
-    Mask cube to region(s) in shapefile by name, using specified column.
-    """
-    shp = gp.read_file(shp_filename)
-    
-    if isinstance(names, str):
-        names = [names]
-    subset = shp[shp[column].isin(names)]
-    # Fix invalid geometries
-    subset = shp[shp[column].isin(names)].copy()
-    subset["geometry"] = subset.geometry.buffer(0)
-    geom = subset.geometry.union_all()  
-
-    if mainland_only and isinstance(geom, MultiPolygon):
-        geom = max(geom.geoms, key=lambda g: g.area)
-    time_dim = cube.coord_dims('time')[0]
-    lat_dim = cube.coord_dims('latitude')[0]
-    lon_dim = cube.coord_dims('longitude')[0]
-    cube = cube.copy()
-    cube.transpose([time_dim, lat_dim, lon_dim])
-
-    return contrain_to_shape(cube, geom, *args, **kw) 
-    
-    
 def contrain_to_sow_shapefile(cube, shp_filename, name, column='name', *args, **kw):
     """
     Mask cube to region(s) in shapefile by name, using specified column (default 'name').

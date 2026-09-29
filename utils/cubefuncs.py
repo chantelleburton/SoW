@@ -3,6 +3,7 @@ import numpy as np
 import os
 from datetime import date
 import geopandas as gpd
+from shapely.geometry import MultiPolygon
 from .constrain_cubes_standard import contrain_to_sow_shapefile, sub_year_months
 
 
@@ -216,7 +217,7 @@ def GetERA5ThresholdFromMonthly(era5_dir, shp_file, shape_name, months, event_ye
     return float(np.array(era5_cube.data))
 
 
-def apply_shapefile_inclusive(shp_file, shape_name, cube):
+def apply_shapefile_inclusive(shp_file, shape_name, cube, mainland_only=False):
     
     shapefile = gpd.read_file(shp_file)
     
@@ -227,6 +228,11 @@ def apply_shapefile_inclusive(shp_file, shape_name, cube):
     # Get geometry for this region
     region_gdf = shapefile[shapefile['name'] == shape_name]
     region_geom = region_gdf['geometry'].values[0]
+
+    # Optionally drop offshore islands: keep only the single largest polygon
+    # (the mainland). Default off -- masking is otherwise unchanged.
+    if mainland_only and isinstance(region_geom, MultiPolygon):
+        region_geom = max(region_geom.geoms, key=lambda g: g.area)
     
     # Step 1: Crop to bounding box to reduce data volume
     from .constrain_cubes_standard import contrain_coords
