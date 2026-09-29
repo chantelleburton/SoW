@@ -33,6 +33,7 @@
 # rose-suite.conf -- edit that file to reconfigure this workflow rather than
 # this file.
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
+{% set RUN_PLOT_SUPPLEMENT = RUN_PLOT_SUPPLEMENT | default(false) %}
 
 [scheduler]
     allow implicit tasks = True
@@ -54,8 +55,10 @@
             probability_ratio<statistic, index, metric, historical_source=xclim>
             probability_ratio<statistic, index=fwi, metric, historical_source=impacttb>
 
-            #plot_supplement<index, historical_source=xclim>
-            #plot_supplement<index=fwi, historical_source=impacttb>
+{% if RUN_PLOT_SUPPLEMENT %}
+            plot_supplement<index, historical_source=xclim>
+            plot_supplement<index=fwi, historical_source=impacttb>
+{% endif %}
         """
 
 [runtime]

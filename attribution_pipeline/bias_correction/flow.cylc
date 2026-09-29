@@ -35,6 +35,11 @@
 # rose-suite.conf -- edit that file to reconfigure this workflow rather than
 # this file.
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
+{% set RUN_BIAS_CORRECTED = RUN_BIAS_CORRECTED | default(false) %}
+{% set RUN_UNCORRECTED_EXTRACTION = RUN_UNCORRECTED_EXTRACTION | default(false) %}
+{% if not (RUN_BIAS_CORRECTED or RUN_UNCORRECTED_EXTRACTION) %}
+{{ raise("At least one of RUN_BIAS_CORRECTED / RUN_UNCORRECTED_EXTRACTION must be true in rose-suite.conf.") }}
+{% endif %}
 
 [scheduler]
     allow implicit tasks = True
@@ -55,9 +60,13 @@
 [scheduling]
     [[graph]]
         R1 = """
+{% if RUN_BIAS_CORRECTED %}
             bias_correction<country, baseline_member, runtype, index, metric, historical_source=xclim>
             bias_correction<country, baseline_member, runtype, index=fwi, metric, historical_source=impacttb>
+{% endif %}
+{% if RUN_UNCORRECTED_EXTRACTION %}
             uncorrected_extraction<country, runtype, index, metric>
+{% endif %}
         """
 
 [runtime]

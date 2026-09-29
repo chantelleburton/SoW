@@ -17,8 +17,9 @@
 # differ (ERA5 has no members but has run_label; hg3_historical_xclim has 15
 # baseline members and fwi/dsr; hg3_historical_impacttb also has 15 baseline
 # members but FWI only (no DSR -- impact-toolbox data doesn't have it);
-# hg3_attribution has 525 members x 2 run types). Comment out any line
-# in [scheduling][[graph]] to run a subset.
+# hg3_attribution has 525 members x 2 run types). Set RUN_ERA5_METRICS /
+# RUN_HISTXCLIM_METRICS / RUN_HISTIMPACTTB_METRICS / RUN_ATTR_METRICS in the
+# sibling rose-suite.conf to select which families run.
 #
 # To add a metric (e.g. dsr p95, fwi 7x, dsr cumulative) add rows to the
 # METRIC value in the sibling rose-suite.conf -- no code change needed,
@@ -28,6 +29,13 @@
 # CODE_DIR) live in the sibling rose-suite.conf -- edit that file to
 # reconfigure this workflow rather than this file.
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
+{% set RUN_ERA5_METRICS = RUN_ERA5_METRICS | default(false) %}
+{% set RUN_HISTXCLIM_METRICS = RUN_HISTXCLIM_METRICS | default(false) %}
+{% set RUN_HISTIMPACTTB_METRICS = RUN_HISTIMPACTTB_METRICS | default(false) %}
+{% set RUN_ATTR_METRICS = RUN_ATTR_METRICS | default(false) %}
+{% if not (RUN_ERA5_METRICS or RUN_HISTXCLIM_METRICS or RUN_HISTIMPACTTB_METRICS or RUN_ATTR_METRICS) %}
+{{ raise("At least one of RUN_ERA5_METRICS / RUN_HISTXCLIM_METRICS / RUN_HISTIMPACTTB_METRICS / RUN_ATTR_METRICS must be true in rose-suite.conf.") }}
+{% endif %}
 
 [scheduler]
     allow implicit tasks = True
@@ -60,10 +68,18 @@
 [scheduling]
     [[graph]]
         R1 = """
+{% if RUN_ERA5_METRICS %}
             era5_metrics<country, index, metric, era5_run_label>
+{% endif %}
+{% if RUN_HISTXCLIM_METRICS %}
             histxclim_metrics<country, index, metric, hist_member>
+{% endif %}
+{% if RUN_HISTIMPACTTB_METRICS %}
             histimpacttb_metrics<country, metric, hist_member>
-            #attr_metrics<country, index, metric, attr_run_type, attr_member>
+{% endif %}
+{% if RUN_ATTR_METRICS %}
+            attr_metrics<country, index, metric, attr_run_type, attr_member>
+{% endif %}
         """ #attr metrics only exists for diagnostic purposes if a deeper dive into the 
         #attribution ensemble is needed should downstream results be off.
         # histimpacttb_metrics has no 'index' parameter -- impact-toolbox historical

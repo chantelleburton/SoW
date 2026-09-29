@@ -29,6 +29,9 @@
 {% set RUN_ERA5 = RUN_ERA5 | default(false) %}
 {% set RUN_HG3_ATTRIBUTION = RUN_HG3_ATTRIBUTION | default(false) %}
 {% set RUN_HG3_HISTORICAL = RUN_HG3_HISTORICAL | default(false) %}
+{% if not (RUN_ERA5 or RUN_HG3_ATTRIBUTION or RUN_HG3_HISTORICAL) %}
+{{ raise("At least one of RUN_ERA5 / RUN_HG3_ATTRIBUTION / RUN_HG3_HISTORICAL must be true in rose-suite.conf.") }}
+{% endif %}
 
 [scheduler]
     allow implicit tasks = True
