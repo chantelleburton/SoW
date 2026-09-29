@@ -140,8 +140,21 @@ class ERA5Loader(BaseLoader):
         return range(self.start_year, self.end_year + 1)
 
     def load(self, chunks):
-        years = self.years
+        tas = self._load_tas(chunks)
+        pr = self._load_pr(chunks)
+        ws = self._load_sfcwind(chunks)
+        hurs = self._load_hurs(chunks)
 
+        # normalise time-of-day so alignment works across sources
+        tas = tas.assign_coords(time=tas.indexes["time"].normalize())
+        pr = pr.assign_coords(time=pr.indexes["time"].normalize())
+        ws = ws.assign_coords(time=ws.indexes["time"].normalize())
+        hurs = hurs.assign_coords(time=hurs.indexes["time"].normalize())
+
+        return {"tas": tas, "pr": pr, "sfcWind": ws, "hurs": hurs}
+
+    def _load_tas(self, chunks):
+        years = self.years
         tas_files = []
         for y in years:
             tas_files += sorted(
@@ -161,7 +174,10 @@ class ERA5Loader(BaseLoader):
         tas = xr.open_mfdataset(tas_files, chunks=chunks)["t2m"] - 273.15
         tas = _fix_valid_time(tas)
         tas.attrs["units"] = "degC"
+        return tas
 
+    def _load_pr(self, chunks):
+        years = self.years
         pr_files = []
         for y in years:
             pr_files += sorted(
@@ -181,7 +197,10 @@ class ERA5Loader(BaseLoader):
         pr = xr.open_mfdataset(pr_files, chunks=chunks)["tp"] * 1000  # m to mm
         pr = _fix_valid_time(pr)
         pr.attrs["units"] = "mm/day"
+        return pr
 
+    def _load_sfcwind(self, chunks):
+        years = self.years
         if self.wind_stat == "mean":
             # Wind (mean) -- derived from daily-mean u/v component files
             # (hypot(u, v)); these have well-formed CF time encoding like
@@ -269,7 +288,10 @@ class ERA5Loader(BaseLoader):
             ws = xr.concat(ws_parts, dim="time")
             ws = ws.chunk(chunks)
             ws.attrs["units"] = "m s-1"
+        return ws
 
+    def _load_hurs(self, chunks):
+        years = self.years
         hurs_files = []
         for y in years:
             hurs_files += sorted(
@@ -287,14 +309,7 @@ class ERA5Loader(BaseLoader):
             )
         hurs = xr.open_mfdataset(hurs_files, chunks=chunks)["hurs"]
         hurs = _fix_valid_time(hurs)
-
-        # normalise time-of-day so alignment works across sources
-        tas = tas.assign_coords(time=tas.indexes["time"].normalize())
-        pr = pr.assign_coords(time=pr.indexes["time"].normalize())
-        ws = ws.assign_coords(time=ws.indexes["time"].normalize())
-        hurs = hurs.assign_coords(time=hurs.indexes["time"].normalize())
-
-        return {"tas": tas, "pr": pr, "sfcWind": ws, "hurs": hurs}
+        return hurs
 
     def trim_output(self, index_map):
         # The block's first year (start_year) exists only to spin up the moisture

@@ -30,10 +30,18 @@ PIPELINE_ROOT = os.environ.get(
 )
 
 # index_calculation/ raw FWI/DSR output (one subfolder per data source).
-RAW_FWI_ERA5 = os.path.join(PIPELINE_ROOT, "raw_fwi/era5")
-RAW_FWI_HG3_HISTORICAL = os.path.join(PIPELINE_ROOT, "raw_fwi/hg3_historical")
+# Each entry may be an absolute path  or a path relative to
+# PIPELINE_ROOT (the default). Falls back to the pre-config.json convention if
+# config.json doesn't have a raw_fwi_output section (older config.json files).
+_RAW_FWI = _CONFIG.get("raw_fwi_output", {})
+RAW_FWI_ERA5 = os.path.join(
+    PIPELINE_ROOT, _RAW_FWI.get("era5", "raw_fwi/era5")
+)
+RAW_FWI_HG3_HISTORICAL = os.path.join(
+    PIPELINE_ROOT, _RAW_FWI.get("hg3_historical", "raw_fwi/hg3_historical")
+)
 RAW_FWI_HG3_ATTRIBUTION = os.path.join(
-    PIPELINE_ROOT, "raw_fwi/hg3_attribution"
+    PIPELINE_ROOT, _RAW_FWI.get("hg3_attribution", "raw_fwi/hg3_attribution")
 )
 
 # metrics/ interim per-year metric CSVs (read by bias_correction/ and

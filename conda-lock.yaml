@@ -475,4 +475,3 @@ dependencies:
       - odfpy==1.4.1
       - rpy2-rinterface==3.6.6
       - rpy2-robjects==3.6.5
-prefix: /home/users/bob.potts/.conda/envs/sowf

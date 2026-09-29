@@ -3,6 +3,13 @@
 ATTRIBUTION_PIPELINE_CODE_DIR=/home/users/chantelle.burton/GitHub/SoW
 
 [template variables]
+<<<<<<< HEAD
+ATTR_RUN_TYPE=['historicalExt', 'historicalNatExt']
+COUNTRY=['France']
+# METRIC=['p95', '7x', 'cum']
+ERA5_RUN_LABEL='Mean_RH_Mean_Wind'
+HIST_MEMBER='1..15'
+=======
 # Which metric task families to run in this invocation. Defaults are false
 # (opt-in) -- set the ones you want explicitly. RUN_ATTR_METRICS is
 # diagnostic-only (see flow.cylc) and should normally stay false.
@@ -15,12 +22,12 @@ RUN_ATTR_METRICS=false
 N_RUNS=105
 N_PHYSICS=5
 
-COUNTRY=['France']
+COUNTRY=['Canada', 'Iberia', 'Chile']
+>>>>>>> origin/attribution-pipeline
 # COUNTRY=['Canada', 'Iberia', 'Chile', 'Korea', 'Scotland']
 INDEX=['fwi']
 # INDEX=['fwi', 'dsr']
 METRIC=['p95']
-# METRIC=['p95', '7x', 'cum']
-ERA5_RUN_LABEL='Mean_RH_Mean_Wind'
-HIST_MEMBER='1..15'
-ATTR_RUN_TYPE=['historicalExt', 'historicalNatExt']
+N_PHYSICS=5
+# HadGEM3-A Attribution ensemble geometry (105 runs x 5 physics = 525 members).
+N_RUNS=105

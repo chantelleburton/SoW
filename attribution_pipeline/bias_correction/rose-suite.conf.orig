@@ -3,6 +3,8 @@
 ATTRIBUTION_PIPELINE_CODE_DIR=/home/users/chantelle.burton/GitHub/SoW
 
 [template variables]
+<<<<<<< HEAD
+=======
 # Which job families to run in this invocation. Defaults are false (opt-in).
 # RUN_BIAS_CORRECTED gates the bias_correction task family (the actual
 # bias-corrected output); RUN_UNCORRECTED_EXTRACTION gates the
@@ -11,6 +13,8 @@ ATTRIBUTION_PIPELINE_CODE_DIR=/home/users/chantelle.burton/GitHub/SoW
 RUN_BIAS_CORRECTED=false
 RUN_UNCORRECTED_EXTRACTION=false
 
+COUNTRY=['Iberia', 'Chile', 'Canada']
+>>>>>>> origin/attribution-pipeline
 # COUNTRY=['Iberia', 'Chile', 'Canada', 'Korea', 'Scotland']
 BASELINE_MEMBER='1..15'
 COUNTRY=['France']

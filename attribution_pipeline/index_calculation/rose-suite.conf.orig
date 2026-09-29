@@ -1,0 +1,44 @@
+[env]
+# Overrides the repo checkout location used by task scripts.
+ATTRIBUTION_PIPELINE_CODE_DIR=/home/users/chantelle.burton/GitHub/SoW
+
+[template variables]
+<<<<<<< HEAD
+ATTR_RUN_TYPE=['historicalExt', 'historicalNatExt']
+# ERA5_WIND_STAT=['mean', 'max']
+ERA5_RH_STAT=['mean']
+# ERA5 FWI-creation task parameters.
+ERA5_START_YEAR=[1979, 1989, 1999, 2009, 2019]
+ERA5_WIND_STAT=['mean']
+HIST_BLOCK_START_YEAR=[1970, 1980, 1990, 2000, 2010]
+=======
+# Which datasets to run in this invocation. At least one must be true, or
+# the workflow's graph will be empty. Defaults are false (opt-in) -- set
+# the ones you want explicitly rather than relying on flow.cylc defaults.
+RUN_ERA5=false
+RUN_HG3_ATTRIBUTION=false
+RUN_HG3_HISTORICAL=false
+
+# ERA5 FWI-creation task parameters.
+ERA5_START_YEAR=[1979, 1989, 1999, 2009, 2019]
+ERA5_WIND_STAT=['mean']
+# ERA5_WIND_STAT=['mean', 'max']
+ERA5_RH_STAT=['mean']
+# ERA5_RH_STAT=['mean', 'minimum']
+
+# Latest year ERA5 FWI-creation will ever compute up to, regardless of
+# ERA5_START_YEAR (each block still stops at start_year + 10 if that's
+# sooner). Bump this forward as more ERA5 data becomes available.
+MAX_END_YEAR=2026
+
+# HadGEM3-A Attribution ensemble geometry (105 runs x 5 physics = 525 members).
+N_RUNS=105
+N_PHYSICS=5
+ATTR_RUN_TYPE=['historicalExt', 'historicalNatExt']
+
+>>>>>>> origin/attribution-pipeline
+# HadGEM3-A Historical FWI-creation task parameters.
+HIST_MEMBER='1..15'
+N_PHYSICS=5
+# HadGEM3-A Attribution ensemble geometry (105 runs x 5 physics = 525 members).
+N_RUNS=105

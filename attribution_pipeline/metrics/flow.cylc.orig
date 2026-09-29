@@ -28,6 +28,9 @@
 # All tunable values (task-parameter lists, ensemble geometry, and
 # CODE_DIR) live in the sibling rose-suite.conf -- edit that file to
 # reconfigure this workflow rather than this file.
+<<<<<<< HEAD
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/home/users/chantelle.burton/GitHub/SoW') %}
+=======
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 {% set RUN_ERA5_METRICS = RUN_ERA5_METRICS | default(false) %}
 {% set RUN_HISTXCLIM_METRICS = RUN_HISTXCLIM_METRICS | default(false) %}
@@ -36,6 +39,7 @@
 {% if not (RUN_ERA5_METRICS or RUN_HISTXCLIM_METRICS or RUN_HISTIMPACTTB_METRICS or RUN_ATTR_METRICS) %}
 {{ raise("At least one of RUN_ERA5_METRICS / RUN_HISTXCLIM_METRICS / RUN_HISTIMPACTTB_METRICS / RUN_ATTR_METRICS must be true in rose-suite.conf.") }}
 {% endif %}
+>>>>>>> origin/attribution-pipeline
 
 [scheduler]
     allow implicit tasks = True

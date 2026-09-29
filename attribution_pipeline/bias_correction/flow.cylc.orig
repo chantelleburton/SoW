@@ -34,6 +34,7 @@
 # All tunable values (task-parameter lists and CODE_DIR) live in the sibling
 # rose-suite.conf -- edit that file to reconfigure this workflow rather than
 # this file.
+#{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/home/users/chantelle.burton/GitHub/SoW') %}
 {% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
 {% set RUN_BIAS_CORRECTED = RUN_BIAS_CORRECTED | default(false) %}
 {% set RUN_UNCORRECTED_EXTRACTION = RUN_UNCORRECTED_EXTRACTION | default(false) %}

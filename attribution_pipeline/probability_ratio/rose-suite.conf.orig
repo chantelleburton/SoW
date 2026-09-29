@@ -3,15 +3,19 @@
 ATTRIBUTION_PIPELINE_CODE_DIR=/home/users/chantelle.burton/GitHub/SoW
 
 [template variables]
+<<<<<<< HEAD
+# METRIC=['p95', '7x', 'cum']
+HISTORICAL_SOURCE=['xclim', 'impacttb']
+=======
 # Whether to run the 5-panel supplement-figure job family in this
 # invocation (plot_supplement). Default is false (opt-in); the main
 # probability_ratio task family always runs and is not gated by a flag.
 RUN_PLOT_SUPPLEMENT=false
 
 STATISTIC=['amplification']
+>>>>>>> origin/attribution-pipeline
 # STATISTIC=['amplification', 'risk_ratio']
 INDEX=['fwi']
 # INDEX=['fwi', 'dsr']
 METRIC=['p95']
-# METRIC=['p95', '7x', 'cum']
-HISTORICAL_SOURCE=['xclim', 'impacttb']
+STATISTIC=['amplification']
