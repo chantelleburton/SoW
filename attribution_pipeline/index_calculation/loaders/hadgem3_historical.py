@@ -16,15 +16,15 @@ import re
 
 import xarray as xr
 
-from attribution_pipeline.index_calculation.config import (
-    ClusterConfig,
-    DatasetConfig,
-)
 from attribution_pipeline.index_calculation.loaders._grid_utils import (
     fix_anonymous_time_dim,
     regrid_to_tracer,
 )
-from attribution_pipeline.index_calculation.loaders.base import BaseLoader
+from attribution_pipeline.index_calculation.loaders.base import (
+    BaseLoader,
+    ClusterConfig,
+    parse_output_indices,
+)
 from attribution_pipeline.pipeline_config import RAW_FWI_HG3_HISTORICAL
 
 VAR_CONFIG = {
@@ -56,7 +56,8 @@ class HadGEM3HistoricalLoader(BaseLoader):
     name = "hg3_historical"
     tld = "/data/users/opatt/HadGEM3-A-N216/historical"
 
-    def __init__(self, member=None, block_start_year=None, out_dir=None):
+    def __init__(self, member=None, block_start_year=None, out_dir=None,
+                 output_indices=None):
         member_num = int(
             member
             if member is not None
@@ -75,18 +76,15 @@ class HadGEM3HistoricalLoader(BaseLoader):
         # lead-in years loaded for spin-up but discarded before writing
         self.data_start_year = self.block_start_year - SPIN_UP_YEARS
 
-        cfg = DatasetConfig(
-            name=self.name,
-            out_dir=out_dir or RAW_FWI_HG3_HISTORICAL,
-            spatial_chunk=30,
-            cluster=ClusterConfig(n_workers=30, memory_per_worker_gb=4),
-            cffwis_kwargs={"initial_start_up": True},
+        self.out_dir = out_dir or RAW_FWI_HG3_HISTORICAL
+        self.spatial_chunk = 30
+        self.cluster = ClusterConfig(n_workers=30, memory_per_worker_gb=4)
+        self.cffwis_kwargs = {"initial_start_up": True}
+        self.output_indices = parse_output_indices(
+            output_indices
+            or os.environ.get("CYLC_TASK_PARAM_output_indices"),
+            default=["fwi", "dsr", "dc", "dmc", "ffmc", "isi", "bui"],
         )
-        self.out_dir = cfg.out_dir
-        self.spatial_chunk = cfg.spatial_chunk
-        self.cluster = cfg.cluster
-        self.output_indices = cfg.output_indices
-        self.cffwis_kwargs = cfg.cffwis_kwargs
 
         print(
             f"[{self.name}] member={self.member}, block={self.block_start_year}-{self.block_end_year} "

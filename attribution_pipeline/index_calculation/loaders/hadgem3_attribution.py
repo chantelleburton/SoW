@@ -11,15 +11,15 @@ import os
 
 import xarray as xr
 
-from attribution_pipeline.index_calculation.config import (
-    ClusterConfig,
-    DatasetConfig,
-)
 from attribution_pipeline.index_calculation.loaders._grid_utils import (
     fix_anonymous_time_dim,
     regrid_to_tracer,
 )
-from attribution_pipeline.index_calculation.loaders.base import BaseLoader
+from attribution_pipeline.index_calculation.loaders.base import (
+    BaseLoader,
+    ClusterConfig,
+    parse_output_indices,
+)
 from attribution_pipeline.pipeline_config import (
     WINDOW_END,
     WINDOW_END_MONTH,
@@ -53,7 +53,8 @@ class HadGEM3AttributionLoader(BaseLoader):
     name = "hg3_attribution"
     tld = "/data/users/opatt/HadGEM3-A-N216"
 
-    def __init__(self, run_type=None, member=None, out_dir=None):
+    def __init__(self, run_type=None, member=None, out_dir=None,
+                 output_indices=None):
         self.run_type = (
             run_type
             or os.environ.get("CYLC_TASK_PARAM_run_type", "historicalExt")
@@ -62,19 +63,18 @@ class HadGEM3AttributionLoader(BaseLoader):
             member or os.environ.get("CYLC_TASK_PARAM_member", "r001i1p1")
         ).strip()
 
-        cfg = DatasetConfig(
-            name=self.name,
-            out_dir=out_dir
-            or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution",
-            spatial_chunk=30,
-            cluster=ClusterConfig(n_workers=8, memory_per_worker_gb=2),
-            cffwis_kwargs={"initial_start_up": True},
+        self.out_dir = (
+            out_dir
+            or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution"
         )
-        self.out_dir = cfg.out_dir
-        self.spatial_chunk = cfg.spatial_chunk
-        self.cluster = cfg.cluster
-        self.output_indices = cfg.output_indices
-        self.cffwis_kwargs = cfg.cffwis_kwargs
+        self.spatial_chunk = 30
+        self.cluster = ClusterConfig(n_workers=8, memory_per_worker_gb=2)
+        self.cffwis_kwargs = {"initial_start_up": True}
+        self.output_indices = parse_output_indices(
+            output_indices
+            or os.environ.get("CYLC_TASK_PARAM_output_indices"),
+            default=["fwi", "dsr"],
+        )
 
         print(f"[{self.name}] run_type={self.run_type}, member={self.member}")
 

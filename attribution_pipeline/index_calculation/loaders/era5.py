@@ -15,11 +15,11 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from attribution_pipeline.index_calculation.config import (
+from attribution_pipeline.index_calculation.loaders.base import (
+    BaseLoader,
     ClusterConfig,
-    DatasetConfig,
+    parse_output_indices,
 )
-from attribution_pipeline.index_calculation.loaders.base import BaseLoader
 from attribution_pipeline.pipeline_config import (
     ERA5_OBS_BASEPATH,
     RAW_FWI_ERA5,
@@ -85,6 +85,7 @@ class ERA5Loader(BaseLoader):
         rh_stat=None,
         max_end_year=None,
         out_dir=None,
+        output_indices=None,
     ):
         self.start_year = start_year or int(
             os.environ.get("CYLC_TASK_PARAM_start_year", 2025)
@@ -117,18 +118,15 @@ class ERA5Loader(BaseLoader):
         self.rh_cfg = RH_OPTIONS[self.rh_stat]
         self.run_label = f"{self.rh_cfg['label']}_{self.wind_cfg['label']}"
 
-        cfg = DatasetConfig(
-            name=self.name,
-            out_dir=out_dir or RAW_FWI_ERA5,
-            spatial_chunk=90,
-            cluster=ClusterConfig(n_workers=30, memory_per_worker_gb=4),
-            cffwis_kwargs={"initial_start_up": True},
+        self.out_dir = out_dir or RAW_FWI_ERA5
+        self.spatial_chunk = 90
+        self.cluster = ClusterConfig(n_workers=10, memory_per_worker_gb=12)
+        self.cffwis_kwargs = {"initial_start_up": True}
+        self.output_indices = parse_output_indices(
+            output_indices
+            or os.environ.get("CYLC_TASK_PARAM_output_indices"),
+            default=["fwi", "dsr"],
         )
-        self.out_dir = cfg.out_dir
-        self.spatial_chunk = cfg.spatial_chunk
-        self.cluster = cfg.cluster
-        self.output_indices = cfg.output_indices
-        self.cffwis_kwargs = cfg.cffwis_kwargs
 
         print(
             f"[{self.name}] start_year={self.start_year}, end_year={self.end_year}, "
