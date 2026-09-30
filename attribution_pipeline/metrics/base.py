@@ -13,7 +13,7 @@ implementing `compute`.
 from abc import ABC, abstractmethod
 
 import iris.coord_categorisation as icc
-from utils.cubefuncs import CountryMax, CountryMean, CountryPercentile
+from attribution_pipeline._utils import CountryMax, CountryMean, CountryPercentile
 
 
 def _ensure_year_coord(cube, months=None, season_wrap=False):

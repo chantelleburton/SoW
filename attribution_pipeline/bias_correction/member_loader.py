@@ -13,7 +13,7 @@ import os
 
 import iris
 import numpy as np
-from utils.cubefuncs import (
+from attribution_pipeline._utils import (
     ConstrainToYear,
     apply_shapefile_inclusive,
     constrain_cube_to_months,

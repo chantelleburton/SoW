@@ -23,7 +23,7 @@ import os
 
 import iris
 import numpy as np
-from utils.cubefuncs import apply_shapefile_inclusive
+from attribution_pipeline._utils import apply_shapefile_inclusive
 
 from attribution_pipeline.metrics.base import BaseMetric
 from attribution_pipeline.metrics.cumulative import CumulativeMetric
