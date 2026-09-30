@@ -38,6 +38,8 @@ if __name__ == "__main__":
         os.environ.get("CYLC_TASK_PARAM_paired_only", "true").lower()
         != "false"
     )
+    countries_env = os.environ.get("CYLC_TASK_PARAM_countries")
+    countries = countries_env.split(",") if countries_env else None
 
     out_dir = DEFAULT_OUTPUT_DIR
     generate_all_supplements(
@@ -47,4 +49,5 @@ if __name__ == "__main__":
         percentile=percentile,
         historical_source=historical_source,
         paired_only=paired_only,
+        countries=countries,
     )

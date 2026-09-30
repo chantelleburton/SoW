@@ -75,6 +75,7 @@
         unset CYLC_TASK_PARAM_metric
         export CYLC_TASK_PARAM_statistic=${CYLC_TASK_PARAM_statistic}
         export CYLC_TASK_PARAM_historical_source=${CYLC_TASK_PARAM_historical_source}
+        export CYLC_TASK_PARAM_countries="{{ COUNTRY | join(',') }}"
         python -m attribution_pipeline.probability_ratio.run_probability_ratio
         """
 
@@ -95,6 +96,7 @@
         export CYLC_TASK_PARAM_index=${CYLC_TASK_PARAM_index}
         export CYLC_TASK_PARAM_metric_name=p95
         export CYLC_TASK_PARAM_historical_source=${CYLC_TASK_PARAM_historical_source}
+        export CYLC_TASK_PARAM_countries="{{ COUNTRY | join(',') }}"
         python -m attribution_pipeline.probability_ratio.run_supplement
         """
 

@@ -541,14 +541,18 @@ def generate_all_supplements(
     percentile: float = 95,
     historical_source: str = "xclim",
     paired_only: bool = True,
+    countries=None,
 ):
-    """Runs plot_supplement() for every region in REGION_CONFIGS (dynamic region
-    count -- no hardcoded country list). Outputs are nested under
+    """Runs plot_supplement() for every region in REGION_CONFIGS by default
+    (dynamic region count -- no hardcoded country list), or for the given
+    subset of countries if provided. Outputs are nested under
     out_dir/{historical_source}/, mirroring bias_correction's
     bias_corrected_metrics/{historical_source}/ layout."""
+    if countries is None:
+        countries = list(REGION_CONFIGS)
     source_dir = os.path.join(out_dir, historical_source)
     written = []
-    for country in REGION_CONFIGS:
+    for country in countries:
         out_path = os.path.join(source_dir, f"Supplement_{country}.png")
         try:
             written.append(
