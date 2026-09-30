@@ -67,6 +67,7 @@ def run_risk_ratio(
     # mirroring bias_correction's bias_corrected_metrics/{historical_source}/ layout.
     output_dir = os.path.join(DEFAULT_OUTPUT_DIR, historical_source)
     os.makedirs(output_dir, exist_ok=True)
+    regions_suffix = "-".join(results.keys())
     rows = []
     for country, res in results.items():
         likelihood = (
@@ -90,12 +91,16 @@ def run_risk_ratio(
             }
         )
     summary_path = os.path.join(
-        output_dir, f"{metric_stem}_Risk_Ratio_Summary.csv"
+        output_dir,
+        f"{metric_stem}_Risk_Ratio_{historical_source}_{regions_suffix}_Summary.csv",
     )
     pd.DataFrame(rows).to_csv(summary_path, index=False)
     print(f"[probability_ratio] Saved: {summary_path}")
 
-    plot_path = os.path.join(output_dir, f"{metric_stem}_Risk_Ratio.png")
+    plot_path = os.path.join(
+        output_dir,
+        f"{metric_stem}_Risk_Ratio_{historical_source}_{regions_suffix}.png",
+    )
     plot_risk_ratio_grid(results, metric_stem, plot_path)
     print(f"[probability_ratio] Saved: {plot_path}")
 
@@ -135,14 +140,17 @@ def run_amplification(
                 "Amp_95th": np.percentile(diffs, 95),
             }
         )
+    regions_suffix = "-".join(row["Country"] for row in rows)
     summary_path = os.path.join(
-        output_dir, f"{metric_stem}_Intensity_Amplification_Summary.csv"
+        output_dir,
+        f"{metric_stem}_Intensity_Amplification_{historical_source}_{regions_suffix}_Summary.csv",
     )
     pd.DataFrame(rows).to_csv(summary_path, index=False)
     print(f"[probability_ratio] Saved: {summary_path}")
 
     plot_path = os.path.join(
-        output_dir, f"{metric_stem}_Intensity_Amplification.png"
+        output_dir,
+        f"{metric_stem}_Intensity_Amplification_{historical_source}_{regions_suffix}.png",
     )
     plot_amplification(results, metric_stem, plot_path)
     print(f"[probability_ratio] Saved: {plot_path}")
