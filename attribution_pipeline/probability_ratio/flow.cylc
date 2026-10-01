@@ -27,7 +27,7 @@
 # (attribution_pipeline/probability_ratio/run_supplement.py), one task per
 # (index, historical_source), looping over all configured regions internally.
 # Fixed to metric=p95 only for now. Writes exports/plots/{historical_source}/
-# Supplement_{country}.png.
+# Supplement_{historical_source}_{country}.png.
 #
 # All tunable values (task-parameter lists and CODE_DIR) live in the sibling
 # rose-suite.conf -- edit that file to reconfigure this workflow rather than

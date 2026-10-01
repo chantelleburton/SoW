@@ -87,7 +87,12 @@ def plot_risk_ratio_grid(results: dict, metric_stem: str, out_path: str):
         if idx == n - 1:
             ax.legend()
 
-    summary_ax = axes[-1] if n < len(axes) else axes[n]
+    # Place the summary panel immediately after the last histogram (not at
+    # axes[-1]) so no untouched/blank axes are left in between -- previously
+    # this left a visibly empty subplot whenever spare axes existed (e.g. a
+    # single-region run, where nrows is forced to 2 for summary-panel room).
+    summary_idx = n if n < len(axes) else len(axes) - 1
+    summary_ax = axes[summary_idx]
     summary_ax.axis("off")
     lines = ["SUMMARY OF RESULTS", ""]
     for country, res in results.items():
@@ -105,8 +110,9 @@ def plot_risk_ratio_grid(results: dict, metric_stem: str, out_path: str):
         family="monospace",
     )
 
-    for extra_ax in axes[len(countries) + 1 :]:
-        extra_ax.axis("off")
+    for extra_idx in range(n, len(axes)):
+        if extra_idx != summary_idx:
+            axes[extra_idx].axis("off")
 
     plt.tight_layout()
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -553,7 +559,9 @@ def generate_all_supplements(
     source_dir = os.path.join(out_dir, historical_source)
     written = []
     for country in countries:
-        out_path = os.path.join(source_dir, f"Supplement_{country}.png")
+        out_path = os.path.join(
+            source_dir, f"Supplement_{historical_source}_{country}.png"
+        )
         try:
             written.append(
                 plot_supplement(
