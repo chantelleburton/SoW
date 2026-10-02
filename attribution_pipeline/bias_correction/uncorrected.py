@@ -40,6 +40,8 @@ def run_uncorrected_extraction(
     region = get_region(country)
     shape_name = region["shape_name"]
     months = region["months"]
+    mainland_only = region.get("mainland_only", False)
+    season_wrap = region.get("season_wrap", False)
     data_years = region["bias_correction_years"]
 
     metric_stem = METRICS[metric_name](
@@ -59,7 +61,7 @@ def run_uncorrected_extraction(
     for member in members:
         try:
             member_cubes[member] = load_member_cube(
-                index, run_type, member, shape_name
+                index, run_type, member, shape_name, mainland_only
             )
         except MissingMemberError as e:
             load_missing.append((member, str(e)))
@@ -87,6 +89,7 @@ def run_uncorrected_extraction(
                     metric_name,
                     index,
                     percentile=percentile,
+                    season_wrap=season_wrap,
                     **metric_kwargs,
                 )
                 successful.append(member)

@@ -8,7 +8,7 @@ region (i.e. the single hottest cell/window in the event period that year).
 """
 
 import iris.analysis
-from utils.cubefuncs import CountryMax, constrain_cube_to_months
+from attribution_pipeline._utils import CountryMax, constrain_cube_to_months
 
 from attribution_pipeline.metrics.base import BaseMetric, _ensure_year_coord
 
@@ -19,11 +19,11 @@ class ExtremeWindowMetric(BaseMetric):
         self.window = window
         self.metric_id = f"{window}x"
 
-    def compute(self, cube, months):
+    def compute(self, cube, months, season_wrap=False):
         cube = constrain_cube_to_months(cube, months)
         # 1) window-day rolling mean per cell (drops edge days that can't form a full window)
         rolled = cube.rolling_window("time", iris.analysis.MEAN, self.window)
-        rolled = _ensure_year_coord(rolled)
+        rolled = _ensure_year_coord(rolled, months, season_wrap)
 
         # 2) per year: max of the rolling mean over time, per cell
         yr_time_max = rolled.aggregated_by("year", iris.analysis.MAX)

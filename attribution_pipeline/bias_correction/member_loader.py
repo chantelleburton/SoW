@@ -13,17 +13,15 @@ import os
 
 import iris
 import numpy as np
-from utils.cubefuncs import (
+from attribution_pipeline._utils import (
     ConstrainToYear,
     apply_shapefile_inclusive,
     constrain_cube_to_months,
 )
-from utils.constrain_cubes_standard import (constrain_to_sow_shapefile_countries)
-
-
 from attribution_pipeline.pipeline_config import (
     RAW_FWI_HG3_ATTRIBUTION,
     SHAPEFILE,
+    SHAPEFILE_NAME_COLUMN,
 )
 
 RAW_FWI_DIR = RAW_FWI_HG3_ATTRIBUTION
@@ -70,7 +68,8 @@ def paired_members(index: str) -> set:
     )
 
 
-def load_member_cube(index: str, run_type: str, member: str, shape_name: str):
+def load_member_cube(index: str, run_type: str, member: str, shape_name: str,
+                     mainland_only: bool = False):
     """Load and shapefile-mask a member's full-window cube (2019-11..2024-12).
     Does NOT constrain to a specific year/month -- callers needing antecedent
     context (e.g. CumulativeMetric) need the full window; use
@@ -85,8 +84,10 @@ def load_member_cube(index: str, run_type: str, member: str, shape_name: str):
     for coord_name in ("year", "season_year"):
         if cube.coords(coord_name):
             cube.remove_coord(coord_name)
-    #cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
-    cube = constrain_to_sow_shapefile_countries(cube, SHAPEFILE, shape_name, mainland_only=True)
+    cube = apply_shapefile_inclusive(
+        SHAPEFILE, shape_name, cube, mainland_only=mainland_only,
+        name_column=SHAPEFILE_NAME_COLUMN,
+    )
     return cube
 
 
@@ -98,21 +99,61 @@ def _expected_days_in_month(year: int, month: int, calendar: str) -> int:
     return cal.monthrange(year, month)[1]
 
 
-def validate_member_window(cube, data_year: int, months):
+def validate_member_window(
+    cube, data_year: int, months, season_wrap: bool = False
+):
     """Constrain `cube` to data_year/months and validate it. Raises
     MissingMemberError if the year isn't present, InvalidMemberDataError if
     the day-count (calendar-aware) or data looks wrong. Returns the
-    constrained cube on success."""
-    try:
-        yr_cube = ConstrainToYear(cube, data_year)
-    except ValueError as e:
-        raise MissingMemberError(str(e))
-    yr_cube = constrain_cube_to_months(yr_cube, months)
+    constrained cube on success.
 
-    calendar = yr_cube.coord("time").units.calendar
-    expected = sum(
-        _expected_days_in_month(data_year, m, calendar) for m in months
-    )
+    season_wrap: region's config flag for an event crossing the year
+    boundary (e.g. months=[12, 1]). `data_year` is the event's START year
+    (the December year, per the config convention) -- the trailing,
+    January-side months are pulled from data_year + 1. When False (default,
+    all pre-existing regions), behaviour is identical to before.
+    """
+    if season_wrap:
+        wrap_start = months[0]
+        leading = [m for m in months if m >= wrap_start]
+        trailing = [m for m in months if m < wrap_start]
+        year_a, year_b = data_year, data_year + 1
+
+        def _in_season(
+            cell,
+            leading=leading,
+            trailing=trailing,
+            year_a=year_a,
+            year_b=year_b,
+        ):
+            return (
+                cell.point.year == year_a and cell.point.month in leading
+            ) or (cell.point.year == year_b and cell.point.month in trailing)
+
+        yr_cube = cube.extract(iris.Constraint(time=_in_season))
+        if yr_cube is None:
+            raise MissingMemberError(
+                f"No data for wrapping season starting {data_year} "
+                f"(months={months})."
+            )
+        calendar = yr_cube.coord("time").units.calendar
+        expected = sum(
+            _expected_days_in_month(year_a, m, calendar) for m in leading
+        ) + sum(
+            _expected_days_in_month(year_b, m, calendar) for m in trailing
+        )
+    else:
+        try:
+            yr_cube = ConstrainToYear(cube, data_year)
+        except ValueError as e:
+            raise MissingMemberError(str(e))
+        yr_cube = constrain_cube_to_months(yr_cube, months)
+
+        calendar = yr_cube.coord("time").units.calendar
+        expected = sum(
+            _expected_days_in_month(data_year, m, calendar) for m in months
+        )
+
     actual = yr_cube.coord("time").shape[0]
     if actual != expected:
         raise InvalidMemberDataError(

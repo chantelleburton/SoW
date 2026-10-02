@@ -51,6 +51,7 @@
     [[root]]
         [[[environment]]]
             CODE_DIR = {{ CODE_DIR }}
+            MAX_END_YEAR = {{ MAX_END_YEAR }}
 
 [scheduling]
     [[graph]]
@@ -70,11 +71,12 @@
     [[era5_fwi_calculation<era5_start_year, era5_wind_stat, era5_rh_stat>]]
         script = """
         set -eux
-        conda activate SoW
+        conda activate sowf
         cd $CODE_DIR
         export CYLC_TASK_PARAM_start_year=${CYLC_TASK_PARAM_era5_start_year}
         export CYLC_TASK_PARAM_wind_stat=${CYLC_TASK_PARAM_era5_wind_stat}
         export CYLC_TASK_PARAM_rh_stat=${CYLC_TASK_PARAM_era5_rh_stat}
+        export CYLC_TASK_PARAM_output_indices="{{ ERA5_INDICES | join(',') }}"
         echo "Running era5 start_year=${CYLC_TASK_PARAM_start_year} wind_stat=${CYLC_TASK_PARAM_wind_stat} rh_stat=${CYLC_TASK_PARAM_rh_stat}"
         python -m attribution_pipeline.index_calculation.run_fwi era5
         """
@@ -83,18 +85,19 @@
 
         [[[directives]]]
             --mem = 150G
-            --partition = cpu-long
-            --time = 720
-            --cpus-per-task = 4
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 32
             --ntasks = 1
 
     [[hadgem_attribution_fwi_calculation<attr_run_type, attr_member>]]
         script = """
         set -eux
-        conda activate SoW
+        conda activate sowf
         cd $CODE_DIR
         export CYLC_TASK_PARAM_run_type=${CYLC_TASK_PARAM_attr_run_type}
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_attr_member}
+        export CYLC_TASK_PARAM_output_indices="{{ HG3_ATTRIBUTION_INDICES | join(',') }}"
         echo "Running hg3_attribution run_type=${CYLC_TASK_PARAM_run_type} member=${CYLC_TASK_PARAM_member}"
         python -m attribution_pipeline.index_calculation.run_fwi hg3_attribution
         """
@@ -103,18 +106,19 @@
 
         [[[directives]]]
             --mem = 20G
-            --partition = cpu-long
-            --time = 360
-            --cpus-per-task = 4
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 10
             --ntasks = 1
 
     [[hadgem_historical_fwi_calculation<hist_member, hist_block_start_year>]]
         script = """
         set -eux
-        conda activate SoW
+        conda activate sowf
         cd $CODE_DIR
         export CYLC_TASK_PARAM_member=${CYLC_TASK_PARAM_hist_member}
         export CYLC_TASK_PARAM_block_start_year=${CYLC_TASK_PARAM_hist_block_start_year}
+        export CYLC_TASK_PARAM_output_indices="{{ HG3_HISTORICAL_INDICES | join(',') }}"
         echo "Running hg3_historical member=${CYLC_TASK_PARAM_member} block_start_year=${CYLC_TASK_PARAM_block_start_year}"
         python -m attribution_pipeline.index_calculation.run_fwi hg3_historical
         """
@@ -122,8 +126,8 @@
         platform = spice
 
         [[[directives]]]
-            --mem = 40G
-            --partition = cpu-long
-            --time = 360
-            --cpus-per-task = 4
+            --mem = 150G
+            --partition = cpu
+            --time = 120
+            --cpus-per-task = 32
             --ntasks = 1

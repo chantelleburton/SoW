@@ -23,8 +23,7 @@ import os
 
 import iris
 import numpy as np
-from utils.cubefuncs import apply_shapefile_inclusive
-from utils.constrain_cubes_standard import (constrain_to_sow_shapefile_countries)
+from attribution_pipeline._utils import apply_shapefile_inclusive
 
 from attribution_pipeline.metrics.base import BaseMetric
 from attribution_pipeline.metrics.cumulative import CumulativeMetric
@@ -37,6 +36,7 @@ from attribution_pipeline.pipeline_config import (
     RAW_FWI_HG3_ATTRIBUTION,
     RAW_FWI_HG3_HISTORICAL,
     SHAPEFILE,
+    SHAPEFILE_NAME_COLUMN,
     get_region,
 )
 
@@ -344,6 +344,8 @@ def run(
     region = get_region(country)
     months = region["months"]
     shape_name = region["shape_name"]
+    mainland_only = region.get("mainland_only", False)
+    season_wrap = region.get("season_wrap", False)
 
     if dataset not in DATASET_RESOLVERS:
         raise ValueError(
@@ -364,11 +366,13 @@ def run(
     print(cube)
     _validate_cube(cube, dataset, "post-resolve")
     print(cube)
-    #cube = apply_shapefile_inclusive(SHAPEFILE, shape_name, cube)
-    cube = constrain_to_sow_shapefile_countries(cube, SHAPEFILE, shape_name, mainland_only=True)
+    cube = apply_shapefile_inclusive(
+        SHAPEFILE, shape_name, cube, mainland_only=mainland_only,
+        name_column=SHAPEFILE_NAME_COLUMN,
+    )
     _validate_cube(cube, dataset, "post-mask")
 
-    years, values = metric.compute(cube, months)
+    years, values = metric.compute(cube, months, season_wrap=season_wrap)
     if not years:
         raise RuntimeError(
             f"No results computed for {dataset}/{country}/{metric.output_stem()}"

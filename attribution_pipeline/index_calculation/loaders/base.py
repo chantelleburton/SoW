@@ -15,6 +15,39 @@ parts of writing NetCDF output.
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+#: Every sub-index xclim.indices.cffwis_indices can produce, plus derived dsr.
+ALL_INDICES = ["fwi", "dsr", "dc", "dmc", "ffmc", "isi", "bui"]
+
+
+@dataclass
+class ClusterConfig:
+    """Dask LocalCluster sizing, consumed by FWICalculator via loader.cluster."""
+
+    n_workers: int = 3
+    threads_per_worker: int = 1  # numpy inner loop is GIL-bound
+    memory_per_worker_gb: int = 30
+
+
+def parse_output_indices(value, default):
+    """Resolve a comma-separated output-index string (typically from
+    CYLC_TASK_PARAM_output_indices) into a validated list, falling back to
+    `default` when empty/None.
+
+    NOTE: fwi is always computed internally by cffwis_indices, and dsr is
+    derived from fwi, so selecting dsr without fwi still works -- fwi is
+    simply computed but not written.
+    """
+    if not value:
+        return list(default)
+    indices = [i.strip().lower() for i in value.split(",") if i.strip()]
+    unknown = sorted(set(indices) - set(ALL_INDICES))
+    if unknown:
+        raise ValueError(
+            f"Unknown output_indices {unknown}; valid options: {ALL_INDICES}"
+        )
+    return indices
 
 
 class BaseLoader(ABC):

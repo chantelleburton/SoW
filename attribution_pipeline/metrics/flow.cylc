@@ -89,7 +89,7 @@
     [[era5_metrics<country, index, metric, era5_run_label>]]
         script = """
         set -eux
-        conda activate SoW
+        conda activate sowf
         cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=era5
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
@@ -111,7 +111,7 @@
     [[histxclim_metrics<country, index, metric, hist_member>]]
         script = """
         set -eux
-        conda activate SoW
+        conda activate sowf
         cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_historical_xclim
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
@@ -133,7 +133,7 @@
     [[histimpacttb_metrics<country, metric, hist_member>]]
         script = """
         set -eux
-        conda activate SoW
+        conda activate sowf
         cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_historical_impacttb
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
@@ -155,7 +155,7 @@
     [[attr_metrics<country, index, metric, attr_run_type, attr_member>]]
         script = """
         set -eux
-        conda activate SoW
+        conda activate sowf
         cd $CODE_DIR
         export CYLC_TASK_PARAM_dataset=hg3_attribution
         export CYLC_TASK_PARAM_country=${CYLC_TASK_PARAM_country}
