@@ -27,7 +27,7 @@ import matplotlib
 matplotlib.use('Agg')  # headless
 import matplotlib.pyplot as plt
 
-OUT_DIR = '/data/scratch/bob.potts/sowf/fwi-calculation-pipeline/HadGEM3-A_Historical/validation/raw_fwi_diffs'
+OUT_DIR = '/data/scratch/bob.potts/sowf/attribution_pipeline/validation/raw_fwi_diffs'
 REGION_ORDER = ['Iberia', 'Chile', 'Canada']
 
 DAILY_RE = re.compile(r'daily_diff_(?P<country>[^_]+)_(?P<exp>[^_]+)_(?P<member>[^_]+)\.csv$')
@@ -143,14 +143,14 @@ def write_summaries(summary):
     full = summary[summary['pct_complete'] >= 100.0 - 1e-6].copy()
     partial = summary[summary['pct_complete'] < 100.0 - 1e-6].copy()
 
-    summary.to_csv(os.path.join(OUT_DIR, 'raw_fwi_diffs_summary_stats_modified.csv'), index=False)
+    summary.to_csv(os.path.join(OUT_DIR, 'raw_fwi_diffs_summary_stats.csv'), index=False)
     partial.sort_values(['experiment', 'country', 'pct_complete']).to_csv(
-        os.path.join(OUT_DIR, 'raw_fwi_diffs_incomplete_members_modified.csv'), index=False)
+        os.path.join(OUT_DIR, 'raw_fwi_diffs_incomplete_members.csv'), index=False)
 
     if not partial.empty:
         print(f"{len(partial)} member/country/experiment rows are incomplete "
               f"(partial ImpactTB coverage) -- excluded from ensemble means, "
-              f"see raw_fwi_diffs_incomplete_members_modified.csv")
+              f"see raw_fwi_diffs_incomplete_members.csv")
         print(partial[['experiment', 'country', 'member', 'n_days', 'expected_n_days', 'pct_complete']]
               .sort_values('pct_complete').to_string(index=False))
 
@@ -161,7 +161,7 @@ def write_summaries(summary):
                     mean_corr=('corr', 'mean'),
                     mean_max_abs_diff=('max_abs_diff', 'mean'))
                .reset_index())
-    overall.to_csv(os.path.join(OUT_DIR, 'raw_fwi_diffs_summary_overall_modified.csv'), index=False)
+    overall.to_csv(os.path.join(OUT_DIR, 'raw_fwi_diffs_summary_overall.csv'), index=False)
     print("Overall raw-FWI diff agreement (ensemble means, complete members only):")
     print(overall.round(3).to_string(index=False))
     return overall, full
@@ -202,7 +202,7 @@ def plot_ensemble_daily(alldata, experiment):
     axes[0].legend(loc='upper left', fontsize=8)
     fig.suptitle(f'Daily raw FWI diff: mean +/- spread across members — {experiment}', y=1.0)
     fig.tight_layout()
-    out_png = os.path.join(OUT_DIR, f'ensemble_daily_diff_{experiment}_modified.png')
+    out_png = os.path.join(OUT_DIR, f'ensemble_daily_diff_{experiment}.png')
     fig.savefig(out_png, dpi=150, bbox_inches='tight')
     plt.close(fig)
     print(f"Saved {out_png}")

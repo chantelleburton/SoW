@@ -263,7 +263,17 @@ if __name__ == '__main__':
     print(f"Discarding spin-up year {start_year}; writing yearly files for {output_years}")
     for idx_name in OUTPUT_INDICES:
         da, long_name, units = index_map[idx_name]
-        da.attrs.update({'long_name': long_name, 'units': units})
+        # Reset (not just update) attrs: xclim's cffwis_indices computation
+        # leaks the original 'tas' input's raw GRIB attrs (GRIB_paramId,
+        # GRIB_cfVarName='t2m', coordinates='day_of_month number surface',
+        # etc.) through via xarray's keep_attrs propagation. Patching just
+        # long_name/units with .update() leaves that stale metadata in place,
+        # which later confuses CF-metadata-sensitive readers (e.g. Iris) on load.
+        da = da.copy()
+        da.attrs = {'long_name': long_name, 'units': units}
+        extra_coords = [c for c in da.coords if c not in ('time', 'latitude', 'longitude')]
+        if extra_coords:
+            da = da.drop_vars(extra_coords)
         for y in output_years:
             da_year = da.sel(time=slice(f'{y}-01-01', f'{y}-12-31'))
             n_times_year = da_year.sizes['time']
@@ -273,6 +283,7 @@ if __name__ == '__main__':
             out_path = os.path.join(out_dir, f'era5_{idx_name}_{RUN_LABEL}_{y}.nc')
             enc = {idx_name: {'chunksizes': (n_times_year, SPATIAL_CHUNK, SPATIAL_CHUNK)}}
             ds = xr.Dataset({idx_name: da_year})
+            ds['time'].attrs = {}
             ds.to_netcdf(out_path, encoding=enc)
             print(f"Saved {idx_name} {y} ({n_times_year} days) to {out_path}")
     print("--- %s seconds ---" % (np.round(time.time() - start_time, 2)))
