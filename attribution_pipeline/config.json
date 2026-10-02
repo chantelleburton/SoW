@@ -103,6 +103,46 @@
             "mainland_only": true,
             "season_wrap": false,
             "bias_correction_years": [2020,2021, 2022, 2023, 2024]
+        },
+        "Spain": {
+            "months": [7],
+            "month_name": "July",
+            "shape_name": "Spain",
+            "display_name": "Spain",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "mainland_only": true,
+            "season_wrap": false,
+            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
+        },
+        "Portugal": {
+            "months": [7],
+            "month_name": "July",
+            "shape_name": "Portugal",
+            "display_name": "Portugal",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "mainland_only": true,
+            "season_wrap": false,
+            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
+        },
+        "United Kingdom": {
+            "months": [7],
+            "month_name": "July",
+            "shape_name": "United Kingdom",
+            "display_name": "United Kingdom",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "mainland_only": true,
+            "season_wrap": false,
+            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
         }
+
     }
 }

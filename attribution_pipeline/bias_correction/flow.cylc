@@ -24,6 +24,14 @@
 # for the same (country, index, metric) first. Keep the index/metric rows
 # here aligned with those in metrics/flow.cylc.
 #
+# The graph only schedules the historical_source=xclim / historical_source=
+# impacttb branches that are actually listed in HISTORICAL_SOURCE (sibling
+# rose-suite.conf) -- declaring a value in HISTORICAL_SOURCE/INDEX no longer
+# forces its tasks to run. impacttb still only supports index=fwi; if
+# HISTORICAL_SOURCE includes 'impacttb' but INDEX doesn't include 'fwi', this
+# flow raises a clear error at validation time instead of a cryptic
+# ParamExpandError.
+#
 # historical_source=impacttb only supports index=fwi (impact-toolbox data has
 # no DSR) -- restricted via explicit-value graph narrowing below.
 #
@@ -61,8 +69,15 @@
     [[graph]]
         R1 = """
 {% if RUN_BIAS_CORRECTED %}
+{%   if 'xclim' in HISTORICAL_SOURCE %}
             bias_correction<country, baseline_member, runtype, index, metric, historical_source=xclim>
+{%   endif %}
+{%   if 'impacttb' in HISTORICAL_SOURCE %}
+{%     if 'fwi' not in INDEX %}
+{{ raise("HISTORICAL_SOURCE includes 'impacttb', which only supports index=fwi (impact-toolbox data has no DSR). Add 'fwi' to INDEX in rose-suite.conf, or drop 'impacttb' from HISTORICAL_SOURCE.") }}
+{%     endif %}
             bias_correction<country, baseline_member, runtype, index=fwi, metric, historical_source=impacttb>
+{%   endif %}
 {% endif %}
 {% if RUN_UNCORRECTED_EXTRACTION %}
             uncorrected_extraction<country, runtype, index, metric>

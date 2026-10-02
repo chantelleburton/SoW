@@ -84,11 +84,18 @@ REGION_CONFIGS = _CONFIG["regions"]
 
 
 def get_region(country: str) -> dict:
-    if country not in REGION_CONFIGS:
-        raise ValueError(
-            f"Unknown Country: {country}. Expected one of: {sorted(REGION_CONFIGS)}"
-        )
-    return REGION_CONFIGS[country]
+    if country in REGION_CONFIGS:
+        return REGION_CONFIGS[country]
+    # Cylc task-parameter values can't contain spaces, so multi-word country
+    # names (e.g. "United Kingdom") are passed through COUNTRY in
+    # rose-suite.conf with underscores instead (e.g. "United_Kingdom"). Fall
+    # back to the space form here before giving up.
+    despaced = country.replace("_", " ")
+    if despaced in REGION_CONFIGS:
+        return REGION_CONFIGS[despaced]
+    raise ValueError(
+        f"Unknown Country: {country}. Expected one of: {sorted(REGION_CONFIGS)}"
+    )
 
 
 def month_label(months) -> str:

@@ -17,7 +17,8 @@
 #
 # historical_source=impacttb only supports index=fwi (impact-toolbox data has
 # no DSR) -- restricted via explicit-value graph narrowing below, same as
-# bias_correction/flow.cylc.
+# bias_correction/flow.cylc. Guarded by 'xclim'/'impacttb' in HISTORICAL_SOURCE
+# so declaring the other value in rose-suite.conf doesn't force it to run.
 #
 # statistic:
 #   risk_ratio   -> probability ratio + bootstrap CI + density-histogram grid
@@ -52,12 +53,23 @@
 [scheduling]
     [[graph]]
         R1 = """
+{%   if 'xclim' in HISTORICAL_SOURCE %}
             probability_ratio<statistic, index, metric, historical_source=xclim>
+{%   endif %}
+{%   if 'impacttb' in HISTORICAL_SOURCE %}
+{%     if 'fwi' not in INDEX %}
+{{ raise("HISTORICAL_SOURCE includes 'impacttb', which only supports index=fwi (impact-toolbox data has no DSR). Add 'fwi' to INDEX in rose-suite.conf, or drop 'impacttb' from HISTORICAL_SOURCE.") }}
+{%     endif %}
             probability_ratio<statistic, index=fwi, metric, historical_source=impacttb>
+{%   endif %}
 
 {% if RUN_PLOT_SUPPLEMENT %}
+{%   if 'xclim' in HISTORICAL_SOURCE %}
             plot_supplement<index, historical_source=xclim>
+{%   endif %}
+{%   if 'impacttb' in HISTORICAL_SOURCE %}
             plot_supplement<index=fwi, historical_source=impacttb>
+{%   endif %}
 {% endif %}
         """
 
