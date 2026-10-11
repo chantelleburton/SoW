@@ -27,19 +27,6 @@
     "_regions_comment": "List months in event order. Set season_wrap to false for an event inside one calendar year. Set season_wrap to true for an event that crosses the year boundary (for example December to January); list the months in order (for example [12, 1]) and set event_year to the START year (the earlier, December year).",
 
     "regions": {
-        "Korea": {
-            "months": [3],
-            "month_name": "March",
-            "shape_name": "Southeast South Korea",
-            "display_name": "SE S. Korea",
-            "event_year": 2025,
-            "percentile": 95,
-            "baseline_start": 1980,
-            "baseline_end": 2013,
-            "season_wrap": false,
-            "mainland_only": false,
-            "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
-        },
         "Iberia": {
             "months": [8],
             "month_name": "Aug",
@@ -51,19 +38,6 @@
             "baseline_end": 2013,
             "season_wrap": false,
             "mainland_only": false,
-            "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
-        },
-        "Scotland": {
-            "months": [6, 7],
-            "month_name": "June-July",
-            "shape_name": "Scottish Highlands",
-            "display_name": "Scottish Highlands",
-            "event_year": 2025,
-            "percentile": 95,
-            "baseline_start": 1980,
-            "baseline_end": 2013,
-            "mainland_only": false,
-            "season_wrap": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         },
         "Chile": {
@@ -92,58 +66,6 @@
             "mainland_only": false,
             "season_wrap": false,
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
-        },
-        "France": {
-            "months": [7],
-            "month_name": "July",
-            "shape_name": "France",
-            "display_name": "France",
-            "event_year": 2026,
-            "percentile": 95,
-            "baseline_start": 1980,
-            "baseline_end": 2013,
-            "mainland_only": true,
-            "season_wrap": false,
-            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
-        },
-        "Spain": {
-            "months": [7],
-            "month_name": "July",
-            "shape_name": "Spain",
-            "display_name": "Spain",
-            "event_year": 2026,
-            "percentile": 95,
-            "baseline_start": 1980,
-            "baseline_end": 2013,
-            "mainland_only": true,
-            "season_wrap": false,
-            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
-        },
-        "Portugal": {
-            "months": [7],
-            "month_name": "July",
-            "shape_name": "Portugal",
-            "display_name": "Portugal",
-            "event_year": 2026,
-            "percentile": 95,
-            "baseline_start": 1980,
-            "baseline_end": 2013,
-            "mainland_only": true,
-            "season_wrap": false,
-            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
-        },
-        "United Kingdom": {
-            "months": [7],
-            "month_name": "July",
-            "shape_name": "United Kingdom",
-            "display_name": "United Kingdom",
-            "event_year": 2026,
-            "percentile": 95,
-            "baseline_start": 1980,
-            "baseline_end": 2013,
-            "mainland_only": true,
-            "season_wrap": false,
-            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
         }
 
     }
