@@ -275,7 +275,8 @@ for region_name, cfg in regions.items():
     print(f"Plotting {region_name}...")
     data = load_data(cfg['file'])
     fig = plot_region(data, cfg)
-    save_path = os.path.join(PLOT_DIR, f'{region_name}_Main_Attribution.png')
-    fig.savefig(save_path, dpi=300, bbox_inches='tight')
-    print(f"  Saved to {save_path}")
+    for ext in ('png', 'svg'):
+        save_path = os.path.join(PLOT_DIR, f'{region_name}_Main_Attribution.{ext}')
+        fig.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"  Saved to {save_path}")
     #plt.show()
