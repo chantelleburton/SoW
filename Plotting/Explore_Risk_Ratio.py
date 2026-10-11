@@ -18,7 +18,9 @@ import sys
 import pandas as pd
 import os
 from datetime import date
-sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
 
 from utils.cubefuncs import *
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -26,10 +28,10 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 ############# Configuration #############
-LOG_FOLDER = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Condensed_Log_Transforms'
-SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-PLOT_FOLDER = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Exports/Plots'
-EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/Attribution_Ensemble_xclim/Exports'
+LOG_FOLDER = '/path/to/output/Attribution_Ensemble_xclim/Condensed_Log_Transforms'
+SHP_FILE = os.path.join(REPO_ROOT, 'Shapefiles', 'SoW2526_Focal_MASTER_20260218.shp')
+PLOT_FOLDER = '/path/to/output/Attribution_Ensemble_xclim/Exports/Plots'
+EXPORT_FOLDER = '/path/to/output/Attribution_Ensemble_xclim/Exports'
 ERA5_FWI_DIR = '/path/to/impactstoolbox/Data/era5/Fire-Weather/FWI'  # external ImpactsToolBox ERA5 FWI data
 BOOTSTRAP_SIZE = 10000
 N_BASELINES = 15

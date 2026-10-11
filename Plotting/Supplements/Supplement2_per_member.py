@@ -11,7 +11,7 @@ import statsmodels.api as sm
 import os
 import sys
 
-sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code/Plotting')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Supplement2_generalised import (
     load_era5_baseline,
     load_hadgem3_baseline,

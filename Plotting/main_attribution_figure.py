@@ -14,8 +14,8 @@ plt.rcParams['xtick.minor.size'] = 3
 plt.rcParams['ytick.minor.size'] = 3
 
 # --- Region configurations ---
-DATA_DIR = '/data/scratch/bob.potts/sowf/test_output/Plots/Main_Attribution'
-PLOT_DIR = '/data/scratch/bob.potts/sowf/test_output/Plots/Main_Attribution'
+DATA_DIR = '/path/to/output/test_output/Plots/Main_Attribution'
+PLOT_DIR = '/path/to/output/test_output/Plots/Main_Attribution'
 
 regions = {
     'Canada': {

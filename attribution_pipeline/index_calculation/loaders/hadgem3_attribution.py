@@ -22,6 +22,7 @@ from attribution_pipeline.index_calculation.loaders.base import (
 )
 from attribution_pipeline.pipeline_config import (
     HADGEM3_N216_BASEPATH,
+    RAW_FWI_HG3_ATTRIBUTION,
     WINDOW_END,
     WINDOW_END_MONTH,
     WINDOW_START,
@@ -64,10 +65,7 @@ class HadGEM3AttributionLoader(BaseLoader):
             member or os.environ.get("CYLC_TASK_PARAM_member", "r001i1p1")
         ).strip()
 
-        self.out_dir = (
-            out_dir
-            or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution"
-        )
+        self.out_dir = out_dir or RAW_FWI_HG3_ATTRIBUTION
         self.spatial_chunk = 30
         self.cluster = ClusterConfig(n_workers=8, memory_per_worker_gb=2)
         self.cffwis_kwargs = {"initial_start_up": True}

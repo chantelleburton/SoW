@@ -3,9 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-baseline_dir = '/data/scratch/bob.potts/sowf/test_output/AllMonths_Baseline'
-export_dir = '/data/scratch/bob.potts/sowf/test_output/Exports'
-plot_dir = '/data/scratch/bob.potts/sowf/test_output/Plots/CDS_Comparison'
+baseline_dir = '/path/to/output/test_output/AllMonths_Baseline'
+export_dir = '/path/to/output/test_output/Exports'
+plot_dir = '/path/to/output/test_output/Plots/CDS_Comparison'
 
 REGION_CONFIGS = {
     'Iberia':   {'percentile': 95, 'shape_name': 'Northwest Iberia',

@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "State of Wildfires 2025-26 Attribution Pipeline For HadGEM3-A"
+version: "1.0.0"
+date-released: "2026-10-11"
+license: "OGL-UK-3.0"
+repository-code: "PLACEHOLDER_REPOSITORY_URL"
+authors:
+  - family-names: "Potts"
+    given-names: "Bob"
+    affiliation: "UK Met Office"
+    orcid: "PLACEHOLDER_ORCID"
+  - family-names: "Burton"
+    given-names: "Chantelle"
+    affiliation: "UK Met Office"
+    orcid: "PLACEHOLDER_ORCID"

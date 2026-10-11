@@ -1,5 +1,5 @@
 {
-    "pipeline_root_default": "/data/scratch/bob.potts/sowf/attribution_pipeline",
+    "pipeline_root_default": "/path/to/output/sowf/attribution_pipeline",
 
     "raw_fwi_output": {
         "era5": "raw_fwi/era5",
@@ -8,9 +8,10 @@
     },
 
     "external_data_sources": {
+        "_comment": "Set these to your local data locations. shapefile can point at the bundled Shapefiles/<name>.shp (relative to the repo root) if running from there.",
         "era5_obs_basepath": "/data/users/appldata/Data/OBS-ERA5/daily",
-        "impacttb_historical_fwi_dir": "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM",
-        "shapefile": "/data/users/bob.potts/sowf_data/Countries/GCP_Country_Domains_v1.6_ed.shp",
+        "impacttb_historical_fwi_dir": "/path/to/historicalFWI/HadGEM",
+        "shapefile": "/path/to/Shapefiles/SoW2526_Focal_MASTER_20260218.shp",
         "shapefile_name_column": "region_nam",
         "hadgem3_n216_basepath": "/path/to/HadGEM3-A-N216"
     },

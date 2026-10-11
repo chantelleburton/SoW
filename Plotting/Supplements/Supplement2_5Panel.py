@@ -15,7 +15,8 @@ import warnings
 import os
 import sys
 
-sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, REPO_ROOT)
 from utils.cubefuncs import GetERA5ThresholdFromMonthly
 
 warnings.filterwarnings("ignore", module=r"^seaborn(\.|$)")
@@ -23,12 +24,12 @@ warnings.filterwarnings("ignore", module=r"^iris(\.|$)")
 
 ############# Configuration #############
 
-FOLDER = '/data/scratch/bob.potts/sowf/'
+FOLDER = '/path/to/output/'
 OUTPUT_FOLDER = FOLDER + 'test_output/Plots'
 BASELINE_FOLDER = FOLDER + 'test_output/Baseline/'
 UNCORRECTED_ENSEMBLE_FOLDER = FOLDER + 'test_output/Uncorrected_Attribution_Ensembles/'
 CORRECTED_ENSEMBLE_FOLDER = FOLDER + 'test_output/Condensed_Log_Transforms/'
-SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
+SHP_FILE = os.path.join(REPO_ROOT, 'Shapefiles', 'SoW2526_Focal_MASTER_20260218.shp')
 ERA5_FWI_DIR = '/path/to/impactstoolbox/Data/era5/Fire-Weather/FWI'  # external ImpactsToolBox ERA5 FWI data
 
 BASELINE_START_YEAR = 1980

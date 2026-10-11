@@ -237,3 +237,9 @@ CYLC_TASK_PARAM_statistic=risk_ratio \
 CYLC_TASK_PARAM_historical_source=xclim \
 python -m attribution_pipeline.probability_ratio.run_probability_ratio
 ```
+
+## License & citation
+
+This code is licensed under the Open Government Licence v3.0 -- see
+[LICENSE](LICENSE). If you use this software, please cite it as described in
+[CITATION.cff](CITATION.cff).

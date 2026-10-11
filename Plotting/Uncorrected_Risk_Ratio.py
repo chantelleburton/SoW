@@ -14,7 +14,8 @@ import warnings
 import sys
 import pandas as pd
 
-sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
 
 from utils.cubefuncs import *
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -23,10 +24,10 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 ############# Configuration #############
 
-UNCORRECTED_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Uncorrected_Attribution_Ensembles/'
-SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-PLOT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Plots'
-EXPORT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Exports'
+UNCORRECTED_FOLDER = '/path/to/output/test_output/Uncorrected_Attribution_Ensembles/'
+SHP_FILE = os.path.join(REPO_ROOT, 'Shapefiles', 'SoW2526_Focal_MASTER_20260218.shp')
+PLOT_FOLDER = '/path/to/output/test_output/Plots'
+EXPORT_FOLDER = '/path/to/output/test_output/Exports'
 ERA5_FWI_DIR = '/path/to/impactstoolbox/Data/era5/Fire-Weather/FWI'  # external ImpactsToolBox ERA5 FWI data
 BOOTSTRAP_SIZE = 10000
 N_MEMBERS = 105

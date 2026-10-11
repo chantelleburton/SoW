@@ -28,7 +28,7 @@
 # All tunable values (task-parameter lists, ensemble geometry, and
 # CODE_DIR) live in the sibling rose-suite.conf -- edit that file to
 # reconfigure this workflow rather than this file.
-{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/data/users/bob.potts/StateOfFires_2025-26/code') %}
+{% set CODE_DIR = environ.get('ATTRIBUTION_PIPELINE_CODE_DIR', '/path/to/StateOfFires_2025-26/code') %}
 {% set RUN_ERA5_METRICS = RUN_ERA5_METRICS | default(false) %}
 {% set RUN_HISTXCLIM_METRICS = RUN_HISTXCLIM_METRICS | default(false) %}
 {% set RUN_HISTIMPACTTB_METRICS = RUN_HISTIMPACTTB_METRICS | default(false) %}

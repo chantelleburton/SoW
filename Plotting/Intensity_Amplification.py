@@ -16,7 +16,8 @@ import os
 import sys
 import warnings
 
-sys.path.insert(0, '/data/users/bob.potts/StateOfFires_2025-26/code')
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO_ROOT)
 from utils.branded_colours import SoW_gradient_teal, SoW_gradient_red, SoW_categorial
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -24,8 +25,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 ############# Configuration #############
 
-LOG_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Condensed_Log_Transforms'
-PLOT_FOLDER = '/data/scratch/bob.potts/sowf/test_output/Plots'
+LOG_FOLDER = '/path/to/output/test_output/Condensed_Log_Transforms'
+PLOT_FOLDER = '/path/to/output/test_output/Plots'
 
 N_BASELINES = 15
 BASELINE_START_YEAR = 1980
