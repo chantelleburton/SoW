@@ -38,7 +38,7 @@ UNCORRECTED_ENSEMBLE_FOLDER = FOLDER + 'test_output/Uncorrected_Attribution_Ense
 # Subplot (e) — reduced-set multi-year bias-corrected CSVs
 REDUCED_SET_FOLDER = FOLDER + 'test_output/Reduced_Set_Log_Transforms'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-ERA5_FWI_DIR = '/data/scratch/andrew.hartley/impactstoolbox/Data/era5/Fire-Weather/FWI'
+ERA5_FWI_DIR = '/path/to/impactstoolbox/Data/era5/Fire-Weather/FWI'  # external ImpactsToolBox ERA5 FWI data
 
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013
@@ -53,12 +53,13 @@ YEARS = np.arange(BASELINE_START_YEAR, BASELINE_END_YEAR + 1)
 PAIRED_ONLY = True
 
 # Directories to scan for complete ensemble members (used when PAIRED_ONLY=True)
+# External ImpactsToolBox attribution-ensemble data location
 HIST_DIR = (
-    '/data/scratch/andrew.hartley/impactstoolbox/Data/attribution_ensemble/'
+    '/path/to/impactstoolbox/Data/attribution_ensemble/'
     'Fire-Weather/FWI/HadGEM3-A-N216/historicalExt'
 )
 HISTNAT_DIR = (
-    '/data/scratch/andrew.hartley/impactstoolbox/Data/attribution_ensemble/'
+    '/path/to/impactstoolbox/Data/attribution_ensemble/'
     'Fire-Weather/FWI/HadGEM3-A-N216/historicalNatExt'
 )
 

@@ -29,7 +29,7 @@ BASELINE_FOLDER = FOLDER + 'test_output/Baseline/'
 UNCORRECTED_ENSEMBLE_FOLDER = FOLDER + 'test_output/Uncorrected_Attribution_Ensembles/'
 CORRECTED_ENSEMBLE_FOLDER = FOLDER + 'test_output/Condensed_Log_Transforms/'
 SHP_FILE = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-ERA5_FWI_DIR = '/data/scratch/andrew.hartley/impactstoolbox/Data/era5/Fire-Weather/FWI'
+ERA5_FWI_DIR = '/path/to/impactstoolbox/Data/era5/Fire-Weather/FWI'  # external ImpactsToolBox ERA5 FWI data
 
 BASELINE_START_YEAR = 1980
 BASELINE_END_YEAR = 2013

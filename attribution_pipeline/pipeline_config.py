@@ -61,6 +61,8 @@ _EXTERNAL = _CONFIG["external_data_sources"]
 ERA5_OBS_BASEPATH = _EXTERNAL["era5_obs_basepath"]
 IMPACTTB_HISTORICAL_FWI_DIR = _EXTERNAL["impacttb_historical_fwi_dir"]
 SHAPEFILE = _EXTERNAL["shapefile"]
+# Shared HadGEM3-A-N216 raw-data tree (read-only, institutional).
+HADGEM3_N216_BASEPATH = _EXTERNAL["hadgem3_n216_basepath"]
 # Column in SHAPEFILE holding each region's shape_name (varies by shapefile
 # source -- defaults to "name" for backwards compatibility with older
 # shapefiles that don't set this).

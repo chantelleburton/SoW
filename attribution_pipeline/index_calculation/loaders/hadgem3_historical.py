@@ -25,7 +25,10 @@ from attribution_pipeline.index_calculation.loaders.base import (
     ClusterConfig,
     parse_output_indices,
 )
-from attribution_pipeline.pipeline_config import RAW_FWI_HG3_HISTORICAL
+from attribution_pipeline.pipeline_config import (
+    HADGEM3_N216_BASEPATH,
+    RAW_FWI_HG3_HISTORICAL,
+)
 
 VAR_CONFIG = {
     "tasmax": {"dir": "tasmax/day", "nc_var": "tasmax", "units": "degC"},
@@ -54,7 +57,7 @@ def _decade_file_overlaps_range(fpath, start_year, end_year):
 
 class HadGEM3HistoricalLoader(BaseLoader):
     name = "hg3_historical"
-    tld = "/data/users/opatt/HadGEM3-A-N216/historical"
+    tld = os.path.join(HADGEM3_N216_BASEPATH, "historical")
 
     def __init__(self, member=None, block_start_year=None, out_dir=None,
                  output_indices=None):

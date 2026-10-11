@@ -21,6 +21,7 @@ from attribution_pipeline.index_calculation.loaders.base import (
     parse_output_indices,
 )
 from attribution_pipeline.pipeline_config import (
+    HADGEM3_N216_BASEPATH,
     WINDOW_END,
     WINDOW_END_MONTH,
     WINDOW_START,
@@ -51,7 +52,7 @@ def _token_overlaps_window(month_token):
 
 class HadGEM3AttributionLoader(BaseLoader):
     name = "hg3_attribution"
-    tld = "/data/users/opatt/HadGEM3-A-N216"
+    tld = HADGEM3_N216_BASEPATH
 
     def __init__(self, run_type=None, member=None, out_dir=None,
                  output_indices=None):

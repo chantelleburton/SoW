@@ -11,7 +11,8 @@
         "era5_obs_basepath": "/data/users/appldata/Data/OBS-ERA5/daily",
         "impacttb_historical_fwi_dir": "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM",
         "shapefile": "/data/users/bob.potts/sowf_data/Countries/GCP_Country_Domains_v1.6_ed.shp",
-        "shapefile_name_column": "region_nam"
+        "shapefile_name_column": "region_nam",
+        "hadgem3_n216_basepath": "/path/to/HadGEM3-A-N216"
     },
 
     "hadgem3_attribution_window": {
