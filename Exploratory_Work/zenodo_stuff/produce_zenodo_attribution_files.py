@@ -1,38 +1,55 @@
 """
-Produce Zenodo attribution NetCDF files from the HadGEM3-A attribution ensemble.
+Produce per-member Zenodo interim NetCDF files from the HadGEM3-A attribution ensemble.
 
-For each complete ensemble member, loads all monthly FWI data across the
-full 2020-2024 period (Jan 2020 – Dec 2024, 60 months), applies the
-relevant shapefile mask, and saves a single NetCDF per member.
+One task per (run_type, member): reads the member's xclim FWI file once
+(attribution_pipeline raw_fwi/hg3_attribution output), trims it to Jan 2020 -
+Dec 2024, and writes one shapefile-masked file per region in REGIONS.
 
-Only members returned by get_complete_member_dirs() are included – i.e.
-members that have the full Nov 2019 – Jan 2025 time period available.
+Only members with a file for BOTH historicalExt and historicalNatExt are
+processed. Partial time axes are saved as they are; attribution_file_merging.py
+fills the missing days with NaN.
 
 Output filename format:
-    {zenodo_folder}/HadGEM3-A_FWI_{member_id}_{Country}_{run_name}.nc
+    {zenodo_folder}/HadGEM3-A_FWI_2020-2024_{member_id}_{Country}_{run_name}.nc
 """
 
 import iris
-import iris.util
 import os
 import sys
-from datetime import date
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../Reduced_Att_Set_Processing'))
 
-from utils.cubefuncs import apply_shapefile_inclusive
-from find_matching_members import get_both_complete_member_ids, count_matching_files, N_EXPECTED, HIST_DIR as _HIST_DIR, HISTNAT_DIR as _HISTNAT_DIR
+from attribution_pipeline._utils import apply_shapefile_inclusive
+
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="iris")
 warnings.filterwarnings("ignore", category=FutureWarning, module="iris")
 
-############# Get parameters from Cylc (or defaults for local testing) #############
-Country = os.environ.get("CYLC_TASK_PARAM_country", None)
-if Country is None:
-    Country = "Iberia"
-    print(f"WARNING: CYLC_TASK_PARAM_country not set, falling back to '{Country}'")
+INDEX = "fwi"
 
+RAW_FWI_DIR = '/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution'
+SHAPEFILE = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '../../Shapefiles/SoW2526_Focal_MASTER_20260218.shp',
+))
+SHAPEFILE_NAME_COLUMN = 'name'
+
+# Country label (used in output filenames) -> shape name in SHAPEFILE
+REGIONS = {
+    'Iberia': 'Northwest Iberia',
+    'Chile': 'Chilean Temperate Forests and Matorral',
+    'Canada': 'Midwestern Canadian Shield forests',
+}
+
+# Cylc runtype -> (raw filename token, output run name)
+RUN_TYPES = {
+    'hist': ('historicalExt', 'Factual'),
+    'histnat': ('historicalNatExt', 'Counterfactual'),
+}
+
+zenodo_folder = '/data/scratch/bob.potts/sowf/test_output/Zenodo_Interim/'
+
+############# Get parameters from Cylc (or defaults for local testing) #############
 run_type = os.environ.get("CYLC_TASK_PARAM_runtype", None)
 if run_type is None:
     run_type = "hist"
@@ -42,141 +59,77 @@ if run_type is None:
 # Index maps to r{run:03d}i1p{physics} where:
 #   run     = (member - 1) // 5 + 1   (1..105)
 #   physics = (member - 1) % 5 + 1    (1..5)
-# If not set, fall back to looping over all complete members (local testing).
+# If not set, fall back to looping over all 525 members (local testing).
 _member_num = os.environ.get("CYLC_TASK_PARAM_member", None)
 if _member_num is not None:
     _n = int(_member_num)
     _run = (_n - 1) // 5 + 1
     _physics = (_n - 1) % 5 + 1
-    SINGLE_MEMBER_ID = f"r{_run:03d}i1p{_physics}"
+    member_ids = [f"r{_run:03d}i1p{_physics}"]
 else:
-    SINGLE_MEMBER_ID = None
+    member_ids = [f"r{r:03d}i1p{p}" for r in range(1, 106) for p in range(1, 6)]
 
-print(f"Processing Country: {Country}, run type: {run_type}, member: {SINGLE_MEMBER_ID or 'ALL'}")
-
-shp_file = '/data/users/chantelle.burton/Attribution/StateOfFires_2025-26/SoW2526_Focal_MASTER_20260218.shp'
-zenodo_folder = '/data/scratch/bob.potts/sowf/test_output/Zenodo_Interim/'
-
-HIST_DIR = (
-    '/data/scratch/andrew.hartley/impactstoolbox/Data/attribution_ensemble/'
-    'Fire-Weather/FWI/HadGEM3-A-N216/historicalExt'
-)
-HISTNAT_DIR = (
-    '/data/scratch/andrew.hartley/impactstoolbox/Data/attribution_ensemble/'
-    'Fire-Weather/FWI/HadGEM3-A-N216/historicalNatExt'
-)
-
-############# Country / region configuration #############
-if Country == 'Korea':
-    shape_name = 'Southeast South Korea'
-
-elif Country == 'Iberia':
-    shape_name = 'Northwest Iberia'
-
-elif Country == 'Scotland':
-    shape_name = 'Scottish Highlands'
-
-elif Country == 'Chile':
-    shape_name = 'Chilean Temperate Forests and Matorral'
-
-elif Country == 'Canada':
-    shape_name = 'Midwestern Canadian Shield forests'
-
-else:
-    raise ValueError(f"Unknown Country: {Country}. Expected one of: Korea, Iberia, Scotland, Chile, Canada")
-
-index_filestem = 'historicalExt' if run_type == 'hist' else 'historicalNatExt'
-run_name = 'Factual' if run_type == 'hist' else 'Counterfactual'
-run_dir = HIST_DIR if run_type == 'hist' else HISTNAT_DIR
-
-index_name = 'canadian_fire_weather_index'
-
-############# Identify members to process #############
-# Only members complete in BOTH historicalExt and historicalNatExt are used,
-# so that hist and histnat outputs always form a matched pair.
-if SINGLE_MEMBER_ID is not None:
-    hist_path = os.path.join(_HIST_DIR, SINGLE_MEMBER_ID)
-    histnat_path = os.path.join(_HISTNAT_DIR, SINGLE_MEMBER_ID)
-    if (count_matching_files(hist_path) < N_EXPECTED or
-            count_matching_files(histnat_path) < N_EXPECTED):
-        print(f"Member {SINGLE_MEMBER_ID} is not complete in both run directories, nothing to do.")
-        sys.exit(0)
-    member_dirs = [os.path.join(run_dir, SINGLE_MEMBER_ID)]
-    print(f"Single-member mode: {SINGLE_MEMBER_ID}")
-else:
-    both_complete_ids = get_both_complete_member_ids()
-    member_dirs = [os.path.join(run_dir, m) for m in both_complete_ids]
-    print(f"Found {len(member_dirs)} members complete in both run directories")
+run_token, run_name = RUN_TYPES[run_type]
+print(f"Processing run type: {run_type}, members: {member_ids[0] if len(member_ids) == 1 else 'ALL'}")
 
 
-def _all_2020_2024_stamps():
-    """Return the 60 monthly date-stamp strings for Jan 2020 – Dec 2024."""
-    stamps = []
-    for year in range(2020, 2025):
-        for month in range(1, 13):
-            start = date(year, month, 1)
-            end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
-            stamps.append(f"{start:%Y%m%d}-{end:%Y%m%d}")
-    return stamps
+def _member_file(token, member_id):
+    return os.path.join(RAW_FWI_DIR, f"hadgem3a_{INDEX}_{token}_{member_id}.nc")
 
 
-MONTHLY_STAMPS = _all_2020_2024_stamps()
+def _is_paired(member_id):
+    return all(os.path.exists(_member_file(tok, member_id)) for tok, _ in RUN_TYPES.values())
 
 
-def load_member_full_period(member_dir):
-    """Load and concatenate all 60 monthly files (Jan 2020 – Dec 2024) for a member."""
-    member_id = os.path.basename(member_dir.rstrip('/'))
-    cubes = iris.cube.CubeList()
-    reference_time_units = None
-    for stamp in MONTHLY_STAMPS:
-        fname = (f"FWI_ATTRIBUTION_ENSEMBLE_MOHC_HadGEM3-A-N216_{index_filestem}_{member_id}"
-                 f"_global_day_{stamp}.nc")
-        cube = iris.load_cube(os.path.join(member_dir, fname), index_name)
-        # Remove scalar time-derived coordinates that vary between monthly files
-        for coord in list(cube.coords()):
-            if coord.long_name in ('month', 'month_number', 'season', 'season_year', 'year'):
-                cube.remove_coord(coord)
-        # Standardise time units to the first cube's reference time
-        if cube.coords('time'):
-            time_coord = cube.coord('time')
-            if reference_time_units is None:
-                reference_time_units = time_coord.units
-            else:
-                time_coord.convert_units(reference_time_units)
-            time_coord.attributes = {}
-            time_coord.var_name = None
-            time_coord.long_name = None
-            time_coord.standard_name = 'time'
-        cubes.append(cube)
-    iris.util.equalise_attributes(cubes)
-    return cubes.concatenate_cube()
+def _load_2020_2024(member_id):
+    cube = iris.load_cube(_member_file(run_token, member_id), iris.NameConstraint(var_name=INDEX))
+    for coord_name in ("year", "season_year"):
+        if cube.coords(coord_name):
+            cube.remove_coord(coord_name)
+    return cube.extract(iris.Constraint(time=lambda cell: 2020 <= cell.point.year <= 2024))
 
 
 ############# Main loop over members #############
 os.makedirs(zenodo_folder, exist_ok=True)
 
-n_success = 0
+n_saved = 0
+n_skipped = 0
 n_error = 0
 
-for member_dir in member_dirs:
-    member_id = os.path.basename(member_dir.rstrip('/'))
+for member_id in member_ids:
     print(f"\nProcessing member: {member_id}")
 
+    if not _is_paired(member_id):
+        print("  Not present in both historicalExt and historicalNatExt, skipping.")
+        n_skipped += 1
+        continue
+
     try:
-        cube = load_member_full_period(member_dir)
-        cube = apply_shapefile_inclusive(shp_file, shape_name, cube)
-    except (IOError, OSError) as e:
-        print(f"  Missing file(s): {e}")
-        n_error += 1
-        continue
+        cube = _load_2020_2024(member_id)
     except Exception as e:
-        print(f"  ERROR: {e}")
+        print(f"  ERROR loading: {e}")
         n_error += 1
         continue
+    if cube is None:
+        print("  No data in 2020-2024, skipping.")
+        n_skipped += 1
+        continue
+    print(f"  {cube.coord('time').shape[0]} days in 2020-2024")
 
-    output_file = os.path.join(zenodo_folder, f"HadGEM3-A_FWI_2020-2024_{member_id}_{Country}_{run_name}.nc")
-    iris.save(cube, output_file)
-    print(f"  Saved: {output_file}")
-    n_success += 1
+    for country, shape_name in REGIONS.items():
+        try:
+            region_cube = apply_shapefile_inclusive(
+                SHAPEFILE, shape_name, cube, name_column=SHAPEFILE_NAME_COLUMN,
+            )
+        except Exception as e:
+            print(f"  ERROR masking {country}: {e}")
+            n_error += 1
+            continue
+        output_file = os.path.join(
+            zenodo_folder, f"HadGEM3-A_FWI_2020-2024_{member_id}_{country}_{run_name}.nc"
+        )
+        iris.save(region_cube, output_file)
+        print(f"  Saved: {output_file}")
+        n_saved += 1
 
-print(f"\nDone. {n_success} members saved, {n_error} errors.")
+print(f"\nDone. {n_saved} files saved, {n_skipped} members skipped, {n_error} errors.")
