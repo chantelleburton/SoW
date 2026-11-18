@@ -30,6 +30,7 @@ from attribution_pipeline.pipeline_config import (
     BIAS_CORRECTED_METRICS,
     EXPORTS,
     REGION_CONFIGS,
+    print_paths,
 )
 from attribution_pipeline.probability_ratio.core import (
     compute_region_amplification,
@@ -157,6 +158,7 @@ def run_amplification(
 
 
 if __name__ == "__main__":
+    print_paths()
     # metric_stem can be given directly (e.g. FWI_P95), or built from
     # index + metric (+ metric kwargs) exactly as BaseMetric.output_stem does --
     # the latter is what the flow.cylc passes, so 'cum' correctly expands to

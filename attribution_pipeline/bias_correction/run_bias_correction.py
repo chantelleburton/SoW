@@ -19,8 +19,10 @@ dsr). Output CSVs are written under bias_corrected_metrics/{historical_source}/.
 import os
 
 from attribution_pipeline.bias_correction.core import run_bias_correction
+from attribution_pipeline.pipeline_config import print_paths
 
 if __name__ == "__main__":
+    print_paths()
     country = os.environ.get("CYLC_TASK_PARAM_country", "Iberia")
     baseline_member = int(os.environ.get("CYLC_TASK_PARAM_member", "1"))
     run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")

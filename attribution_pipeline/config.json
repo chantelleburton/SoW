@@ -1,5 +1,5 @@
 {
-    "pipeline_root_default": "/data/scratch/bob.potts/sowf/attribution_pipeline",
+    "pipeline_root_default": "/data/users/bob.potts/attribution_pipeline_blank_testing",
 
     "raw_fwi_output": {
         "era5": "raw_fwi/era5",
@@ -9,9 +9,11 @@
 
     "external_data_sources": {
         "era5_obs_basepath": "/data/users/appldata/Data/OBS-ERA5/daily",
+        "hadgem3_attribution_tld": "/data/users/opatt/HadGEM3-A-N216",
+        "hadgem3_historical_tld": "/data/users/opatt/HadGEM3-A-N216/historical",
         "impacttb_historical_fwi_dir": "/data/users/bob.potts/sowf_data/historicalFWI/HadGEM",
-        "shapefile": "/data/users/bob.potts/sowf_data/Countries/GCP_Country_Domains_v1.6_ed.shp",
-        "shapefile_name_column": "region_nam"
+        "shapefile": "/data/users/bob.potts/sowf_data/Nuts-0/CNTR_RG_20M_2016_4326.shp",
+        "shapefile_name_column": "NAME_ENGL"
     },
 
     "hadgem3_attribution_window": {
@@ -92,8 +94,8 @@
             "bias_correction_years": [2020, 2021, 2022, 2023, 2024]
         },
         "France": {
-            "months": [7],
-            "month_name": "July",
+            "months": [7, 8],
+            "month_name": "July-August",
             "shape_name": "France",
             "display_name": "France",
             "event_year": 2026,
@@ -105,8 +107,8 @@
             "bias_correction_years": [2020,2021, 2022, 2023, 2024]
         },
         "Spain": {
-            "months": [7],
-            "month_name": "July",
+            "months": [7, 8],
+            "month_name": "July-August",
             "shape_name": "Spain",
             "display_name": "Spain",
             "event_year": 2026,
@@ -118,8 +120,8 @@
             "bias_correction_years": [2020,2021, 2022, 2023, 2024]
         },
         "Portugal": {
-            "months": [7],
-            "month_name": "July",
+            "months": [7, 8],
+            "month_name": "July-August",
             "shape_name": "Portugal",
             "display_name": "Portugal",
             "event_year": 2026,
@@ -131,8 +133,8 @@
             "bias_correction_years": [2020,2021, 2022, 2023, 2024]
         },
         "United Kingdom": {
-            "months": [7],
-            "month_name": "July",
+            "months": [7, 8],
+            "month_name": "July-August",
             "shape_name": "United Kingdom",
             "display_name": "United Kingdom",
             "event_year": 2026,
@@ -142,7 +144,58 @@
             "mainland_only": true,
             "season_wrap": false,
             "bias_correction_years": [2020,2021, 2022, 2023, 2024]
+        },
+        "UK-Wales-Spring": {
+            "months": [4,5],
+            "month_name": "April-May",
+            "shape_name": "UK-Wales",
+            "display_name": "Wales",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "mainland_only": true,
+            "season_wrap": false,
+            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
+        },
+       "UK-England": {
+            "months": [7,8],
+            "month_name": "July-August",
+            "shape_name": "UK-England",
+            "display_name": "England",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "mainland_only": false,
+            "season_wrap": false,
+            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
+        } ,
+        "UK-Scotland": {
+            "months": [7,8],
+            "month_name": "July-August",
+            "shape_name": "UK-Scotland",
+            "display_name": "Scotland",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "mainland_only": false,
+            "season_wrap": false,
+            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
+        },
+        "UK-Wales": {
+            "months": [7,8],
+            "month_name": "July-August",
+            "shape_name": "UK-Wales",
+            "display_name": "Wales",
+            "event_year": 2026,
+            "percentile": 95,
+            "baseline_start": 1980,
+            "baseline_end": 2013,
+            "mainland_only": true,
+            "season_wrap": false,
+            "bias_correction_years": [2020,2021, 2022, 2023, 2024]
         }
-
     }
 }

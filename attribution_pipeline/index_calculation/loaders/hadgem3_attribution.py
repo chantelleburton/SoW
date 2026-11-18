@@ -21,6 +21,8 @@ from attribution_pipeline.index_calculation.loaders.base import (
     parse_output_indices,
 )
 from attribution_pipeline.pipeline_config import (
+    HADGEM3_ATTRIBUTION_TLD,
+    RAW_FWI_HG3_ATTRIBUTION,
     WINDOW_END,
     WINDOW_END_MONTH,
     WINDOW_START,
@@ -51,7 +53,7 @@ def _token_overlaps_window(month_token):
 
 class HadGEM3AttributionLoader(BaseLoader):
     name = "hg3_attribution"
-    tld = "/data/users/opatt/HadGEM3-A-N216"
+    tld = HADGEM3_ATTRIBUTION_TLD
 
     def __init__(self, run_type=None, member=None, out_dir=None,
                  output_indices=None):
@@ -63,10 +65,7 @@ class HadGEM3AttributionLoader(BaseLoader):
             member or os.environ.get("CYLC_TASK_PARAM_member", "r001i1p1")
         ).strip()
 
-        self.out_dir = (
-            out_dir
-            or "/data/scratch/bob.potts/sowf/attribution_pipeline/raw_fwi/hg3_attribution"
-        )
+        self.out_dir = out_dir or RAW_FWI_HG3_ATTRIBUTION
         self.spatial_chunk = 30
         self.cluster = ClusterConfig(n_workers=8, memory_per_worker_gb=2)
         self.cffwis_kwargs = {"initial_start_up": True}

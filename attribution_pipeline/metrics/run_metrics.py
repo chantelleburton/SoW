@@ -38,6 +38,7 @@ from attribution_pipeline.pipeline_config import (
     SHAPEFILE,
     SHAPEFILE_NAME_COLUMN,
     get_region,
+    print_paths,
 )
 
 # --- Metric registry -------------------------------------------------------
@@ -395,6 +396,7 @@ def run(
 
 
 if __name__ == "__main__":
+    print_paths()
     dataset = os.environ.get("CYLC_TASK_PARAM_dataset", "hg3_historical_xclim")
     country = os.environ.get("CYLC_TASK_PARAM_country", "Iberia")
     index = os.environ.get("CYLC_TASK_PARAM_index", "fwi")

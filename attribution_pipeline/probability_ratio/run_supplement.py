@@ -20,7 +20,7 @@ Usage (mirrors the CYLC_TASK_PARAM_* convention used elsewhere in the repo):
 
 import os
 
-from attribution_pipeline.pipeline_config import EXPORTS
+from attribution_pipeline.pipeline_config import EXPORTS, print_paths
 from attribution_pipeline.probability_ratio.plotting import (
     generate_all_supplements,
 )
@@ -29,6 +29,7 @@ DEFAULT_OUTPUT_DIR = EXPORTS
 
 
 if __name__ == "__main__":
+    print_paths()
     index = os.environ.get("CYLC_TASK_PARAM_index", "fwi")
     metric_name = os.environ.get("CYLC_TASK_PARAM_metric_name", "p95")
     historical_source = os.environ.get(

@@ -23,6 +23,7 @@ from attribution_pipeline.index_calculation.loaders.hadgem3_attribution import (
 from attribution_pipeline.index_calculation.loaders.hadgem3_historical import (
     HadGEM3HistoricalLoader,
 )
+from attribution_pipeline.pipeline_config import print_paths
 
 LOADERS = {
     "era5": ERA5Loader,
@@ -42,6 +43,7 @@ def main():
             f"Unknown/missing dataset {dataset!r}. Valid options: {sorted(LOADERS)}"
         )
 
+    print_paths()
     loader = LOADERS[dataset]()
     FWICalculator(loader).run()
 

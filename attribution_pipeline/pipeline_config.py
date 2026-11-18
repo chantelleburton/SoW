@@ -6,8 +6,8 @@ attribution_pipeline/probability_ratio/ (risk ratio / amplification / supplement
 
 Loads its values from config.json (sibling to this file) so paths and region
 definitions can be edited without touching code. Override the JSON file
-location via ATTRIBUTION_PIPELINE_CONFIG; override the output root via
-ATTRIBUTION_PIPELINE_ROOT (as before).
+location via ATTRIBUTION_PIPELINE_CONFIG. The output root is set only by
+pipeline_root_default in config.json.
 """
 
 import json
@@ -23,11 +23,8 @@ with open(_CONFIG_PATH) as _f:
 # --- Pipeline output root ---------------------------------------------------
 # Every attribution_pipeline-generated file (raw FWI/DSR, interim metric CSVs,
 # bias-corrected/uncorrected ensemble CSVs, risk-ratio/amplification/supplement
-# exports) lives under this single root. Override via env var to relocate
-PIPELINE_ROOT = os.environ.get(
-    "ATTRIBUTION_PIPELINE_ROOT",
-    _CONFIG["pipeline_root_default"],
-)
+# exports) lives under this single root.
+PIPELINE_ROOT = _CONFIG["pipeline_root_default"]
 
 # index_calculation/ raw FWI/DSR output (one subfolder per data source).
 # Each entry may be an absolute path  or a path relative to
@@ -59,6 +56,8 @@ EXPORTS = os.path.join(PIPELINE_ROOT, "exports")
 # --- External, read-only data sources ---------------------------------------
 _EXTERNAL = _CONFIG["external_data_sources"]
 ERA5_OBS_BASEPATH = _EXTERNAL["era5_obs_basepath"]
+HADGEM3_ATTRIBUTION_TLD = _EXTERNAL["hadgem3_attribution_tld"]
+HADGEM3_HISTORICAL_TLD = _EXTERNAL["hadgem3_historical_tld"]
 IMPACTTB_HISTORICAL_FWI_DIR = _EXTERNAL["impacttb_historical_fwi_dir"]
 SHAPEFILE = _EXTERNAL["shapefile"]
 # Column in SHAPEFILE holding each region's shape_name (varies by shapefile
@@ -81,6 +80,28 @@ WINDOW_END = _WINDOW["end"]
 # actually get run is controlled by the Rose-suite COUNTRY task parameter
 # in metrics/rose-suite.conf and bias_correction/rose-suite.conf, not here.
 REGION_CONFIGS = _CONFIG["regions"]
+
+
+def print_paths() -> None:
+    paths = {
+        "config file": _CONFIG_PATH,
+        "pipeline root": PIPELINE_ROOT,
+        "raw fwi era5": RAW_FWI_ERA5,
+        "raw fwi hg3_historical": RAW_FWI_HG3_HISTORICAL,
+        "raw fwi hg3_attribution": RAW_FWI_HG3_ATTRIBUTION,
+        "metrics": METRICS_OUT_DIR,
+        "bias_corrected_metrics": BIAS_CORRECTED_METRICS,
+        "uncorrected_metrics": UNCORRECTED_METRICS,
+        "exports": EXPORTS,
+        "era5 obs input": ERA5_OBS_BASEPATH,
+        "impacttb historical fwi input": IMPACTTB_HISTORICAL_FWI_DIR,
+        "hadgem3 attribution input": HADGEM3_ATTRIBUTION_TLD,
+        "hadgem3 historical input": HADGEM3_HISTORICAL_TLD,
+        "shapefile": SHAPEFILE,
+    }
+    print("[pipeline_config] Resolved paths:")
+    for label, path in paths.items():
+        print(f"  {label:<30} {path}")
 
 
 def get_region(country: str) -> dict:

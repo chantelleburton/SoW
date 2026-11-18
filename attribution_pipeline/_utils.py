@@ -146,7 +146,11 @@ def apply_shapefile_inclusive(shp_file, shape_name, cube, mainland_only=False,
     # Step 1: Crop to bounding box to reduce data volume
     minx, miny, maxx, maxy = region_geom.bounds
     cube = contrain_coords(cube, (minx, maxx, miny, maxy))
-
+    print("Shape bounds:", region_geom.bounds)
+    print("Cropped cube:", cube.shape)
+    for coord in cube.coords(dim_coords=True):
+        print(coord.name(), coord.standard_name, coord.units,
+          coord.attributes.get("axis"), iris.util.guess_coord_axis(coord))
     # contrain_coords() wraps 0-360 -> -180/180 via cube.intersection(), which
     # reassembles the (possibly dask-backed) data along the longitude axis and
     # can leave the array's lazy .chunks metadata out of sync with its real

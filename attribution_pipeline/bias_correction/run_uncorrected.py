@@ -20,8 +20,10 @@ import os
 from attribution_pipeline.bias_correction.uncorrected import (
     run_uncorrected_extraction,
 )
+from attribution_pipeline.pipeline_config import print_paths
 
 if __name__ == "__main__":
+    print_paths()
     country = os.environ.get("CYLC_TASK_PARAM_country", "Iberia")
     run_type = os.environ.get("CYLC_TASK_PARAM_runtype", "hist")
     index = os.environ.get("CYLC_TASK_PARAM_index", "fwi")
