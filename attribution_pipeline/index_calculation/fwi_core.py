@@ -69,17 +69,14 @@ class FWICalculator:
             raise ValueError("No overlapping dates after alignment.")
 
         # --- Forward-fill NaNs, clip humidity to a physical range ---
-        for varname, da in [
-            ("tas", tas),
-            ("pr", pr),
-            ("ws", ws),
-            ("hurs", hurs),
-        ]:
-            n_nan = da.isnull().sum().values
-            if n_nan > 0:
-                print(
-                    f"[{loader.name}]  {varname}: {int(n_nan)} NaN values detected, applying forward-fill"
-                )
+        # Lazy counts are persisted together with the arrays below, so the check
+        # shares the single read of the inputs instead of triggering its own.
+        nan_counts = {
+            "tas": tas.isnull().sum(),
+            "pr": pr.isnull().sum(),
+            "ws": ws.isnull().sum(),
+            "hurs": hurs.isnull().sum(),
+        }
         tas = tas.ffill(dim="time")
         pr = pr.ffill(dim="time")
         ws = ws.ffill(dim="time")
@@ -101,8 +98,22 @@ class FWICalculator:
             f"[{loader.name}] shapes: tas={tas.shape}, pr={pr.shape}, ws={ws.shape}, hurs={hurs.shape}"
         )
 
-        tas, pr, ws, hurs = client.persist([tas, pr, ws, hurs])
-        wait([tas, pr, ws, hurs])
+        tas, pr, ws, hurs, *counts = client.persist(
+            [tas, pr, ws, hurs, *nan_counts.values()]
+        )
+        wait([tas, pr, ws, hurs, *counts])
+
+        filled = {"tas": tas, "pr": pr, "ws": ws, "hurs": hurs}
+        for (varname, _), count in zip(nan_counts.items(), counts):
+            n_nan = int(count.values)
+            if n_nan > 0:
+                # ffill cannot fill NaNs before the first valid value.
+                n_left = int(filled[varname].isnull().sum().values)
+                print(
+                    f"[{loader.name}]  {varname}: {n_nan} NaN values detected, "
+                    f"{n_nan - n_left} forward-filled, {n_left} left unfilled",
+                    flush=True,
+                )
 
         print(
             f"[{loader.name}] Computing FWI (cffwis_kwargs={loader.cffwis_kwargs})..."
